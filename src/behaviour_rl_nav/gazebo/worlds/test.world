@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <world name="default">
+    <!-- A global light source -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <!-- A ground plane -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+  <model name="heightmap"><static>true</static><link name="heightmap"><visual name="heightmap_visual"><pose>0 0 0 0 0 0</pose><geometry><heightmap><uri>/home/tid010/Dropbox/csiro_ws/src/behaviour_rl_nav/gazebo/worlds/heightmap_test.png</uri><size>100 100 1</size></heightmap></geometry><material><ambient>1 0 0 1</ambient><diffuse>1 0 0 1</diffuse><specular>0.1 0.1 0.1 1</specular><emissive>0 0 0 0</emissive></material></visual><collision name="heightmap_collision"><pose>0 0 0 0 0 0</pose><geometry><heightmap><uri>/home/tid010/Dropbox/csiro_ws/src/behaviour_rl_nav/gazebo/worlds/heightmap_test.png</uri><size>100 100 1</size></heightmap></geometry></collision></link></model>
+    
+  </world>
+</sdf>

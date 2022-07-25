@@ -1,0 +1,24 @@
+<!-- <mujoco model="ball"> -->
+    <!-- <worldbody> -->
+
+<mujocoinclude>
+
+
+    <body name="ball" pos="0 0 2.0">
+        <joint armature="0" damping="0" limited="false" name="ball" pos="0 0 0" stiffness="0" type="free"/> 
+        <geom name="ball" size="0.1" type="sphere"/>
+
+    <!-- <body name="ball" pos="0 1 2"> -->
+        <!-- <freejoint name="root"/> -->
+        <!-- <joint name="ball_x" type="slide" axis="1 0 0"/> -->
+        <!-- <joint name="ball_z" type="slide" axis="0 0 1"/> -->
+        <!-- <geom name="ball" type="sphere" size=".025" material="effector"/> -->
+        <!-- <geom name="ball" type="sphere" size=".1" /> -->
+        <!-- <geom name="ball" type="sphere" size=".5" material="effector"/> -->
+        <!-- <site name="ball" size=".005"/> -->
+    </body>
+
+</mujocoinclude>
+
+    <!-- </worldbody> -->
+<!-- </mujoco> -->

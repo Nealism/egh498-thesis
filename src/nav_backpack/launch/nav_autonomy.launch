@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+
+  <!-- Output logging -->
+  <arg name="output" default="screen" doc="Where should nodes write log output to?"/>
+  <arg name="ROSCONSOLE_FORMAT" default="${severity} ${time} ${node}: ${message}"/>
+  <env name="ROSCONSOLE_FORMAT" value="$(arg ROSCONSOLE_FORMAT)"/>
+
+  <arg name="agent_name" doc="String identifier for this agent."/>
+
+  <!-- Automatically bag autonomy topics as per the record_autonomy.yaml config -->
+  <arg name="auto_bag" default="false"/>
+  <arg name="auto_bag_config" default="$(find nav_backpack)/config/record_autonomy.yaml"/>
+
+  <!-- Configuration -->
+  <arg name="behaviour_align_config" default="$(find behaviour_align)/config/behaviour_align.yaml"/>
+  <arg name="behaviour_align_enable" default="false"/>
+  <arg name="behaviour_compositor_config" default="$(find behaviour_compositor)/config/behaviour_compositor.yaml"/>
+  <arg name="behaviour_compositor_enable" default="true"/>
+  <arg name="behaviour_decollide_straight_config" default="$(find behaviour_decollide_straight)/config/behaviour_decollide_straight.yaml"/>
+  <arg name="behaviour_decollide_straight_enable" default="true"/>
+  <arg name="behaviour_done_config" default="$(find behaviour_done)/config/behaviour_done.yaml"/>
+  <arg name="behaviour_done_enable" default="true"/>
+  <arg name="behaviour_joy_config" default="$(find behaviour_interface)/config/behaviour_joy.yaml"/>
+  <arg name="behaviour_joy_enable" default="true"/>
+  <arg name="behaviour_orientation_correction_config" default="$(find behaviour_orientation_correction)/config/behaviour_orientation_correction.yaml"/>
+  <arg name="behaviour_orientation_correction_enable" default="true"/>
+  <arg name="behaviour_path_follow_config" default="$(find behaviour_path_follow)/config/behaviour_path_follow.yaml"/>
+  <arg name="behaviour_path_follow_enable" default="true"/>
+  <arg name="behaviour_point_config" default="$(find behaviour_point)/config/behaviour_point.yaml"/>
+  <arg name="behaviour_point_enable" default="false"/>
+  <arg name="behaviour_stair_climb_config" default="$(find behaviour_stair_climb)/config/behaviour_stair_climb.yaml"/>
+  <arg name="behaviour_stair_climb_enable" default="false"/>
+  <arg name="behaviour_turn_on_spot_config" default="$(find behaviour_turn_on_spot)/config/behaviour_turn_on_spot.yaml"/>
+  <arg name="behaviour_turn_on_spot_enable" default="false"/>
+  <arg name="config_heightmap_to_costmap_global" default="$(find heightmap_to_costmap)/config/heightmap_to_costmap_global.yaml"/>
+  <arg name="config_heightmap_to_costmap_local" default="$(find heightmap_to_costmap)/config/heightmap_to_costmap_local.yaml"/>
+  <arg name="config_ohm_mapping" default="$(find ohm_mapping_node)/config/ohm_mapping.yaml"/>
+  <arg name="planner_gaps_config" default="$(find planner_gaps)/config/planner_gaps.yaml"/>
+  <arg name="planner_gaps_enable" default="true"/>
+  <arg name="planner_hybrid_astar_config" default="$(find planner_hybrid_astar)/config/planner_hybrid_astar.yaml"/>
+  <arg name="planner_hybrid_astar_enable" default="true"/>
+
+  <!-- Path to joystick device, if any -->
+  <arg name="joy_dev" default="/dev/input/js0"/>
+
+  <!-- Should a joy node be started -->
+  <arg name="joy_start_node" default="false"/>
+
+  <!-- Topic to get joypad messages on -->
+  <arg name="joy_topic" default="joy"/>
+
+  <!-- Absolute namespace (must start with "/" but not end with "/") -->
+  <arg name="namespace" default=""/>
+
+  <arg name="panda_arm" default="false" doc="Does this agent have a Panda arm?"/>
+
+  <!-- Is in a simulation -->
+  <arg name="simulation" default="false"/>
+
+  <!-- tf topic to use -->
+  <arg name="tf" default="/tf"/>
+
+  <!-- Topic to publish velocity to -->
+  <arg name="velocity_topic" default="~velocity"/>
+
+  <!-- Remap to use given tf -->
+  <remap from="/tf" to="$(arg tf)"/>
+  <remap from="tf" to="$(arg tf)"/>
+  <remap from="/tf_static" to="$(arg tf)_static"/>
+  <remap from="tf_static" to="$(arg tf)_static"/>
+
+  <!-- Local navigation -->
+
+  <!-- Load platform specific parameters
+       These config files may use the following args:
+         * agent_name
+         * panda_arm
+  -->
+  <rosparam file="$(arg config_ohm_mapping)" command="load" subst_value="true"/>
+
+  <!-- Mapping node which generates navigation data -->
+  <node name="ohm_mapping" pkg="ohm_mapping_node" type="ohm_mapping_node" output="$(arg output)" respawn="true"/>
+
+  <!-- costmap_local node -->
+  <node name="costmap_local" pkg="heightmap_to_costmap" type="h2c_node" output="screen" respawn="true">
+    <rosparam command="load" file="$(arg config_heightmap_to_costmap_local)" />
+    <rosparam command="load" file="$(find heightmap_to_costmap)/config/filter_chain_local.yaml" />
+  </node>
+
+  <!-- costmap_global node -->
+  <node name="costmap_global" pkg="heightmap_to_costmap" type="h2c_node" output="screen" respawn="true">
+    <rosparam command="load" file="$(arg config_heightmap_to_costmap_global)" />
+    <rosparam command="load" file="$(find heightmap_to_costmap)/config/filter_chain_global.yaml" />
+  </node>
+
+  <!-- costmap_global_server node -->
+  <node name="costmap_global_server" pkg="heightmap_to_costmap" type="h2c_node" output="screen" respawn="true">
+    <rosparam command="load" file="$(arg config_heightmap_to_costmap_global)" />
+    <rosparam command="load" file="$(find heightmap_to_costmap)/config/filter_chain_global.yaml" />
+    <rosparam subst_value="true">
+      static_parameters:
+        obstacle_lists_enabled:         false
+      dynamic_parameters:
+        heightmap_topic:                ""
+        heightmap_expiry:               {default:  0.0, min: 0.0, max: 100.0}
+        publish_on_heightmap:           false
+        dense_point_cloud_2_topic:      ""
+        dense_point_cloud_2_expiry:     {default:  0.0, min: 0.0, max: 100.0}
+        publish_on_dense_point_cloud_2: false
+    </rosparam>
+  </node>
+
+  <!-- Local path planner -->
+  <include file="$(find behaviour_lpp)/launch/behaviour_lpp.launch">
+    <arg name="align_config" value="$(arg behaviour_align_config)"/>
+    <arg name="align_enable" value="$(arg behaviour_align_enable)"/>
+    <arg name="compositor_config" value="$(arg behaviour_compositor_config)"/>
+    <arg name="compositor_enable" value="$(arg behaviour_compositor_enable)"/>
+    <arg name="decollide_straight_config" value="$(arg behaviour_decollide_straight_config)"/>
+    <arg name="decollide_straight_enable" value="$(arg behaviour_decollide_straight_enable)"/>
+    <arg name="done_config" value="$(arg behaviour_done_config)"/>
+    <arg name="done_enable" value="$(arg behaviour_done_enable)"/>
+    <arg name="joy_config" value="$(arg behaviour_joy_config)"/>
+    <arg name="joy_dev" value="$(arg joy_dev)"/>
+    <arg name="joy_enable" value="$(arg behaviour_joy_enable)"/>
+    <arg name="joy_start_node" value="$(arg joy_start_node)"/>
+    <arg name="joy_topic" value="$(arg joy_topic)"/>
+    <arg name="orientation_correction_config" value="$(arg behaviour_orientation_correction_config)"/>
+    <arg name="orientation_correction_enable" value="$(arg behaviour_orientation_correction_enable)"/>
+    <arg name="output" value="$(arg output)"/>
+    <arg name="path_follow_config" value="$(arg behaviour_path_follow_config)"/>
+    <arg name="path_follow_enable" value="$(arg behaviour_path_follow_enable)"/>
+    <arg name="planner_gaps_config" value="$(arg planner_gaps_config)"/>
+    <arg name="planner_gaps_enable" value="$(arg planner_gaps_enable)"/>
+    <arg name="planner_hybrid_astar_config" value="$(arg planner_hybrid_astar_config)"/>
+    <arg name="planner_hybrid_astar_enable" value="$(arg planner_hybrid_astar_enable)"/>
+    <arg name="point_config" value="$(arg behaviour_point_config)"/>
+    <arg name="point_enable" value="$(arg behaviour_point_enable)"/>
+    <arg name="stair_climb_config" value="$(arg behaviour_stair_climb_config)"/>
+    <arg name="stair_climb_enable" value="$(arg behaviour_stair_climb_enable)"/>
+    <arg name="turn_on_spot_config" value="$(arg behaviour_turn_on_spot_config)"/>
+    <arg name="turn_on_spot_enable" value="$(arg behaviour_turn_on_spot_enable)"/>
+    <arg name="velocity_topic" value="$(arg velocity_topic)"/>
+  </include>
+
+  <!-- Auto bag autonomy topics listed in record_autonomy.yaml -->
+  <node name="ras_record_autonomy" pkg="ras_ros" type="record" if="$(arg auto_bag)" output="$(arg output)">
+    <rosparam command="load" subst_value="true" file="$(arg auto_bag_config)"/>
+  </node>
+
+</launch>

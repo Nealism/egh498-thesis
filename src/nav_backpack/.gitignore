@@ -1,0 +1,12 @@
+# Excluded .catkin_tools files, the explicitly include .catkin_tools/profiles/**/config.yaml
+# This includes only the profile configuration files and excluded derived files.
+.catkin_tools/
+!.catkin_tools/profiles/**/config.yaml
+.vscode/
+*.kdev*
+build**/
+devel**/
+install**/
+logs**/
+misc**/
+models**/

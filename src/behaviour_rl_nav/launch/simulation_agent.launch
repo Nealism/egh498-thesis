@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Recording -->
+  <arg name="auto_bag_autonomy" default="false"/>
+  <arg name="auto_bag_perception" default="false"/>
+
+  <!-- Rviz nav GUI -->
+  <arg name="debug_gui" default="false"/>
+  <arg name="panda_arm" default="false"/>
+  <arg name="panda_moveit" default="false"/>
+
+  <!-- Initial y-axis position -->
+  <arg name="init_y_position" default="0"/>
+
+  <!-- Initial x-axis position -->
+  <arg name="init_x_position" default="0"/>
+
+  <arg name="tf" default="/tf"/>
+  <arg name="wildcat_global" default="true"/>
+
+  <!-- Initial z-axis position -->
+  <arg name="init_z_position" default="0"/>
+
+  <!-- Initial orientation. -->
+  <!-- TODO(Gavin Catt) Euler angles, AHHHHH. I have no idea what the ordering is here or if it's static/relative-->
+  <!-- TODO(Gavin Catt) Fletcher has menteiond it is RPY extrinsic, but cant find doco for it-->
+  <!-- Initial roll rotation (rad) -->
+  <arg name="init_roll" default="0"/>
+  <!-- Initial pitch rotation (rad) -->
+  <arg name="init_pitch" default="0"/>
+  <!-- Initial yaw rotation (rad) -->
+  <arg name="init_yaw" default="0"/>
+
+  <!-- Where to log to? -->
+  <arg name="output" default="screen"/>
+
+  <!-- Multimaster mode -->
+  <arg name="multimaster" default="false"/>
+
+  <!-- Mule args -->
+  <arg name="mule_code" default=""/>
+  <arg name="mule_network" default="darpa"/>
+
+  <!-- Task allocation arguments -->
+  <arg name="task_allocate" default="true"/>
+
+  <!-- Platform -->
+  <!-- Options: dsh1, kitten -->
+  <!-- <arg name="platform" default="kitten"/> -->
+  <arg name="platform" default="dynamic_kitten"/>
+
+  <!-- Path to joystick device, if any -->
+  <arg name="joy_dev" default="/dev/input/js0"/>
+
+  <!-- Should a joy node be started -->
+  <arg name="joy_start_node" default="true"/>
+
+  <!-- Joy topic to subscribe to -->
+  <arg name="joy_topic" default="joy"/>
+
+  <!-- Agent's name (used as namespace) -->
+  <arg name="robot_name"/>
+
+  <arg name="controller_manager_namespace" value="/$(arg robot_name)"/>
+  <arg name="namespace" value="/$(arg robot_name)"/>
+
+  <!-- Velocity topic to use -->
+  <arg name="velocity_topic" default="/$(arg robot_name)/cmd_vel_stamped"/>
+
+  <!-- Name file to use to assign an agent name, can be empty for 'wildcat' -->
+  <arg name="wildcat_robot_name_file" default=""/>
+
+  <!-- Simulate perception for object detection -->
+  <arg name="sim_object_detection" default="false"/>
+
+  <arg name="simulation" default="true"/>
+
+  <group if="$(eval arg('platform') in ('kitten', 'rat'))">
+
+    <include ns="$(arg robot_name)" file="$(find titan_gazebo)/launch/sim.launch">
+      <arg name="dynamic_sim" value="false"/>
+      <arg name="extra_urdf_args" value="nav_namespace:=/$(arg robot_name) spawn_logical_cameras:=$(arg sim_object_detection)"/>
+      <arg name="extra_urdf" value="$(find behaviour_rl_nav)/config/kitten_extra.urdf.xacro"/>
+      <arg name="init_pose" value="-x $(arg init_x_position) -y $(arg init_y_position) -z $(arg init_z_position) -R $(arg init_roll) -P $(arg init_pitch) -Y $(arg init_yaw)"/>
+      <arg name="max_track_vel" value="1.0"/>
+      <arg name="model_name" value="$(arg robot_name)"/>
+      <arg name="namespace" value="$(arg robot_name)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="panda_arm" value="$(arg panda_arm)"/>
+      <arg name="panda_moveit" value="$(arg panda_moveit)"/>
+      <arg name="ros_cmd_vel_topic" value="$(arg velocity_topic)"/>
+      <arg name="track_accel" value="1.0"/>
+    </include>
+
+  </group>
+  <group if="$(eval arg('platform') == 'dynamic_kitten')">
+
+    <include ns="$(arg robot_name)" file="$(find titan_gazebo)/launch/sim.launch">
+      <arg name="dynamic_sim" value="true"/>
+      <arg name="extra_urdf_args" value="nav_namespace:=/$(arg robot_name) spawn_logical_cameras:=$(arg sim_object_detection)"/>
+      <arg name="extra_urdf" value="$(find behaviour_rl_nav)/config/kitten_extra.urdf.xacro"/>
+      <arg name="init_pose" value="-x $(arg init_x_position) -y $(arg init_y_position) -z $(arg init_z_position) -R $(arg init_roll) -P $(arg init_pitch) -Y $(arg init_yaw)"/>
+      <arg name="max_track_vel" value="1.6"/>
+      <arg name="model_name" value="$(arg robot_name)"/>
+      <arg name="namespace" value="$(arg robot_name)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="panda_arm" value="$(arg panda_arm)"/>
+      <arg name="panda_moveit" value="$(arg panda_moveit)"/>
+      <arg name="ros_cmd_vel_topic" value="$(arg velocity_topic)"/>
+      <arg name="track_accel" value="3.0"/>
+    </include>
+
+  </group>
+</launch>

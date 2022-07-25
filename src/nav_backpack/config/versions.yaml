@@ -1,0 +1,13 @@
+# This file is used by ../launch/check_depends.launch and should be the
+# authority on what version of non-submodule packages (if any) are required at
+# run time.
+
+# gazebo
+# Version requirement for output from `gazebo --version` (after text transforms)
+gazebo_version_expect_ge: 9.9.0
+
+# wildcat
+# Version requirement for the wildcat superbuild tag (after text transforms)
+wildcat_superbuild_version_required: release_1.6-1.6.2-1-1e0041ea5
+# Version requirement for output from `wildcat_ros pipeline --version` (after text transforms)
+wildcat_version_expect_eq: wildcat_superbuild_release_1.6-1.6.2-1e0041ea5

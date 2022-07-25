@@ -1,0 +1,1 @@
+These files do nothing except tell wildcat the name of the robot to use and broadcast as for anything that needs to know it's own name (like global atlas etc.).

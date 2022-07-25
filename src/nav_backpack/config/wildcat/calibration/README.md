@@ -1,0 +1,1 @@
+This folder contains the calibration values for individual backpacks, most likely to be moved out in the near future.

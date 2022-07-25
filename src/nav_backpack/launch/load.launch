@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+
+  <!-- Output logging -->
+  <arg name="output" default="screen" doc="Where should nodes write log output to?"/>
+  <arg name="ROSCONSOLE_FORMAT" default="${severity} ${time} ${node}: ${message}"/>
+  <env name="ROSCONSOLE_FORMAT" value="$(arg ROSCONSOLE_FORMAT)"/>
+
+  <arg name="simulation"            default="false" />
+  <arg name="model"                 default="$(find nav_backpack)/models/nav_backpack/model_instance.urdf.xacro" />
+  <arg name="robot_state_publisher" default="true" />
+  <arg name="joint_state_publisher" default="true" />
+
+  <!-- Load robot description -->
+  <param name="robot_description" command="xacro $(arg model)" />
+
+  <remap from="/tf" to="tf"/>
+  <remap from="/tf_static" to="tf_static"/>
+
+  <!-- Launch robot_state_publisher and joint_state_publisher if required -->
+  <node if="$(arg robot_state_publisher)" name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+  <node if="$(arg joint_state_publisher)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+
+</launch>

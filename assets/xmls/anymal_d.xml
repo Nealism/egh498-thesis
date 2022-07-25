@@ -1,0 +1,227 @@
+<mujoco model="anymal"> 
+    <compiler angle="radian" discardvisual="true" inertiafromgeom="true" meshdir="../assets/meshes_anymal_d/" texturedir="../assets/meshes_anymal_d/"/>
+
+    <size njmax="500" nconmax="100" />
+    <asset> 
+        <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
+        <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
+    </asset>
+
+    <asset>
+        <mesh file="top_shell_3_6_0_mesh.stl" name="top_shell" />
+        <texture file="top_shell_baked.png" name="tex_top_shell"/>
+        <material name="mat_top_shell" reflectance="0.7" texrepeat="1 1" texture="tex_top_shell" texuniform="false"/>
+    </asset>
+
+    <asset>
+        <mesh file="bottom_shell_3_6_0_mesh.stl" name="bottom_shell" />
+        <texture file="bottom_shell_baked.png" name="tex_bottom_shell"/>
+        <material name="mat_bottom_shell" reflectance="0.7" texrepeat="1 1" texture="tex_bottom_shell" texuniform="false"/>
+    </asset>
+
+    <asset>
+        <mesh file="base_3_6_0_mesh.stl" name="base" />
+        <texture file="base_baked.png" name="tex_base"/>
+        <material name="mat_base" reflectance="0.7" texrepeat="1 1" texture="tex_base" texuniform="false"/>
+    </asset>
+
+    <asset>
+        <mesh file="hip_3_6_0_mesh.stl" name="hip" />
+        <texture file="hip_baked.png" name="tex_hip"/>
+        <material name="mat_hip" reflectance="0.7" texrepeat="1 1" texture="tex_hip" texuniform="false"/>
+    </asset>
+
+    <asset>
+        <mesh file="thigh_3_6_0_mesh.stl" name="thigh" />
+        <texture file="thigh_baked.png" name="tex_thigh"/>
+        <material name="mat_thigh" reflectance="0.7" texrepeat="1 1" texture="tex_thigh" texuniform="false"/>
+    </asset>
+
+    <asset>
+        <mesh file="shank_3_6_0_mesh.stl" name="shank" />
+        <texture file="shank_baked.png" name="tex_shank"/>
+        <material name="mat_shank" reflectance="0.7" texrepeat="1 1" texture="tex_shank" texuniform="false"/>
+    </asset>
+
+    <asset>
+        <mesh file="shank_3_6_0_mesh_mirrored.stl" name="shank_mirror" />
+        <texture file="shank_baked.png" name="tex_shank_mirror"/>
+        <material name="mat_shank_mirror" reflectance="0.7" texrepeat="1 1" texture="tex_shank_mirror" texuniform="false"/>
+    </asset>
+
+    <asset>
+        <mesh file="foot_3_6_1_mesh.stl" name="foot" />
+        <texture file="foot_baked.png" name="tex_foot"/>
+        <material name="mat_foot" reflectance="0.7" texrepeat="1 1" texture="tex_foot" texuniform="false"/>
+    </asset>
+
+
+    <asset>
+        <mesh file="drive_3_2_0_mesh.stl" name="drive" />
+        <texture file="drive_baked.png" name="tex_drive"/>
+        <material name="mat_drive" reflectance="0.7" texrepeat="1 1" texture="tex_drive" texuniform="false"/>
+    </asset>
+
+
+    <worldbody>
+        <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3" specular=".1 .1 .1"/>
+        <geom conaffinity="1" condim="3" material="MatPlane" name="floor" pos="0 0 0" rgba="0.8 0.9 0.8 1" size="40 40 40" type="plane"/>
+        <body name="base" pos="0 0 1.0">
+            <joint armature="0" damping="0" limited="false" name="root" pos="0 0 0" stiffness="0" type="free"/> 
+
+            <!-- <geom size /> -->
+            <geom pos="0 0 0.016" type="mesh" mesh="top_shell" material="mat_top_shell"/>
+            <geom pos="0 0 0.016" type="mesh" mesh="bottom_shell" material="mat_bottom_shell" />
+            <geom pos="0 0 0.016" type="mesh" mesh="base" material="mat_base" />
+
+            <geom size="0.447 0.08075 0.128" pos="0 0 0.016" type="box" contype="0" conaffinity="0"/>
+            <geom size="0.089 0.0741" pos="0.2353 0.08075 0" quat="0.707107 0 0.707107 0" type="cylinder" contype="0" conaffinity="0"/>
+            <geom size="0.089 0.0741" pos="0.2353 -0.08075 0" quat="0.707107 0 0.707107 0" type="cylinder" contype="0" conaffinity="0"/>
+            <geom size="0.089 0.0741" pos="-0.2353 0.08075 0" quat="0.707107 0 0.707107 0" type="cylinder" contype="0" conaffinity="0"/>
+            <geom size="0.089 0.0741" pos="-0.2353 -0.08075 0" quat="0.707107 0 0.707107 0" type="cylinder" contype="0" conaffinity="0"/>
+            <geom size="0.012 0.012 0.005" pos="0.2488 0.00835 0.05128" quat="0.707107 0 0 0.707107" type="box" contype="0" conaffinity="0"/>
+            <geom size="0.07 0.06775" pos="-0.31 0 0.1585" quat="0 0 0 1" type="cylinder" contype="0" conaffinity="0" />
+
+            <body name="LF_HIP" pos="0.304 0.109 0">
+                <inertial pos="0.035047 -0.00122677 0" quat="0.502484 0.502593 0.497424 0.497473" mass="0.36586" diaginertia="0.000558279 0.000443321 0.00023849" />
+                <joint name="LF_HAA" pos="0 0 0" axis="1 0 0" limited="true" range="-0.785398 0.610865" />
+                <body name="LF_THIGH" pos="0.069 0.006 0" quat="0.707107 0 0 -0.707107">
+                    <inertial pos="-0.0905113 -8.79548e-05 -0.140188" quat="0.99036 -0.00771405 0.1034 -0.0918509" mass="5.1322" diaginertia="0.109149 0.107919 0.00970372" />
+                    <joint name="LF_HFE" pos="0 0 0" axis="-1 0 0" limited="true" range="-9.42478 9.42478" />
+                   
+                    <geom size="0.05375 0.0595" pos="-0.0595 0 0" quat="0.707107 0 0.707107 0" type="mesh" mesh="drive" material="mat_drive"/>
+                    <geom size="0.05375 0.0595" pos="-0.0595 0 0" quat="0.707107 0 0.707107 0" type="cylinder" contype="0" conaffinity="0"/>
+
+                    <!-- <geom size="0.07 0.041565" pos="-0.105195 0 0" quat="0.5 0.5 0.5 0.5" type="cylinder"  mesh="hip" material="mat_hip" /> -->
+                    <geom size="0.07 0.041565" pos="-0.105195 0 0" quat="0.5 0.5 0.5 0.5" type="cylinder" contype="0" conaffinity="0"  />
+
+                    <geom size="0.0465 0.0315 0.1425" pos="-0.09513 0 -0.1425" quat="0.707107 0 0 0.707107" type="mesh" mesh="thigh" material="mat_thigh"/>
+                    <geom size="0.0465 0.0315 0.1425" pos="-0.09513 0 -0.1425" quat="0.707107 0 0 0.707107" type="box" contype="0" conaffinity="0"  />
+
+                    <geom size="0.07 0.041565" pos="-0.085065 0 -0.285" quat="0.5 0.5 0.5 0.5" type="cylinder" />
+                    
+                    <geom size="0.05375 0.0595" pos="-0.121 0 -0.285" quat="0 -0.707107 0 0.707107" type="cylinder" contype="0" conaffinity="0"/>
+                    <geom size="0.05375 0.0595" pos="-0.121 0 -0.285" quat="0 -0.707107 0 0.707107" type="mesh" mesh="drive" material="mat_drive"/>
+                    
+                    <body name="LF_SHANK" pos="-0.1805 0 -0.285" quat="0 0 0 1">
+                        <inertial pos="0.00808591 -0.0509335 -0.0900193" quat="0.99296 -0.116018 -0.004155 -0.0235265" mass="0.79598" diaginertia="0.0189142 0.0175029 0.00168996" />
+                        <joint name="LF_KFE" pos="0 0 0" axis="1 0 0" limited="true" range="-9.42478 9.42478" />
+                        <geom size="0.071 0.02866" quat="0.5 0.5 -0.5 -0.5" type="cylinder" />
+
+                        <geom size="0.066415 0.04151 0.02866" pos="0 -0.066415 0" quat="0.5 0.5 -0.5 -0.5" type="mesh" mesh="shank" material="mat_shank" />
+                        <geom size="0.066415 0.04151 0.02866" pos="0 -0.066415 0" quat="0.5 0.5 -0.5 -0.5" type="box" contype="0" conaffinity="0"/>
+
+                        <geom size="0.0175 0.19786" pos="0.00535885 -0.1 -0.164217" quat="0.707107 0 0 -0.707107" type="cylinder" contype="0" conaffinity="0"/>
+                        <geom size="0.031455" pos="0.0141088 -0.1 -0.362077" quat="0.707107 0 0 -0.707107" contype="0" conaffinity="0"/>
+                        <geom size="0.031455" pos="0.0141088 -0.1 -0.362077" type="mesh" mesh="foot" material="mat_foot" />
+                    </body>
+                </body>
+            </body>
+            <body name="RF_HIP" pos="0.304 -0.109 0">
+                <inertial pos="0.035047 0.00122677 0" quat="0.497473 0.497424 0.502593 0.502484" mass="0.36586" diaginertia="0.000558279 0.000443321 0.00023849" />
+                <joint name="RF_HAA" pos="0 0 0" axis="1 0 0" limited="true" range="-0.610865 0.785398" />
+                <body name="RF_THIGH" pos="0.069 -0.006 0" quat="0.707107 0 0 0.707107">
+                    <inertial pos="-0.0905113 8.79548e-05 -0.140188" quat="0.986364 0.0124145 0.10293 0.127816" mass="5.1322" diaginertia="0.109194 0.107873 0.00970475" />
+                    <joint name="RF_HFE" pos="0 0 0" axis="1 0 0" limited="true" range="-9.42478 9.42478" />
+                    
+                    <!-- <geom pos="-0.0595 0 0" quat="0.707107 0 0.707107 0" type="mesh" mesh="hip" material="mat_hip" /> -->
+                    <geom size="0.05375 0.0595" pos="-0.0595 0 0" quat="0.707107 0 0.707107 0" type="mesh" mesh="drive" material="mat_drive"/>
+                    <geom size="0.05375 0.0595" pos="-0.0595 0 0" quat="0.707107 0 0.707107 0" type="cylinder" contype="0" conaffinity="0"/>
+
+                    <!-- <geom size="0.07 0.041565" pos="-0.105195 0 0" quat="0.5 0.5 -0.5 -0.5" type="mesh" mesh="hip" material="mat_hip"/> -->
+                    <geom size="0.07 0.041565" pos="-0.105195 0 0" quat="0.5 0.5 -0.5 -0.5" type="cylinder" contype="0" conaffinity="0"/>
+
+                    <geom size="0.0465 0.0315 0.1425" pos="-0.09513 0 -0.1425" quat="0.707107 0 0 -0.707107" type="mesh" mesh="thigh" material="mat_thigh"/>
+                    <geom size="0.0465 0.0315 0.1425" pos="-0.09513 0 -0.1425" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0"/>
+
+                    <geom size="0.07 0.041565" pos="-0.085065 0 -0.285" quat="0.5 0.5 -0.5 -0.5" type="cylinder" />
+                    
+                    <geom size="0.05375 0.0595" pos="-0.121 0 -0.285" quat="0 0.707107 0 -0.707107" type="mesh" mesh="drive" material="mat_drive" />
+                    <geom size="0.05375 0.0595" pos="-0.121 0 -0.285" quat="0 0.707107 0 -0.707107" type="cylinder" contype="0" conaffinity="0"/>
+
+                    <body name="RF_SHANK" pos="-0.1805 0 -0.285" quat="0 0 0 -1">
+                        <inertial pos="0.00808591 0.0509335 -0.0900193" quat="0.99296 0.116018 -0.004155 0.0235265" mass="0.79598" diaginertia="0.0189142 0.0175029 0.00168996" />
+                        <joint name="RF_KFE" pos="0 0 0" axis="-1 0 0" limited="true" range="-9.42478 9.42478" />
+                        <geom size="0.071 0.02866" quat="0.5 0.5 0.5 0.5" type="cylinder" />
+                        
+                        
+                        <geom size="0.066415 0.04151 0.02866" pos="0 0.066415 0" quat="0.5 0.5 0.5 0.5" type="mesh" mesh="shank_mirror" material="mat_shank" />
+                        <geom size="0.066415 0.04151 0.02866" pos="0 0.066415 0" quat="0.5 0.5 0.5 0.5" type="box"  contype="0" conaffinity="0"/>
+
+                        <geom size="0.0175 0.19786" pos="0.00535885 0.1 -0.164217" quat="0.707107 0 0 0.707107" type="cylinder" contype="0" conaffinity="0"/>
+                        <geom size="0.031455" pos="0.0141088 0.1 -0.362077" quat="0.707107 0 0 0.707107" contype="0" conaffinity="0"/>
+                        <geom size="0.031455" pos="0.0141088 0.1 -0.362077"  type="mesh" mesh="foot" material="mat_foot"/>
+                    </body>
+                </body>
+            </body>
+            <body name="LH_HIP" pos="-0.304 0.109 0" quat="0 0 0 -1">
+                <inertial pos="0.035047 0.00122677 0" quat="0.497473 0.497424 0.502593 0.502484" mass="0.36586" diaginertia="0.000558279 0.000443321 0.00023849" />
+                <joint name="LH_HAA" pos="0 0 0" axis="-1 0 0" limited="true" range="-0.785398 0.610865" />
+                <body name="LH_THIGH" pos="0.069 -0.006 0" quat="-0.707107 0 0 -0.707107">
+                    <inertial pos="-0.0905113 8.79548e-05 -0.140188" quat="0.986364 0.0124145 0.10293 0.127816" mass="5.1322" diaginertia="0.109194 0.107873 0.00970475" />
+                    <joint name="LH_HFE" pos="0 0 0" axis="-1 0 0" limited="true" range="-9.42478 9.42478" />
+                    
+                    <geom size="0.05375 0.0595" pos="-0.0595 0 0" quat="0.707107 0 0.707107 0" type="mesh" mesh="drive" material="mat_drive" />
+                    <geom size="0.05375 0.0595" pos="-0.0595 0 0" quat="0.707107 0 0.707107 0" type="cylinder" contype="0" conaffinity="0"/>
+
+                    <geom size="0.07 0.041565" pos="-0.105195 0 0" quat="0.5 0.5 0.5 0.5" type="cylinder" />
+                    
+                    <geom size="0.0465 0.0315 0.1425" pos="-0.09513 0 -0.1425" quat="0.707107 0 0 0.707107" type="mesh" mesh="thigh" material="mat_thigh"/>
+                    <geom size="0.0465 0.0315 0.1425" pos="-0.09513 0 -0.1425" quat="0.707107 0 0 0.707107" type="box" contype="0" conaffinity="0"/>
+
+                    <geom size="0.07 0.041565" pos="-0.085065 0 -0.285" quat="0.5 0.5 0.5 0.5" type="cylinder" />
+                    
+                    <geom size="0.05375 0.0595" pos="-0.121 0 -0.285" quat="0 -0.707107 0 0.707107" type="mesh" mesh="drive" material="mat_drive" />
+                    <geom size="0.05375 0.0595" pos="-0.121 0 -0.285" quat="0 -0.707107 0 0.707107" type="cylinder" contype="0" conaffinity="0"/>
+                    
+                    <body name="LH_SHANK" pos="-0.1805 0 -0.285" quat="0 0 0 1">
+                        <inertial pos="0.00808591 0.0509335 -0.0900193" quat="0.99296 0.116018 -0.004155 0.0235265" mass="0.79598" diaginertia="0.0189142 0.0175029 0.00168996" />
+                        <joint name="LH_KFE" pos="0 0 0" axis="1 0 0" limited="true" range="-9.42478 9.42478" />
+                        <geom size="0.071 0.02866" quat="0.5 0.5 -0.5 -0.5" type="cylinder" />
+                        
+                        <geom size="0.066415 0.04151 0.02866" pos="0 0.066415 0" quat="0.5 0.5 -0.5 -0.5" type="mesh" mesh="shank" material="mat_shank" />
+                        <geom size="0.066415 0.04151 0.02866" pos="0 0.066415 0" quat="0.5 0.5 -0.5 -0.5" type="box" contype="0" conaffinity="0"/>
+
+                        <geom size="0.0175 0.19786" pos="0.00535885 0.1 -0.164217" quat="0.707107 0 0 -0.707107" type="cylinder" contype="0" conaffinity="0"/>
+                        <geom size="0.031455" pos="0.0141088 0.1 -0.362077" quat="0.707107 0 0 -0.707107" contype="0" conaffinity="0"/>
+                        <geom size="0.031455" pos="0.0141088 0.1 -0.362077" type="mesh" mesh="foot" material="mat_foot"/>
+                    </body>
+                </body>
+            </body>
+            <body name="RH_HIP" pos="-0.304 -0.109 0" quat="0 0 0 -1">
+                <inertial pos="0.035047 -0.00122677 0" quat="0.502484 0.502593 0.497424 0.497473" mass="0.36586" diaginertia="0.000558279 0.000443321 0.00023849" />
+                <joint name="RH_HAA" pos="0 0 0" axis="-1 0 0" limited="true" range="-0.610865 0.785398" />
+                <body name="RH_THIGH" pos="0.069 0.006 0" quat="0.707107 0 0 -0.707107">
+                    <inertial pos="-0.0905113 -8.79548e-05 -0.140188" quat="0.99036 -0.00771405 0.1034 -0.0918509" mass="5.1322" diaginertia="0.109149 0.107919 0.00970372" />
+                    <joint name="RH_HFE" pos="0 0 0" axis="1 0 0" limited="true" range="-9.42478 9.42478" />
+
+                    <geom size="0.05375 0.0595" pos="-0.0595 0 0" quat="0.707107 0 0.707107 0" type="mesh" mesh="drive" material="mat_drive"/>
+                    <geom size="0.05375 0.0595" pos="-0.0595 0 0" quat="0.707107 0 0.707107 0" type="cylinder" contype="0" conaffinity="0"/>
+
+                    <geom size="0.07 0.041565" pos="-0.105195 0 0" quat="0.5 0.5 -0.5 -0.5" type="cylinder" />
+                    
+                    <geom size="0.0465 0.0315 0.1425" pos="-0.09513 0 -0.1425" quat="0.707107 0 0 -0.707107" type="mesh" mesh="thigh" material="mat_thigh" />
+                    <geom size="0.0465 0.0315 0.1425" pos="-0.09513 0 -0.1425" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0"/>
+                    
+                    <geom size="0.07 0.041565" pos="-0.085065 0 -0.285" quat="0.5 0.5 -0.5 -0.5" type="cylinder" />
+                    
+                    <geom size="0.05375 0.0595" pos="-0.121 0 -0.285" quat="0 0.707107 0 -0.707107" type="mesh" mesh="drive" material="mat_drive"/>
+                    <geom size="0.05375 0.0595" pos="-0.121 0 -0.285" quat="0 0.707107 0 -0.707107" type="cylinder" contype="0" conaffinity="0"/>
+                    
+                    <body name="RH_SHANK" pos="-0.1805 0 -0.285" quat="0 0 0 -1">
+                        <inertial pos="0.00808591 -0.0509335 -0.0900193" quat="0.99296 -0.116018 -0.004155 -0.0235265" mass="0.79598" diaginertia="0.0189142 0.0175029 0.00168996" />
+                        <joint name="RH_KFE" pos="0 0 0" axis="-1 0 0" limited="true" range="-9.42478 9.42478" />
+                        <geom size="0.071 0.02866" quat="0.5 0.5 0.5 0.5" type="cylinder" />
+
+                        <geom size="0.066415 0.04151 0.02866" pos="0 -0.066415 0" quat="0.5 0.5 0.5 0.5" type="mesh" mesh="shank_mirror" material="mat_shank"  />
+                        <geom size="0.066415 0.04151 0.02866" pos="0 -0.066415 0" quat="0.5 0.5 0.5 0.5" type="box" contype="0" conaffinity="0"/>
+
+                        <geom size="0.0175 0.19786" pos="0.00535885 -0.1 -0.164217" quat="0.707107 0 0 0.707107" type="cylinder" contype="0" conaffinity="0"/>
+                        <geom size="0.031455" pos="0.0141088 -0.1 -0.362077" quat="0.707107 0 0 0.707107" contype="0" conaffinity="0"/>
+                        <geom size="0.031455" pos="0.0141088 -0.1 -0.362077" type="mesh" mesh="foot" material="mat_foot"/>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+</mujoco>

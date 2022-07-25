@@ -1,0 +1,15 @@
+# # Publish all joint states
+# joint_state_controller:
+#   type: joint_state_controller/JointStateController
+#   publish_rate: 70
+
+# LIDAR rotor
+rotor:
+  type: effort_controllers/JointVelocityController
+  joint: nav_base_link_to_encoder_rotating_link
+  pid: {p: 1, i: 0.0, d: 0.0}
+
+imu_joint:
+  type: effort_controllers/JointVelocityController
+  joint: nav_base_link_to_imu
+  pid: {p: 1, i: 0.0, d: 0.0}

@@ -1,0 +1,44 @@
+Mass properties of Titan V2 Top Level Asembly
+     Configuration: Default
+     Coordinate system: Sim
+
+Mass = 98424.72 grams
+
+Volume = 45286437.68 cubic millimeters
+
+Surface area = 8492248.78  square millimeters
+
+Center of mass: ( millimeters )
+	X = 51.74
+	Y = 0.51
+	Z = 173.77
+
+Principal axes of inertia and principal moments of inertia: ( grams *  square millimeters )
+Taken at the center of mass.
+	 Ix = (-1.00,  0.00, -0.03)   	Px = 3453246125.69
+	 Iy = ( 0.00, -1.00,  0.00)   	Py = 14159336910.45
+	 Iz = (-0.03,  0.00,  1.00)   	Pz = 15316621818.06
+
+Moments of inertia: ( grams *  square millimeters )
+Taken at the center of mass and aligned with the output coordinate system.
+	Lxx = 3461743011.78	Lxy = -7679914.76	Lxz = 317272173.06
+	Lyx = -7679914.76	Lyy = 14159354209.54	Lyz = -5367917.40
+	Lzx = 317272173.06	Lzy = -5367917.40	Lzz = 15308107632.89
+
+Moments of inertia: ( grams *  square millimeters )
+Taken at the output coordinate system.
+	Ixx = 6433797478.59	Ixy = -5085928.75	Ixz = 1202156550.16
+	Iyx = -5085928.75	Iyy = 17394846373.43	Iyz = 3344408.95
+	Izx = 1202156550.16	Izy = 3344408.95	Izz = 15571596409.29
+
+One or more components have overridden mass properties:
+	Component6.step<1><Default>@Component5.step<1><Default>@TubMotorsGearboxesControllerBatteries.step<1><Default>@TubMotorsGearboxesControllerBatteries<1><Default>
+	(Unsaved)-4.step<1><Default>@TubMotorsGearboxesControllerBatteries.step<1><Default>@TubMotorsGearboxesControllerBatteries<1><Default>
+	TitanBatteries<1><Default>@TubMotorsGearboxesControllerBatteries<1><Default>
+	DSH1_EOA_ESTOP_84-5140_0020_19017_434<1><Default>@DSH1_0007_estop_assembly<1><Default>@DSH1_ASM_E-Stop_DARPA<1><Default>
+	DX-1100-20190814<1><Default>@ASM_Avionics<1><Default>
+	B62SR24015AC<1><Default>@Power_Distribution_Stackup<1><Default>@ASM_Avionics<1><Default>
+	Titan Power Distribution<1><Default>@Power_Distribution_Stackup<1><Default>@ASM_Avionics<1><Default>
+	Contactor_Inrush_Control<1><Default>@Power_Distribution_Stackup<1><Default>@ASM_Avionics<1><Default>
+	Perception_Power_V1_1<1><Default>@PowerPCB_Stackup<1><Default>@ASM_Avionics<1><Default>
+	Payload Power Adapter<1><Default>@PowerPCB_Stackup<1><Default>@ASM_Avionics<1><Default>

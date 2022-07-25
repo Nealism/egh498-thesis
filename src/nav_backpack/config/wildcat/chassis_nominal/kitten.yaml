@@ -1,0 +1,6 @@
+# Nominal values for a bounding box to include only self-strikes when sitting on a flat surface.
+SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER:
+ type: BOX
+ parameters:
+  dimensions: [3,2,1.6]
+  shouldKeepPointsInside: true

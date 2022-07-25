@@ -1,0 +1,23 @@
+<sdf version="1.6">
+  <world name="test">
+    <physics name="1ms" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <scene>
+      <ambient>0.2 0.2 0.2 1.0</ambient>
+      <background>0.34 0.39 0.43 1.0</background>
+      <grid>false</grid>
+      <origin_visual>false</origin_visual>
+    </scene>
+
+   <light name="sun" type="directional">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.8 0.8 0.8 1</specular>
+      <direction>0.5 0.1 -0.9</direction>
+    </light>
+  <model name="heightmap"><static>true</static><link name="heightmap"><visual name="heightmap_visual"><pose>0 0 0 0 0 0</pose><geometry><heightmap><uri>/home/tid010/Dropbox/csiro_ws/src/behaviour_rl_nav/gazebo/worlds/heightmap_test.png</uri><size>100 100 1</size></heightmap></geometry><material><ambient>1 0 0 1</ambient><diffuse>1 0 0 1</diffuse><specular>0.1 0.1 0.1 1</specular><emissive>0 0 0 0</emissive></material></visual><collision name="heightmap_collision"><pose>0 0 0 0 0 0</pose><geometry><heightmap><uri>/home/tid010/Dropbox/csiro_ws/src/behaviour_rl_nav/gazebo/worlds/heightmap_test.png</uri><size>100 100 1</size></heightmap></geometry></collision></link></model></world>
+</sdf>

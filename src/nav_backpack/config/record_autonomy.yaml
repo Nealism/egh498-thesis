@@ -1,0 +1,18 @@
+directory: /data/record # must exist
+bag_size: 2000 # Megabytes
+min_space: 40000 # Megabytes
+# Topics should be local to autonomy or small. Perception recorded elsewhere.
+topics: [
+    tf_static,
+    tf,
+    waypoint/cancel,
+    waypoint/goal,
+  ]
+static_files: [
+    $(arg config_local_path_planner),
+    $(arg config_ohm_mapping),
+    $(arg config_safety),
+    $(arg config_teb_local_planner),
+    $(arg config_traversability),
+    $(arg config_velocity_generator),
+  ]

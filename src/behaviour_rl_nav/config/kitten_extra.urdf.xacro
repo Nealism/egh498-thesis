@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="titan_nav_backpack">
+
+  <!-- This is included by $(find titan_gazebo)/models/titan/model.urdf.xacro -->
+
+  <!-- Include the nav backpack -->
+  <xacro:include filename="$(find nav_backpack)/models/nav_backpack/model.urdf.xacro"/>
+  <xacro:arg name="nav_namespace" default="$(arg namespace)/nav"/>
+  <xacro:arg name="spawn_cameras" default="true"/>
+  <xacro:arg name="spawn_logical_cameras" default="true"/>
+  <xacro:arg name="spawn_lights" default="true"/>
+  <xacro:nav_backpack namespace="$(arg nav_namespace)" parent="base_link" spawn_cameras="$(arg spawn_cameras)"
+                spawn_logical_cameras="$(arg spawn_logical_cameras)" spawn_lights="$(arg spawn_lights)"
+                x="0.433" y="0.0" z="0.423"/>
+</robot>

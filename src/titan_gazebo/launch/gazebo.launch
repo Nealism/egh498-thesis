@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="robot_name" default="titan"/>
+  <arg name="dynamic_sim" default="false"/>
+  <arg name="panda_arm" default="false"/>
+  <arg name="panda_moveit" default="true"/>
+  <arg name="teleop" default="true"/>
+  <arg name="joy_dev" default="/dev/input/js0"/>
+
+  <!-- Path to world to load -->
+  <arg name="world" default="$(find titan_gazebo)/worlds/little_orchard.world"/>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="debug" value="false"/>
+    <arg name="extra_gazebo_args" value=""/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
+    <arg name="paused" value="true"/>
+    <arg name="physics" value="ode"/>
+    <arg name="recording" value="false"/>
+    <arg name="respawn_gazebo" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="verbose" value="true"/>
+    <arg name="world_name" value="$(arg world)"/>
+  </include>
+
+  <group if="$(arg teleop)" ns="$(arg robot_name)">
+
+    <rosparam command="load" file="$(find titan_gazebo)/config/teleop.yaml"/>
+
+    <node pkg="joy" type="joy_node" name="joy_node">
+      <param name="dev" value="$(arg joy_dev)" />
+    </node>
+
+    <node pkg="teleop_twist_joy" name="teleop_twist_joy" type="teleop_node"/>
+
+  </group>
+
+  <include ns="$(arg robot_name)" file="$(find titan_gazebo)/launch/sim.launch">
+    <arg name="init_pose" value="-x 0 -y 0 -z 0.3"/>
+    <arg name="is_ros_cmd_vel_stamped" value="false"/>
+    <arg name="namespace" value="/$(arg robot_name)"/>
+    <arg name="model_name" value="$(arg robot_name)"/>
+    <arg name="dynamic_sim" value="$(arg dynamic_sim)"/>
+    <arg name="panda_arm" value="$(arg panda_arm)"/>
+    <arg name="panda_moveit" value="$(arg panda_moveit)"/>
+  </include>
+
+</launch>

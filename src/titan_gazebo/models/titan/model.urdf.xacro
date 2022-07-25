@@ -1,0 +1,241 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="titan">
+
+  <xacro:arg name="colour" default="Orange"/>
+  <xacro:arg name="extra_urdf" default=""/>
+  <xacro:arg name="is_ros_cmd_vel_stamped" default="true"/>
+  <xacro:arg name="max_track_vel" default="2.0"/>
+  <xacro:arg name="model_name" default="titan"/>
+  <xacro:arg name="namespace" default="titan"/>
+  <xacro:arg name="spawn_arm" default="true"/>
+  <xacro:arg name="timeout" default="10.0"/>
+  <xacro:arg name="track_accel" default="4.0"/>
+  <xacro:arg name="ros_cmd_vel_topic" default="$(arg namespace)/cmd_vel"/>
+
+  <link name="base_link"/>
+
+  <xacro:property name="chassis_dx" value="1.34135"/>
+  <xacro:property name="chassis_dy" value="0.768"/>
+  <xacro:property name="chassis_dz" value="0.33726"/>
+  <xacro:property name="track_dx" value="1.34184"/>
+  <xacro:property name="track_dy" value="0.2"/>
+  <xacro:property name="track_dz" value="0.4575"/>
+  <xacro:property name="track_x" value="0.08"/>
+  <xacro:property name="track_y" value="${chassis_dy / 2 - track_dy / 2 - 0.015}"/>
+  <xacro:property name="track_z" value="-0.15"/>
+
+  <xacro:include filename="$(find titan_gazebo)/models/dynamic_titan/inertia/sw_inertia_tensors.xacro"/>
+  <link name="$(arg model_name)_chassis">
+    <xacro:body_inertial/>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find titan_gazebo)/models/dynamic_titan/meshes/Titan_Visual.dae" scale="1.0 1.0 1.0"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find titan_gazebo)/models/dynamic_titan/meshes/Titan_Collision.STL" scale="1.0 1.0 1.0"/>
+      </geometry>
+    </collision>
+  </link>
+  <gazebo reference="$(arg model_name)_chassis">
+    <material>Gazebo/$(arg colour)</material>
+    <selfCollide>false</selfCollide>
+  </gazebo>
+  <joint name="base_link_to_$(arg model_name)_chassis" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="$(arg model_name)_chassis"/>
+  </joint>
+  <gazebo reference="base_link_to_$(arg model_name)_chassis">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+
+  <xacro:include filename="$(find titan_gazebo)/models/track/track.urdf.xacro"/>
+
+  <link name="$(arg model_name)_track_left">
+    <inertial>
+      <origin xyz="-0.03 0.00 0.22"/>
+      <mass value="25.00"/>
+      <inertia ixx="0.68" ixy="0.00" ixz="0.04"
+                          iyy="4.74" iyz="0.00"
+                                     izz="4.18"/>
+    </inertial>
+    <visual>
+      <origin xyz="${track_dx / 2} ${track_dy / 2} 0" rpy="${pi / 2} 0 ${-pi / 2}"/>
+      <geometry>
+        <mesh filename="file://$(find titan_gazebo)/models/titan/meshes/Track_Assembly.STL" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+    <xacro:titan_track_geometry visual="false" collision="true" width="${track_dy}"/>
+  </link>
+  <gazebo reference="$(arg model_name)_track_left">
+    <material>Gazebo/DarkGrey</material>
+    <selfCollide>false</selfCollide>
+  </gazebo>
+  <joint name="$(arg model_name)_chassis_to_$(arg model_name)_track_left" type="fixed">
+    <origin xyz="${track_x} ${+track_y} ${track_z}" rpy="0 0 0"/>
+    <parent link="$(arg model_name)_chassis"/>
+    <child link="$(arg model_name)_track_left"/>
+  </joint>
+  <gazebo reference="$(arg model_name)_chassis_to_$(arg model_name)_track_left">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+
+  <link name="$(arg model_name)_track_right">
+    <inertial>
+      <origin xyz="-0.03 0.00 0.22"/>
+      <mass value="25.00"/>
+      <inertia ixx="0.68" ixy="0.00" ixz="0.04"
+                          iyy="4.74" iyz="0.00"
+                                     izz="4.18"/>
+    </inertial>
+    <visual>
+      <origin xyz="${track_dx / 2} ${track_dy / 2} 0" rpy="${pi / 2} 0 ${-pi / 2}"/>
+      <geometry>
+        <mesh filename="file://$(find titan_gazebo)/models/titan/meshes/Track_Assembly.STL" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+    <xacro:titan_track_geometry visual="false" collision="true" width="${track_dy}"/>
+  </link>
+  <gazebo reference="$(arg model_name)_track_right">
+    <material>Gazebo/DarkGrey</material>
+    <selfCollide>false</selfCollide>
+  </gazebo>
+  <joint name="$(arg model_name)_chassis_to_$(arg model_name)_track_right" type="fixed">
+    <origin xyz="${track_x} ${-track_y} ${track_z}" rpy="0 0 0"/>
+    <parent link="$(arg model_name)_chassis"/>
+    <child link="$(arg model_name)_track_right"/>
+  </joint>
+  <gazebo reference="$(arg model_name)_chassis_to_$(arg model_name)_track_right">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+
+  <!-- Include the panda arm -->
+  <xacro:if value="$(arg spawn_arm)">
+    <xacro:include filename="$(find panda_arm_gazebo)/robots/panda_arm.xacro"/>
+    <xacro:panda_arm namespace="$(arg namespace)" parent="base_link" arm_id="panda" spawn_hand="true"
+                     xyz="-0.3 0 0.3" rpy="0 0 0"/>
+  </xacro:if>
+
+  <gazebo>
+    <xacro:unless value="$(arg spawn_arm)">
+      <plugin filename="libgazebo_ros_control.so" name="$(arg model_name)_gazebo_ros_control">
+        <robotDescription>titan_description</robotDescription>
+        <robotBaseLink>base_link</robotBaseLink>
+        <statePublisherRate>200.0</statePublisherRate>
+        <robotNamespace>$(arg namespace)</robotNamespace>
+      </plugin>
+    </xacro:unless>
+
+    <plugin filename="libtitan_gazebo_tracks.so" name="$(arg model_name)_simple_tracked_vehicle">
+      <!--
+        Commands are Pose:
+          * position: x is used as the linear speed, clamped to
+                      [-max_linear_speed, +max_linear_speed]
+          * orientation: converted to euler rotation then the z angle is used as
+                         the yaw rate (per second) clamped to
+                         [-max_angular_speed, +max_angular_speed]
+                         (this means angular cannot reach pi rad/s)
+
+        Track velocities are then calculated as:
+        leftVelocity = linearSpeed + angularSpeed * tracksSeparation / 2 / steeringEfficiency
+        rightVelocity = linearSpeed - angularSpeed * tracksSeparation / 2 / steeringEfficiency
+        Note that this is backwards if z is upward.
+
+        This is then converted back to linear+angular:
+        linearSpeed = (leftBeltSpeed + rightBeltSpeed) / 2
+        angularSpeed = -(leftBeltSpeed - rightBeltSpeed) * steeringEfficiency / tracksSeparation
+
+        Turn radius is calculated:
+        desiredRotationRadiusSigned =
+          if fabs(angularSpeed) < 0.1 then
+            infinity (straight)
+          else
+            if fabs(linearSpeed) < 0.1 then
+              0 (turn on spot)
+            else
+              linearSpeed / angularSpeed (turn while moving)
+            endif
+          endif
+
+        From here on the code in SimpleTrackedVehiclePlugin gets more convoluted
+        than I care to understand currently, but the friction in the tracks'
+        contacts is used to produce the surface motion.
+      -->
+
+      <!-- SimpleTrackedVehiclePlugin -->
+      <body>$(arg model_name)_chassis</body>
+      <collide_without_contact_bitmask>1</collide_without_contact_bitmask>
+      <left_track>$(arg model_name)_track_left</left_track>
+      <right_track>$(arg model_name)_track_right</right_track>
+
+      <!-- TrackedVehiclePlugin -->
+      <max_track_velocity>$(arg max_track_vel)</max_track_velocity>
+      <track_acceleration>$(arg track_accel)</track_acceleration>
+      <robot_namespace>$(arg namespace)</robot_namespace>
+      <steering_efficiency>1.0</steering_efficiency>
+      <track_mu>1.0</track_mu> <!-- along tracks -->
+      <track_mu2>0.7</track_mu2> <!-- across tracks -->
+      <tracks_separation>0.8</tracks_separation>
+    </plugin>
+
+    <plugin filename="libtitan_gazebo_ros.so" name="$(arg model_name)_titan_gazebo_ros">
+      <!--
+        Commands are Twist that are converted into Pose and then sent to
+            SimpleTrackedVehiclePlugin.
+          * linear -> position
+          * angular -> orientation (euler to quaternion using ignition math and
+                       negating z)
+      -->
+      <is_ros_cmd_vel_stamped>$(arg is_ros_cmd_vel_stamped)</is_ros_cmd_vel_stamped>
+      <robot_namespace>$(arg namespace)</robot_namespace>
+      <ros_cmd_vel_topic>$(arg ros_cmd_vel_topic)</ros_cmd_vel_topic>
+      <timeout>$(arg timeout)</timeout>
+    </plugin>
+
+  </gazebo>
+
+  <xacro:property name="extra_urdf" value="$(arg extra_urdf)"/>
+
+  <xacro:unless value="${extra_urdf == ''}">
+    <xacro:include filename="$(arg extra_urdf)"/>
+  </xacro:unless>
+  <xacro:if value="${extra_urdf == ''}"> <!-- Dummy head link or for some reason it doesn't generate -->
+    <link name="head_link">
+      <inertial>
+        <origin xyz="0 0 0"/>
+        <mass value="0.0001"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+      <visual>
+        <geometry>
+          <box size="0.01 0.01 0.01"/>
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.01 0.01 0.01"/>
+        </geometry>
+      </collision>
+    </link>
+    <gazebo reference="head_link">
+      <mu1>0.9</mu1>
+      <mu2>0.9</mu2>
+      <minDepth>0.005</minDepth>
+      <fdir1>1 0 0</fdir1>
+      <material>Gazebo/Black</material>
+      <selfCollide>true</selfCollide>
+      <gravity>true</gravity>
+    </gazebo>
+    <joint name="base_link_to_head_link" type="fixed">
+      <origin xyz="0.425 0 0.29" rpy="0 0 0"/>
+      <parent link="base_link"/>
+      <child link="head_link"/>
+    </joint>
+  </xacro:if>
+
+</robot>

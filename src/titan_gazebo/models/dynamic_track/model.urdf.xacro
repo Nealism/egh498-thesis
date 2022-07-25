@@ -1,0 +1,228 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="titan_track">
+
+  <xacro:arg name="model_name" default="titan"/>
+  <xacro:arg name="namespace" default="/titan"/>
+
+  <xacro:macro name="titan_track_wheel" params="name parent width x y z alpha travel radius">
+
+    <xacro:property name="wheel_mass" value="2.0"/>
+    <xacro:property name="suspension_stop_mass" value="1.0"/>
+    <xacro:property name="suspension_stop_radius" value="${radius*0.5}"/>
+
+  <!-- include inertia tensors -->
+  <xacro:include filename="$(find titan_gazebo)/models/dynamic_titan/inertia/standard_inertia_tensors.xacro"/>
+
+    <!-- define the suspension link-->
+    <link name="${name}_suspension_start">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="0.01"/>
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${suspension_stop_radius}"/>
+        </geometry>
+      </collision>
+      <xacro:sphere_inertial radius="${suspension_stop_radius}" mass="${suspension_stop_mass}"/>
+    </link>
+
+    <gazebo reference="${name}_suspension_start">
+      <material>Gazebo/DarkGrey</material>
+      <selfCollide>false</selfCollide>
+    </gazebo>
+
+    <!-- define the transform between the base link and the suspension -->
+    <joint name="${parent}_to_${name}_joint" type="fixed">
+      <origin xyz="${x} ${y} ${z}" rpy="0 ${alpha} 0"/>
+      <parent link="${parent}"/>
+      <child link="${name}_suspension_start"/>
+    </joint>
+
+    <!-- define the suspension end -->
+    <link name="${name}_suspension_end">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="0.01"/>
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${suspension_stop_radius}"/>
+        </geometry>
+      </collision>
+      <xacro:sphere_inertial radius="${suspension_stop_radius}" mass="${suspension_stop_mass}"/>
+    </link>
+
+    <gazebo reference="${name}_suspension_end">
+      <material>Gazebo/DarkGrey</material>
+      <selfCollide>false</selfCollide>
+    </gazebo>
+
+    <joint name="${name}_suspension_joint" type="prismatic">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${name}_suspension_start"/>
+      <child link="${name}_suspension_end"/>
+      <axis xyz="0 0 -1"/>
+      <limit lower="0.0" upper="${travel}" effort="1e9" velocity="1e9"/>
+      <dynamics damping="${0.5 + 0.5 * x * x}" friction="0.0"/>
+    </joint>
+
+    <gazebo>
+      <plugin filename="libtitan_gazebo_suspension_ros.so" name="${name}_suspension_ros">
+        <robot_namespace>$(arg namespace)</robot_namespace>
+        <joint_name>${name}_suspension_joint</joint_name>
+        <suspension_stiffness>${150 + 300 * x * x}</suspension_stiffness>
+        <suspension_preload>${140 + 50 * x * x}</suspension_preload>
+        <suspension_damping>400</suspension_damping>
+        <suspension_reference>0.10</suspension_reference>
+      </plugin>
+    </gazebo>
+
+    <transmission name="${name}_suspension_tran">
+      <type>transmission_interface/SimpleTransmission</type>
+
+      <joint name="${name}_suspension_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+
+      <actuator name="${name}_suspension_motor">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+    <!-- define the wheel -->
+    <link name="${name}_wheel">
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="${radius}" length="${width}"/>
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="${radius}" length="${width}"/>
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertial radius="${radius}" length="${width}" mass="${wheel_mass}"/>
+    </link>
+
+		<gazebo reference="${name}_wheel">
+      <material>Gazebo/DarkGrey</material>
+      <selfCollide>false</selfCollide>
+			<kp value="10000000.0" />
+			<kd value="1.0" />
+			<collision>
+			  <surface>
+			    <friction>
+			      <ode>
+
+              <xacro:if value="${x == 0}">
+                <mu>1.0</mu>
+                <mu2>1.0</mu2>
+              </xacro:if>
+              <xacro:unless value="${x == 0}">
+                <mu>1.0</mu>
+                <mu2>${1.0 - x*x}</mu2>
+              </xacro:unless>
+
+			        <fdir1>1 0 0</fdir1>
+			      </ode>
+			    </friction>
+			  </surface>
+			</collision>
+		</gazebo>
+
+    <joint name="${name}_wheel_joint" type="continuous">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${name}_suspension_end"/>
+      <child link="${name}_wheel"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="1e3" velocity="1e3"/>
+      <dynamics damping="1.0" friction="0.0"/>
+    </joint>
+
+    <transmission name="${name}_wheel_tran">
+      <type>transmission_interface/SimpleTransmission</type>
+
+      <joint name="${name}_wheel_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+
+      <actuator name="${name}_wheel_motor">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+  </xacro:macro>
+
+
+  <xacro:macro name="titan_track_geometry" params="name parent x_offset y_offset z_offset width">
+
+    <xacro:property name="wheel_radius" value="0.14"/>
+
+    <!-- Front angle rollers -->
+
+    <xacro:titan_track_wheel name="${name}_1" parent="${parent}" width="${width}" x="${x_offset+0.71-0.084}" y="${y_offset}" z="${z_offset+0.22-0.054}"
+                              alpha="-1.0" travel="0.05" radius="${wheel_radius}"/>
+
+    <xacro:titan_track_wheel name="${name}_2" parent="${parent}" width="${width}" x="${x_offset+0.57-0.084}" y="${y_offset}" z="${z_offset+0.10-0.054}"
+                              alpha="-1.0" travel="0.1" radius="${wheel_radius}"/>
+
+    <!-- Center section rollers -->
+    <xacro:titan_track_wheel name="${name}_3" parent="${parent}" width="${width}" x="${x_offset+0.48-0.048}" y="${y_offset}" z="${z_offset+0.00}"
+                              alpha="-0.5" travel="0.1" radius="${wheel_radius}"/>
+
+    <xacro:titan_track_wheel name="${name}_4" parent="${parent}" width="${width}" x="${x_offset+0.32}" y="${y_offset}" z="${z_offset+0.00}"
+                              alpha="0.00" travel="0.1" radius="${wheel_radius}"/>
+
+    <xacro:titan_track_wheel name="${name}_5" parent="${parent}" width="${width}" x="${x_offset+0.16}" y="${y_offset}" z="${z_offset+0.00}"
+                              alpha="0.00" travel="0.1" radius="${wheel_radius}"/>
+
+    <xacro:titan_track_wheel name="${name}_6" parent="${parent}" width="${width}" x="${x_offset+0.00}" y="${y_offset}" z="${z_offset+0.00}"
+                              alpha="0.00" travel="0.1" radius="${wheel_radius}"/>
+
+    <xacro:titan_track_wheel name="${name}_7" parent="${parent}" width="${width}" x="${x_offset-0.16}" y="${y_offset}" z="${z_offset+0.00}"
+                              alpha="0.00" travel="0.1" radius="${wheel_radius}"/>
+
+    <xacro:titan_track_wheel name="${name}_8" parent="${parent}" width="${width}" x="${x_offset-0.32}" y="${y_offset}" z="${z_offset+0.00}"
+                              alpha="0.00" travel="0.1" radius="${wheel_radius}"/>
+
+    <xacro:titan_track_wheel name="${name}_9" parent="${parent}" width="${width}" x="${x_offset-0.48+0.055}" y="${y_offset}" z="${z_offset+0.00}"
+                              alpha="0.59" travel="0.1" radius="${wheel_radius}"/>
+
+    <!-- Rear Section Rollers -->
+    <xacro:titan_track_wheel name="${name}_10" parent="${parent}" width="${width}" x="${x_offset-0.57+0.093}" y="${y_offset}" z="${z_offset+0.08-0.036}"
+                              alpha="1.18" travel="0.1" radius="${wheel_radius}"/>
+
+    <xacro:titan_track_wheel name="${name}_11" parent="${parent}" width="${width}" x="${x_offset-0.65+0.093}" y="${y_offset}" z="${z_offset+0.20-0.036}"
+                              alpha="1.18" travel="0.05" radius="${wheel_radius}"/>
+
+  </xacro:macro>
+
+
+  <xacro:macro name="titan_track" params="name width">
+
+    <link name="${name}">
+
+      <inertial>
+        <origin xyz="0 0 0"/>
+        <mass value="100"/>
+        <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+      </inertial>
+
+      <xacro:titan_track_geometry visual="true" collision="true" width="${width}"/>
+
+    </link>
+
+  </xacro:macro>
+
+</robot>

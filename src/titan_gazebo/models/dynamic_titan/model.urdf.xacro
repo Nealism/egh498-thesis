@@ -1,0 +1,141 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="titan">
+
+  <xacro:arg name="colour" default="Orange"/>
+  <xacro:arg name="extra_urdf" default=""/>
+  <xacro:arg name="is_ros_cmd_vel_stamped" default="true"/>
+  <xacro:arg name="model_name" default="titan"/>
+  <xacro:arg name="namespace" default="titan"/>
+  <xacro:arg name="ros_cmd_vel_topic" default="$(arg namespace)/cmd_vel"/>
+  <xacro:arg name="timeout" default="10.0"/>
+
+  <xacro:arg name="max_track_vel" default="4.0"/>
+  <xacro:arg name="track_accel" default="12.0"/>
+
+  <xacro:arg name="spawn_arm" default="true"/>
+
+  <link name="base_link"/>
+
+  <xacro:property name="chassis_dx" value="1.34135"/>
+  <xacro:property name="chassis_dy" value="0.768"/>
+  <xacro:property name="chassis_dz" value="0.33726"/>
+  <xacro:property name="track_dx" value="1.34184"/>
+  <xacro:property name="track_dy" value="0.2"/>
+  <xacro:property name="track_dz" value="0.4575"/>
+  <xacro:property name="track_x" value="0.03"/>
+  <xacro:property name="track_y" value="${chassis_dy / 2 - track_dy / 2 - 0.015}"/>
+  <xacro:property name="track_z" value="0.05"/>
+
+<!-- include inertia tensors -->
+  <xacro:include filename="$(find titan_gazebo)/models/dynamic_titan/inertia/sw_inertia_tensors.xacro"/>
+
+  <!-- define chassis link -->
+  <link name="$(arg model_name)_chassis">
+    <xacro:body_inertial/>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find titan_gazebo)/models/dynamic_titan/meshes/Titan_Visual.dae" scale="1.0 1.0 1.0"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find titan_gazebo)/models/dynamic_titan/meshes/Titan_Collision.STL" scale="1.0 1.0 1.0"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <gazebo reference="$(arg model_name)_chassis">
+    <material>Gazebo/$(arg colour)</material>
+    <selfCollide>false</selfCollide>
+  </gazebo>
+
+  <joint name="base_link_to_$(arg model_name)_chassis" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="$(arg model_name)_chassis"/>
+  </joint>
+
+  <!-- include tracks -->
+  <xacro:include filename="$(find titan_gazebo)/models/dynamic_track/model.urdf.xacro"/>
+
+  <!-- define left track -->
+  <xacro:titan_track_geometry name="left" parent="base_link" x_offset="0.0" y_offset="${track_y}" z_offset="${track_z}" width="${track_dy}"/>
+
+  <!-- define right track -->
+  <xacro:titan_track_geometry name="right" parent="base_link" x_offset="0.0" y_offset="${-track_y}" z_offset="${track_z}" width="${track_dy}"/>
+
+  <!-- Include the panda arm -->
+  <xacro:if value="$(arg spawn_arm)">
+    <xacro:include filename="$(find panda_arm_gazebo)/robots/panda_arm.xacro"/>
+    <xacro:panda_arm namespace="$(arg namespace)" parent="base_link" arm_id="$(arg model_name)" spawn_hand="true"
+                     xyz="-0.2 0 0.3" rpy="0 0 0"/>
+  </xacro:if>
+
+  <gazebo>
+    <xacro:unless value="$(arg spawn_arm)">
+      <plugin filename="libgazebo_ros_control.so" name="$(arg model_name)_gazebo_ros_control">
+        <robotDescription>titan_description</robotDescription>
+        <robotBaseLink>base_link</robotBaseLink>
+        <statePublisherRate>200.0</statePublisherRate>
+        <robotNamespace>$(arg namespace)</robotNamespace>
+      </plugin>
+    </xacro:unless>
+
+    <plugin filename="libdynamic_titan_gazebo_ros.so" name="$(arg model_name)_dynamic_titan_gazebo_ros">
+      <is_ros_cmd_vel_stamped>$(arg is_ros_cmd_vel_stamped)</is_ros_cmd_vel_stamped>
+      <robot_namespace>$(arg namespace)</robot_namespace>
+      <ros_cmd_vel_topic>$(arg ros_cmd_vel_topic)</ros_cmd_vel_topic>
+      <timeout>$(arg timeout)</timeout>
+      <steering_efficiency>1.0</steering_efficiency>
+      <track_separation>0.8</track_separation>
+      <wheel_radius>0.14</wheel_radius>
+      <max_track_velocity>$(arg max_track_vel)</max_track_velocity>
+      <track_acceleration>$(arg track_accel)</track_acceleration>
+      <sim_rate>200</sim_rate>
+    </plugin>
+
+  </gazebo>
+
+  <xacro:property name="extra_urdf" value="$(arg extra_urdf)"/>
+
+  <xacro:unless value="${extra_urdf == ''}">
+    <xacro:include filename="$(arg extra_urdf)"/>
+  </xacro:unless>
+  <xacro:if value="${extra_urdf == ''}"> <!-- Dummy head link or for some reason it doesn't generate -->
+    <link name="head_link">
+      <inertial>
+        <origin xyz="0 0 0"/>
+        <mass value="0.0001"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+      <visual>
+        <geometry>
+          <box size="0.01 0.01 0.01"/>
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.01 0.01 0.01"/>
+        </geometry>
+      </collision>
+    </link>
+    <gazebo reference="head_link">
+      <mu1>0.9</mu1>
+      <mu2>0.9</mu2>
+      <minDepth>0.005</minDepth>
+      <fdir1>1 0 0</fdir1>
+      <material>Gazebo/Black</material>
+      <selfCollide>true</selfCollide>
+      <gravity>true</gravity>
+    </gazebo>
+    <joint name="base_link_to_head_link" type="fixed">
+      <origin xyz="0.425 0 0.29" rpy="0 0 0"/>
+      <parent link="base_link"/>
+      <child link="head_link"/>
+    </joint>
+  </xacro:if>
+
+</robot>

@@ -1,0 +1,4412 @@
+---
+
+# Base wildcat config file for the nav backpack
+# Contains everything from offline to online global
+
+# Debug output options, configured via overrides
+debug: &debug
+ type: SIMPLE
+ parameters:
+  logger:
+   type: ROS_LOGGER
+   parameters:
+    namespace: "wildcat"
+    level: LOGGER_LEVEL
+  drawer: DEBUG_DRAWER
+
+# Options for logging progress
+taskMonitor: &task_monitor
+ type: ROS_TASK_MONITOR
+ parameters:
+  shouldUseAsync: false
+  shouldPoll: false
+  shouldLog: true
+  shouldLogStarts: true
+  shouldLogEnds: true
+  publish: true
+  topic: "slam/progress"
+
+# Available overrides
+# -- Calibrations --
+# IMU_IMU_ANGULAR_VELOCITY_TIME_OFFSET - Time offset for imu ang vels
+# IMU_IMU_LINEAR_ACCELERATION_TIME_OFFSET - Time offset for imu lin accs
+# IMU_STATIC_TRANSFORM_POSE_OFFSET - Pose offset for base_link->imu
+# GPS_STATIC_TRANSFORM_POSE_OFFSET - Pose offset for base_link->gps
+# VELODYNE_LASER_TIME_OFFSET - Time offset for velodyne data
+# VELODYNE_STATIC_TRANSFORM_POSE_OFFSET - Pose offset for encoder_rotating->velodyne
+# LASER_CALIBRATION_VALUES - Laser calibration values
+# ENCODER_ROTATING_DYNAMIC_TRANSFORM_TIME_OFFSET - Time offset for encoder data
+# ENCODER_CALIBRATION_VALUES - Encoder calibration values
+# ENCODER_FIXED_STATIC_TRANSFORM_POSE_OFFSET - Pose offset for base_link->encoder_fixed
+# -- Output options --
+# SHOULD_OUTPUT_ONLINE_RESULTS - If onlineX operations should output their results for usage in writeX operations
+# SHOULD_OUTPUT_ONLINE_MAPS - If online mapping results should be output, e.g. odom will output odom clouds
+# SHOULD_OUTPUT_PREVIEW_CLOUD - If preview clouds should be output, these are filtered/downsampled clouds
+# PREVIEW_CLOUD_VOXEL_RESOLUTION: 0.1 - The voxel filter resolution to use for the preview point clouds
+# -- Other --
+# AGENT_NAME - Name to assign to the agent for use with agent queries
+# INIT_FORWARD_AXIS - Forward axis for the purpose of initialization, this is lined up with X world space
+# TRANSFORM_STD_DEV - Transform std deviations for estimation, only enabled for calibration
+# TIMING_STD_DEV - Timing std deviations for estimation, only enabled for calibration
+# VELODYNE_FILTER - Filter to apply to velodyne data
+# SELF_STRIKE_SPHERICAL_IMAGE_VALUES - Spherical image to use to crop out the system slam is on
+# SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER - Filter to use to identify points that are 'self'
+# SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SPHERE_ORIGIN - Origin point for the self strike sphere, ie the velodyne origin in the base_link frame
+# ADDITIONAL_SELF_STRIKE_FILTER - Additional filter to run over the pointcloud data (base_link frame at the centre of lidar rotation position)
+# SHOULD_FILTER_ATLAS_FRAME_OUTPUT - If the atlas output frames should be filtered when stationary
+# ATLAS_SAME_START_POSE_PROVIDER - Hint provider for same-start poses for atlas
+# ATLAS_INITIAL_POSE_PROVIDER - Hint provider for initial poses
+# BASEMAP_INPUT_FILE - Input file for the basemap
+# BASEMAP_OUTPUT_FILE - Output file for the basemap
+# -- Debug/Output --
+# LOGGER_LEVEL - Logging level to use
+# DEBUG_DRAWER - Drawer to use
+
+# Groupings for override sinks
+overrideSinks:
+ # Upstream process generate a few that are currently unused
+ unused: &unused_override_sink [ENCODER_ROTATING_TO_LASER_CALIBRATION_VALUES, SAX_STATIC_TRANSFORM_POSE_OFFSET]
+
+# Default nominal overrides configures much of the basic stuff, but does not set actual calibrations, to stop accidental processing without calibrations
+nominalOverrides:
+ AGENT_NAME: wildcat
+ # For backwards compat with older calibs, provide a gps nominal
+ GPS_STATIC_TRANSFORM_POSE_OFFSET: [0,0,0, 1,0,0,0]
+ GPS_GPS_TIME_OFFSET: 0.0
+ # For backwards compat with older calibs, provide a landmark nominal
+ LANDMARK_STATIC_TRANSFORM_POSE_OFFSET: [0,0,0, 1,0,0,0]
+ # By default, treat the landmark as the dominant frame (GPS is secondary)
+ SHOULD_OPTIMIZE_LANDMARK_OFFSET: false
+ SHOULD_OPTIMIZE_GPS_OFFSET: true
+ # Self-strike calibs
+ SELF_STRIKE_SPHERICAL_IMAGE_VALUES: []
+ SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER:
+  type: BOX
+  parameters:
+   dimensions: [3,2,1.6]
+   shouldKeepPointsInside: true
+ SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SPHERE_ORIGIN: [0,0,0.12, 1,0,0,0]
+ # All valid velodyne data/rings
+ VELODYNE_FILTER: &full_velodyne_filter
+  type: COMPOUND
+  parameters:
+   filters:
+    - # Range
+     type: RANGE
+     parameters:
+      min: 0.6 # Under 0.6 the velodyne returns garbage
+ # If the online output clouds should be filtered
+ SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT: false
+ # Additional filters to run over the pointcloud data (base_link frame at the centre of lidar rotation position)
+ # By default we don't run any
+ ADDITIONAL_SELF_STRIKE_FILTER:
+  type: NONE
+ # No atlas frame filtering by default
+ SHOULD_FILTER_ATLAS_FRAME_OUTPUT: false
+ # Use tail frames for atlas by default for onlineOdom
+ SHOULD_OUTPUT_TAIL_ATLAS_FRAMES: true
+ SHOULD_OUTPUT_HIGH_ATLAS_FRAMES: false
+ # No online output results/maps
+ SHOULD_OUTPUT_ONLINE_RESULTS: false
+ SHOULD_OUTPUT_ONLINE_MAPS: false
+ SHOULD_OUTPUT_PREVIEW_CLOUD: false
+ PREVIEW_CLOUD_VOXEL_RESOLUTION: 0.1
+ # Default for no same start-up pose inputs
+ ATLAS_SAME_START_POSE_PROVIDER:
+  type: COMPOUND
+  parameters:
+   controllers: {}
+ # Default for no same initial pose inputs
+ ATLAS_INITIAL_POSE_PROVIDER:
+  type: COMPOUND
+  parameters:
+   controllers: {}
+ BASEMAP_INPUT_FILE: "basemap.basemap"
+ BASEMAP_OUTPUT_FILE: "basemap.basemap"
+ # Debug options
+ LOGGER_LEVEL: WARN
+ DEBUG_DRAWER: ~ # @note `~` is the yaml null equivalent
+
+# Log level overrides
+debugLoggingOverrides:
+ LOGGER_LEVEL: DEBUG
+infoLoggingOverrides:
+ LOGGER_LEVEL: INFO
+warnLoggingOverrides:
+ LOGGER_LEVEL: WARN
+errorLoggingOverrides:
+ LOGGER_LEVEL: ERROR
+
+# Drawing overrides
+debugDrawingOverrides:
+ DEBUG_DRAWER:
+  type: ROS_RVIZ
+  parameters:
+   fixedFrame: "map"
+   namespace: "wildcat"
+
+# Overrides for offline
+offlineOverrides:
+ # No calibration
+ TRANSFORM_STD_DEV: [0.0, 0]
+ TIMING_STD_DEV: 0.0
+ # Input bag files for offline pipelines
+ INPUT_RAW_BAG_FILES: ["input.bag"]
+
+# Overrides for online
+onlineOverrides:
+ # No calibration
+ TRANSFORM_STD_DEV: [0.0, 0]
+ TIMING_STD_DEV: 0.0
+
+# Overrides for the dynamic calibration
+dynamicCalibrationOverrides:
+ # Calibration
+ TRANSFORM_STD_DEV: [0.01, 1.0]
+ TIMING_STD_DEV: 0.0
+
+# Overrides for the static calibration
+staticCalibrationOverrides:
+ # No calibration
+ TRANSFORM_STD_DEV: [0.0, 0]
+ TIMING_STD_DEV: 0.0
+
+# Overrides to enable atlas frame filtering
+atlasFrameFilteringOverrides:
+ SHOULD_FILTER_ATLAS_FRAME_OUTPUT: true
+
+# Enable output of high atlas frames
+enableHighAtlasFrameOverrides:
+ SHOULD_OUTPUT_HIGH_ATLAS_FRAMES: true
+
+# Disable output of tail atlas frames
+disableTailAtlasFrameOverrides:
+ SHOULD_OUTPUT_TAIL_ATLAS_FRAMES: false
+
+# Enable online output of slam results (not maps)
+enableOnlineResultOutputOverrides:
+ SHOULD_OUTPUT_ONLINE_RESULTS: true
+
+# Enable online output of map results (if able)
+enableOnlineMapOutputOverrides:
+ SHOULD_OUTPUT_ONLINE_MAPS: true
+
+# Enable preview output of clouds
+enablePreviewCloudOutputOverrides:
+ SHOULD_OUTPUT_PREVIEW_CLOUD: true
+
+# Set the gps as the reference frame and fit against it
+# All other fixed-frame constraints will be floating
+useGpsAsReferenceOverrides:
+  SHOULD_OPTIMIZE_LANDMARK_OFFSET: true
+  SHOULD_OPTIMIZE_GPS_OFFSET: false
+
+# Set the landmark as the reference frame and fit against it
+# All other fixed-frame constraints will be floating
+useLandmarkAsReferenceOverrides:
+  SHOULD_OPTIMIZE_LANDMARK_OFFSET: false
+  SHOULD_OPTIMIZE_GPS_OFFSET: true
+
+# Assume that the starting pose is at the origin for the basemap for localization
+assumeAtlasStartPoseIsOriginInBasemapOverrides:
+ ATLAS_SAME_START_POSE_PROVIDER:
+  type: SAME_START_POSE_HINT_PROVIDER
+  parameters:
+   confidence:
+    # Provide confidence that is within the high range so the fine aligner is used
+    # [math.sqrt(target/6.0), math.degrees(math.sqrt(target/6.0))], where target is the high covariance thresholds
+    stdDev: [0.40, 6.0]
+   shouldUseOrientation: false
+   # List of agents that are **NOT** started in the same location
+   blacklist: []
+
+# Allow for initial pose inputs for atlas
+allowAtlasInitialPoseInputOverrides:
+ ATLAS_INITIAL_POSE_PROVIDER:
+  type: ROS_INITIAL_POSE_HINT_PROVIDER_TOPIC
+  parameters:
+   topic: slam/map/initial_poses
+   confidence:
+    stdDev: [2.5, 15.0]
+
+transforms: &all_transforms
+ wildcat_odom_pose_estimate:
+  type: STATIC_TRANSFORM
+  parameters:
+   transform:
+    data: [0,0,0, 1,0,0,0]
+ wildcat_global_pose_estimate:
+  type: STATIC_TRANSFORM
+  parameters:
+   transform:
+    data: [0,0,0, 1,0,0,0]
+ imu:
+  type: STATIC_TRANSFORM
+  parameters:
+   transform:
+    data: IMU_STATIC_TRANSFORM_POSE_OFFSET
+ gps:
+  type: STATIC_TRANSFORM
+  parameters:
+   transform:
+    data: GPS_STATIC_TRANSFORM_POSE_OFFSET
+    stdDev: TRANSFORM_STD_DEV
+ landmark:
+  type: STATIC_TRANSFORM
+  parameters:
+   transform:
+    data: LANDMARK_STATIC_TRANSFORM_POSE_OFFSET
+    stdDev: TRANSFORM_STD_DEV
+ event:
+  type: STATIC_TRANSFORM
+  parameters:
+   transform:
+    data: [0,0,0, 1,0,0,0]
+ pose_event:
+  type: STATIC_TRANSFORM
+  parameters:
+   transform:
+    data: [0,0,0, 1,0,0,0]
+ encoder_fixed:
+  type: STATIC_TRANSFORM
+  parameters:
+   transform:
+    data: ENCODER_FIXED_STATIC_TRANSFORM_POSE_OFFSET
+    stdDev: TRANSFORM_STD_DEV
+  transforms:
+   encoder_rotating:
+    type: DYNAMIC_TRANSFORM
+    parameters:
+     parameters:
+      timeOffset: ENCODER_ROTATING_DYNAMIC_TRANSFORM_TIME_OFFSET
+      timeOffsetDelta:
+       data: 0.0
+       stdDev: TIMING_STD_DEV
+     shouldFilterRotationRollover: true
+     rotationRollover:
+      angularVelocityThreshold: 90
+      angularChangeThreshold: 90
+      rolloverCountThreshold: 1
+    transforms:
+     velodyne:
+      type: STATIC_TRANSFORM
+      parameters:
+       transform:
+        data: VELODYNE_STATIC_TRANSFORM_POSE_OFFSET
+        stdDev: TRANSFORM_STD_DEV
+
+wildcatOdomPoseEstimateSensor: &odom_pose_estimate_sensor
+ type: POSE
+ parameters: {}
+
+wildcatGlobalPoseEstimateSensor: &global_pose_estimate_sensor
+ type: POSE
+ parameters: {}
+
+imu: &imu_sensor
+ type: IMU
+ parameters:
+  parameters:
+   angularVelocityTimeOffset: IMU_IMU_ANGULAR_VELOCITY_TIME_OFFSET
+   linearAccelerationTimeOffset: IMU_IMU_LINEAR_ACCELERATION_TIME_OFFSET
+   gravityConstant:
+    data: 9.81
+    stdDev: 0.005
+    zeroMean:
+     stdDev: 0.06864655 # 0.7% variation on earth
+   angularVelocityBias:
+    data: [0,0,0]
+    stdDev: 0.1
+    zeroMean:
+     stdDev: 5.0 # Ang is easily detectable
+   linearAccelerationBias:
+    data: [0,0,0]
+    stdDev: 0.01
+    zeroMean:
+     stdDev: 0.1
+  confidences:
+   angularVelocity:
+    stdDev: &imu_ang_vel_std_dev 1.0
+   linearAcceleration:
+    stdDev: &imu_lin_acc_std_dev 0.3
+   saturatedAngularVelocity:
+    stdDev: *imu_ang_vel_std_dev
+    weight: 0.333
+   saturatedLinearAcceleration:
+    stdDev: *imu_lin_acc_std_dev
+    weight: 0.333
+  limits:
+   angularVelocitySaturation: 900
+   linearAccelerationSaturation: 100
+
+gps: &gps_sensor
+ type: GPS
+ parameters:
+  parameters:
+   timeOffset: GPS_GPS_TIME_OFFSET
+   timeOffsetDelta:
+    data: 0.0
+    stdDev: TIMING_STD_DEV
+  confidences:
+   position:
+    stdDev: [0.0, 0.0, 0.0]
+    weight: [1.0, 1.0, 1.0]
+
+landmark: &landmark_sensor
+ type: LANDMARK
+ parameters:
+  # When landmarks have no confidence information the sensor supplies it.
+  # The weighting of the confidences is applied to ALL sources of confidences (data/sensor)
+  confidences:
+   # The nominal covariance for a supplied landmark pose, used when none is supplied
+   landmarkPose:
+    stdDev: [0.0, 0.0]
+    weight: [1.0, 1.0]
+   # The nominal covariance for a supplied observation pose, used when none is supplied
+   # NOTE: A landmark with no confidence is invalid, so a nominal must be supplied or be present in the data
+   observationPose:
+    stdDev: [0.0, 0.0]
+    weight: [1.0, 1.0]
+
+velodyne: &velodyne_sensor
+ type: LASER
+ parameters:
+  # NOTE It's possible to filter in a per-sensor, or at the input when it's read, in this case we filter on input.
+  parameters:
+   timeOffset: VELODYNE_LASER_TIME_OFFSET
+   timeOffsetDelta:
+    data: 0.0
+    stdDev: TIMING_STD_DEV
+  confidences:
+   range: &laser_confidence_range
+    stdDev: 0.04
+    weight: 1.0
+
+event: &event_sensor
+ type: EVENT
+ parameters: {}
+
+pose_event: &pose_event_sensor
+ type: POSE_EVENT
+ parameters: {}
+
+sensors: &all_sensors
+ wildcat_odom_pose_estimate: *odom_pose_estimate_sensor
+ wildcat_global_pose_estimate: *global_pose_estimate_sensor
+ imu: *imu_sensor
+ gps: *gps_sensor
+ landmark: *landmark_sensor
+ velodyne: *velodyne_sensor
+ event: *event_sensor
+ pose_event: *pose_event_sensor
+
+# Defines for common components
+commonDefines:
+ # Common frame names
+ frameNames:
+  wildcatOdomPoseEstimateFrame: &wildcat_odom_pose_estimate_frame "wildcat_odom_pose_estimate"
+  wildcatGlobalPoseEstimateFrame: &wildcat_global_pose_estimate_frame "wildcat_global_pose_estimate"
+  gpsFrame: &gps_frame "gps"
+  landmarkFrame: &landmark_frame "landmark"
+  landmarkProjectionFrame: &landmark_projection_frame "landmark"
+  laserFrame: &laser_frame "velodyne"
+  eventFrame: &event_frame "event"
+  poseEventFrame: &pose_event_frame "pose_event"
+  encoderFixedFrame: &encoder_fixed_frame encoder_fixed
+  encoderRotatingFrame: &encoder_rotating_frame encoder_rotating
+  baseFrame: &base_link_frame "base_link"
+  odomFrame: &odom_frame "odom"
+  odomGeoreferencedFrame: &odom_georeferenced_frame "odom_georeferenced"
+  odomLandmarkreferencedFrame: &odom_landmarkreferenced_frame "odom_landmarkreferenced"
+  atlasFrame: &atlas_frame "atlas"
+  atlasGeoreferencedFrame: &atlas_georeferenced_frame "atlas_georeferenced"
+  atlasLandmarkreferencedFrame: &atlas_landmarkreferenced_frame "atlas_landmarkreferenced"
+  globalFrame: &global_frame "global"
+  globalGeoreferencedFrame: &global_georeferenced_frame "global_georeferenced"
+  globalLandmarkreferencedFrame: &global_landmarkreferenced_frame "global_landmarkreferenced"
+  # Map frame name for tf
+  tfMapFrame: &tf_map_frame "map"
+  
+ # Result naming conventions
+ resultNames:
+  odomResultsFilename: &odom_results_filename "odom.bag"
+  odomResultsTopic: &odom_results_topic "wildcat/odom/raw"
+  odomGeoReferencedResultsFilename: &odom_georeferenced_results_filename "odom_georeferenced.bag"
+  odomGeoReferencedResultsTopic: &odom_georeferenced_results_topic "wildcat/odom_georeferenced/raw"
+  odomLandmarkReferencedResultsFilename: &odom_landmarkreferenced_results_filename "odom_landmarkreferenced.bag"
+  odomLandmarkReferencedResultsTopic: &odom_landmarkreferenced_results_topic "wildcat/odom_landmarkreferenced/raw"
+  atlasResultsFilename: &atlas_results_filename "atlas.bag"
+  atlasResultsTopic: &atlas_results_topic "wildcat/atlas/raw"
+  atlasGeoReferencedResultsFilename: &atlas_georeferenced_results_filename "atlas_georeferenced.bag"
+  atlasGeoReferencedResultsTopic: &atlas_georeferenced_results_topic "wildcat/atlas_georeferenced/raw"
+  atlasLandmarkReferencedResultsFilename: &atlas_landmarkreferenced_results_filename "atlas_landmarkreferenced.bag"
+  atlasLandmarkReferencedResultsTopic: &atlas_landmarkreferenced_results_topic "wildcat/atlas_landmarkreferenced/raw"
+  globalResultsFilename: &global_results_filename "global.bag"
+  globalResultsTopic: &global_results_topic "wildcat/global/raw"
+  globalGeoReferencedResultsFilename: &global_georeferenced_results_filename "global_georeferenced.bag"
+  globalGeoReferencedResultsTopic: &global_georeferenced_results_topic "wildcat/global_georeferenced/raw"
+  globalLandmarkReferencedResultsFilename: &global_landmarkreferenced_results_filename "global_landmarkreferenced.bag"
+  globalLandmarkReferencedResultsTopic: &global_landmarkreferenced_results_topic "wildcat/global_landmarkreferenced/raw"
+
+ # Threading model
+ dataBox: &data_box_config
+  in:
+   isThreaded: true
+   maxQueueDuration: 3
+  out:
+   isThreaded: false
+   maxQueueDuration: 3
+
+# Read the raw bag files
+rawBagReader: &raw_bag_reader
+ type: SIMPLE_READER
+ parameters:
+  dataBox: *data_box_config
+  readers:
+   bag: &raw_bag_reader_reader
+    type: ROS_BAG
+    parameters:
+     reader:
+      agents:
+       AGENT_NAME:
+        bags: INPUT_RAW_BAG_FILES
+        startDelay: 0
+        endDelay: 0
+        decoders: &raw_decoders
+         imu: &imu_decoder
+          type: IMU
+          topics: ["imu/data"]
+          parameters:
+           frame: imu
+           timeFrame: imu_system
+         imuTimeRef: &imu_time_ref_decoder
+          type: TIME_REFERENCE
+          topics: ["imu/pps_timestamp"]
+          parameters:
+           frame: imu
+           parentTimeFrame: imu_system
+           timeFrame: imu_sensor
+         gps: &gps_decoder
+          type: NAV_SAT_FIX
+          topics: ["navsat/fix"]
+          parameters:
+           frame: *gps_frame
+           timeFrame: gps_system
+           shouldIgnoreNoFix: true
+         sphericalLandmark: &spherical_landmark_decoder
+          type: SPHERICAL_LANDMARK
+          topics: ["landmark/spherical"]
+          parameters:
+           landmarkFrame: *landmark_projection_frame
+           frame: *landmark_frame
+           timeFrame: "landmark"
+           # Set if the location should be removed (thus only allowing observation constraints)
+           shouldRemoveLocation: false
+           # Set if the location covariance should be removed (thus using the nominal values in the sensor)
+           shouldRemoveLocationCovariance: false
+         sphericalLandmarkObservation: &spherical_landmark_observation_decoder
+          type: SPHERICAL_LANDMARK_OBSERVATION
+          topics: ["landmark/spherical_observation"]
+          parameters:
+           frame: *landmark_frame
+           timeFrame: "landmark"
+           # Set if the location covariance should be removed (thus using the nominal values in the sensor)
+           shouldRemoveLocationCovariance: false
+         laser: &laser_decoder
+          type: POINT_CLOUD_2
+          topics: &velodyne_topics ["velodyne_points"]
+          parameters:
+           frame: &velodyne_frame velodyne
+           timeFrame: velodyne_system
+           shouldExtractAttributes: true
+           shouldExtractTimeReference: true
+           shouldIgnoreEmptyScans: false
+           timeReferenceFrame: velodyne
+           timeReferenceParentTimeFrame: velodyne_system
+           timeReferenceTimeFrame: velodyne_sensor
+           modifier:
+            type: LASER_CALIBRATION
+            parameters:
+             calibration: LASER_CALIBRATION_VALUES
+           filter: VELODYNE_FILTER
+         event:
+          type: EVENT_STAMPED
+          topics: ["event/data"]
+          parameters:
+           frame: *event_frame
+         poseEvent:
+          type: POSE_EVENT_STAMPED
+          topics: ["pose_event/data"]
+          parameters:
+           frame: *pose_event_frame
+         encoderTimeRef: &encoder_time_ref_decoder
+          type: TIME_REFERENCE
+          topics: ["encoder/pps_timestamp", "timing/encoder/pps_timestamp"]
+          parameters:
+           frame: *encoder_fixed_frame
+           parentTimeFrame: encoder_system
+           timeFrame: encoder_sensor
+         tf: &tf_decoder
+          type: TF_MESSAGE
+          topics: &tf_topics ["tf"]
+          parameters:
+           transforms:
+            encoder_rotating: &encoder_decoder
+             parentFrame: *encoder_fixed_frame
+             frame: *encoder_rotating_frame
+             timeFrame: encoder_system
+             poseModifier:
+              type: ENCODER_CALIBRATION
+              parameters:
+               calibration: ENCODER_CALIBRATION_VALUES
+
+# Read the raw bag files for sim
+rawBagReaderSim: &raw_bag_reader_sim
+ type: SIMPLE_READER
+ parameters:
+  dataBox: *data_box_config
+  readers:
+   bag:
+    type: ROS_BAG
+    parameters:
+     reader:
+      agents:
+       AGENT_NAME:
+        bags: INPUT_RAW_BAG_FILES
+        startDelay: 0
+        endDelay: 0
+        decoders: &sim_raw_decoders
+         imu: *imu_decoder
+         # @note no gps in sim
+         laser:
+          type: POINT_CLOUD_2
+          topics: *velodyne_topics
+          parameters:
+           frame: *velodyne_frame
+           shouldExtractAttributes: true
+           filter: VELODYNE_FILTER
+           modifier:
+            type: LASER_CALIBRATION
+            parameters:
+             calibration: LASER_CALIBRATION_VALUES
+         tf:
+          type: TF_MESSAGE
+          topics: *tf_topics
+          parameters:
+           transforms:
+            encoder_rotating_link: *encoder_decoder
+
+# Read the raw topics
+rawTopicReader: &raw_topic_reader
+ type: SIMPLE_READER
+ parameters:
+  readers:
+   bag:
+    type: ROS_TOPIC
+    parameters:
+     reader:
+      agents:
+       AGENT_NAME:
+        decoders: *raw_decoders
+
+# Read the raw topics for sim
+simRawTopicReader: &raw_topic_reader_sim
+ type: SIMPLE_READER
+ parameters:
+  readers:
+   bag:
+    type: ROS_TOPIC
+    parameters:
+     reader:
+      agents:
+       AGENT_NAME:
+        decoders: *sim_raw_decoders
+
+# Smooth the imu times to use as the master system time reference
+smoother: &smoother
+ type: TIME_SMOOTHER
+ parameters:
+  agents:
+   default:
+    timeFrames:
+     imu_system:
+      inputReferenceTimeFrame: imu_sensor
+      shouldOutputReference: true
+      outputReferenceTimeFrame: imu_sensor_smoothed
+      outputReferenceParentTimeFrame: imu_system_smoothed
+      outputDataTimeFrame: imu_system_smoothed
+      smoother: &time_smoother_config
+       maxBufferDuration: 1.0
+       sampleSize: 100
+       minSampleSize: 100
+
+# Perform PPS sync of the devices
+pps: &pps
+ type: TIME_SECOND_ALIGNER
+ parameters:
+  agents:
+   default:
+    timeFrames:
+     imu_system_smoothed:
+      inputReferenceTimeFrame: imu_sensor_smoothed
+      inputMasterReferenceTimeFrame: &master_sync_ref imu_sensor_smoothed
+      shouldOutputReference: true
+      outputReferenceTimeFrame: imu_synced
+      outputReferenceParentTimeFrame: imu_system_synced
+      outputDataTimeFrame: imu_aligned
+      aligner: &second_aligner_config
+       maxBufferDuration: 1.0
+       maxIntegralError: 0.25
+       minSyncDuration: 1.0
+     encoder_system:
+      inputReferenceTimeFrame: encoder_sensor
+      inputMasterReferenceTimeFrame: *master_sync_ref
+      outputDataTimeFrame: encoder_aligned
+      aligner: *second_aligner_config
+     velodyne_system:
+      inputReferenceTimeFrame: velodyne_sensor
+      inputMasterReferenceTimeFrame: *master_sync_ref
+      outputDataTimeFrame: velodyne_aligned
+      aligner: *second_aligner_config
+
+# Using the IMU as the reference, convert to system time
+converter: &converter
+ type: TIME_CONVERTER
+ parameters:
+  agents:
+   default:
+    timeFrames:
+     imu_aligned:
+      inputMasterReferenceTimeFrame: imu_system_synced
+      outputDataTimeFrame: map
+      converter: &converter_config
+       maxBufferDuration: 1.0
+     encoder_aligned:
+      inputMasterReferenceTimeFrame: imu_system_synced
+      outputDataTimeFrame: map
+      converter: *converter_config
+     velodyne_aligned:
+      inputMasterReferenceTimeFrame: imu_system_synced
+      outputDataTimeFrame: map
+      converter: *converter_config
+
+# Take in raw data and convert to system time.
+timing: &timing
+ type: PIPELINE
+ parameters:
+  dataBox: *data_box_config
+  connections:
+   input: smoother
+   smoother: pps
+   pps: converter
+   converter: output
+  flushOrder: [smoother, pps, converter]
+  nodes:
+   smoother: *smoother
+   pps: *pps
+   converter: *converter
+
+# Pipeline for filtering input data
+rawDataFilter: &raw_data_filter
+ # Filter out self-strikes via the self-strike filter + an optional additional filters
+ type: POINT_CLOUD_STATEFUL_FILTER
+ parameters:
+  state: &base_link_state
+   agents:
+    default:
+     frame:
+      baseLink: *base_link_frame
+     sensorTree: &full_sensor_tree
+      transforms: *all_transforms
+      sensors: *all_sensors
+  agents:
+   default:
+    targetFrame: *base_link_frame
+    filterOrigin: &self_strike_sphere_origin SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SPHERE_ORIGIN
+    filter:
+     type: COMPOUND
+     parameters:
+      filters:
+       # Any other filters to apply on top of the self-strike filter
+       additional: ADDITIONAL_SELF_STRIKE_FILTER
+       # Self-strike filter
+       polar:
+        type: POLAR
+        parameters:
+         sphericalImage: SELF_STRIKE_SPHERICAL_IMAGE_VALUES
+         shouldKeepNonZero: false
+         maxRangeThreshold: 3.5
+
+# Standard pipeline for all raw data
+# Performs timing sync and data filtering.
+rawDataPipeline: &raw_data_pipeline
+ type: PIPELINE
+ parameters:
+  connections:
+   # Correct timing
+   input: timing
+   # Filter
+   timing: filter
+   # Output
+   filter: output
+  flushOrder: [timing, filter]
+  nodes:
+   timing: *timing
+   filter: *raw_data_filter
+
+# Do offline odom
+odomOffline: &odom_offline
+ type: SIMPLE_WINDOWED_TRAJECTORY_OPTIMIZER
+ parameters:
+  dataBox: *data_box_config
+  shouldPrintState: false
+  shouldEstimateTrajectory: true
+  shouldOutputTailPoseCovariance: true
+  outputTailPoseCovarianceFrame: *wildcat_odom_pose_estimate_frame
+  poseCovarianceSamplingPeriod: 0.1
+  trajectoryEstimator: &traj_estimator_imu
+   type: IMU_DEAD_RECKONING
+   parameters:
+    forwardAxis: INIT_FORWARD_AXIS
+    # Carry-thru the error for the correction sample delta
+    priorErrorDecayDuration: 0.1
+  state: &odom_state
+   agents:
+    default:
+     frame:
+      optimization: *odom_frame
+      baseLink: *base_link_frame
+     sensorTree: *full_sensor_tree
+  optimization:
+   windowDuration: 5.0
+   windowShiftDuration: 1.0
+   attemptPeriod: 0.1
+   solver:
+    maxNumIterations: 5
+    iterationConvergenceThreshold: 0.0
+    taskMonitor:
+     shouldMonitor: false
+   problem:
+    correctionSampler: &odom_correction_sampler
+     type: UNIFORM
+     parameters:
+      delta: 0.1
+      correctionType: CUBIC
+      sampleType: LINEAR
+    solver:
+     type: STATIC_LINEAR
+     parameters:
+      maxNumIterations: 5
+      iterationConvergenceThreshold: 0.01
+      enableSafetyChecks: false
+      dampingFactor: 0.01
+  constraints:
+    transform: &odom_transform_estimation_constraint
+     type: TRANSFORM_ESTIMATION
+     parameters:
+      agents:
+       default:
+        shouldNormalizeConstraints: &odom_should_normalize_constraints false
+        metaParameterResidualOptions: &odom_meta_param_residual_options
+         shouldScaleByUsage: true
+         shouldScaleZeroMeanByUsage: true
+    clamp: &odom_clamp_constraint
+     type: CLAMP
+     parameters:
+      agents:
+       default:
+        shouldNormalizeConstraints: *odom_should_normalize_constraints
+        duration: 0.5
+        shouldSetConstant: true
+    notEnoughMotionClamp: &odom_insufficient_motion_clamp_constraint
+     type: INSUFFICIENT_MOTION_CLAMP
+     parameters:
+      agents:
+       default:
+        shouldNormalizeConstraints: *odom_should_normalize_constraints
+        baseFrame: *base_link_frame
+        confidences:
+         zeroLinearVelocity:
+          stdDev: 0.001
+        requirements:
+         -
+          frame: *laser_frame
+          minValidDuration: 1.0
+          minAverageAngularVelocity: 20
+          invalidRotationAxis: [0,0,1]
+    notEnoughPointsClamp: &odom_insufficient_points_clamp_constraint
+     type: INSUFFICIENT_LASER_POINTS_CLAMP
+     parameters:
+      agents:
+       default:
+        shouldNormalizeConstraints: *odom_should_normalize_constraints
+        confidences:
+         zeroLinearVelocity:
+          stdDev: 0.001
+        requirements:
+         -
+          frame: *laser_frame
+          minValidDuration: 1
+          minNumPoints: 1
+    imus: &odom_imu_constraint
+     type: IMU
+     parameters:
+      agents:
+       default:
+        shouldOutputIntrinsics: true
+        shouldNormalizeConstraints: *odom_should_normalize_constraints
+        metaParameterResidualOptions: *odom_meta_param_residual_options
+    lasers: &odom_laser_constraint
+     type: LASER
+     parameters:
+      agents:
+       default:
+        shouldNormalizeConstraints: *odom_should_normalize_constraints
+        metaParameterResidualOptions: *odom_meta_param_residual_options
+    saxs:
+     type: SIMPLE_SAX
+     parameters:
+      agents:
+       default:
+        provider:
+         type: FIXED_MERGER
+         parameters:
+          provider:
+           type: FIXED_VIEW
+           parameters:
+             duration: &fixed_duration 1.0
+             maxNumSets: 3
+             minNeighbourDistance: 3
+             minNeighbourDuration: *fixed_duration
+             startupDelay: 5.0
+             shouldDropEmptyFirstView: false
+             filter:
+              minPlanarity: 0.5
+              minWeightPerResolution: 100
+              maxAngleOfIncidence: 30
+             provider:
+              type: CACHED
+              parameters:
+               duration: 0
+               provider:
+                type: BATCHED
+                parameters:
+                 saxizer: &odom_saxizer
+                  shouldComputeOffset: true
+                  shouldFilterSaxsNearEdge: true
+                  numLevels: 5
+                  baseResolution: 0.4
+                  minTimeDelta: 0.025
+                  maxTimeDelta: &saxMaxTime 0.5
+                  minWeight: 8
+                  maxWeight: 1000000
+                  minCylindricality: 0
+                  maxCylindricality: 0.8
+                  minPlanarity: 0.2
+                  maxPlanarity: 1
+                  minSphericity: 0
+                  maxSphericity: 0.5
+                  maxAngleOfIncidence: 90
+      constrainer: &odom_sax_constrainer
+       shouldNormalizeConstraints: *odom_should_normalize_constraints
+       shouldNormalizeConstraintsWithMatchCounts: false
+       dynamic:
+        -
+         match:
+          search: &search
+           numMatches: 4
+           epsilon: 0.0
+           maxDist: 0.8
+           shouldScalePositionWithRes: true
+           minTimeDelta: *saxMaxTime
+           normalScale: 1
+           resolutionScale: 100
+           maxNumThreads: 4
+          shouldFilterReciprocal: true
+          minNumMatches: 1000
+          maxNumMatches: 10000000
+          numMatchesSubsetRatio: 0.1
+          maxAngle: 30
+         constraint:
+          matchScalingMethod: SUMMED_AND_WEIGHT_UNCERTAINTY
+          weight: 1.0
+          loss:
+           type: SOFT
+           parameters:
+            threshold: 5
+        -
+         match:
+          search: *search
+          shouldFilterReciprocal: true
+          minNumMatches: 1000
+          maxNumMatches: 10000000
+          numMatchesSubsetRatio: 0.1
+          maxAngle: 15
+         constraint:
+          matchScalingMethod: SUMMED_AND_WEIGHT_UNCERTAINTY
+          weight: 1.0
+          loss:
+           type: SOFT
+           parameters:
+            threshold: 3
+        -
+         match:
+          search: *search
+          shouldFilterReciprocal: true
+          minNumMatches: 1000
+          maxNumMatches: 10000000
+          numMatchesSubsetRatio: 0.1
+          maxAngle: 15
+         constraint:
+          matchScalingMethod: SUMMED_AND_WEIGHT_UNCERTAINTY
+          weight: 1.0
+          loss:
+           type: SOFT
+           parameters:
+            threshold: 1
+       fixed:
+        -
+         match:
+          search: &search
+           numMatches: 4
+           epsilon: 0.0
+           maxDist: 0.8
+           shouldScalePositionWithRes: true
+           minTimeDelta: 0
+           normalScale: 1
+           resolutionScale: 100
+           maxNumThreads: 4
+          shouldFilterReciprocal: true
+          minNumMatches: 1000
+          maxNumMatches: 100000
+          numMatchesSubsetRatio: 0.1
+          maxAngle: 30
+         constraint:
+          matchScalingMethod: SUMMED_AND_WEIGHT_UNCERTAINTY
+          weight: 0.5
+          loss:
+           type: SOFT
+           parameters:
+            threshold: 5
+        -
+         match:
+          search: *search
+          shouldFilterReciprocal: true
+          minNumMatches: 1000
+          maxNumMatches: 100000
+          numMatchesSubsetRatio: 0.1
+          maxAngle: 15
+         constraint:
+          matchScalingMethod: SUMMED_AND_WEIGHT_UNCERTAINTY
+          weight: 0.5
+          loss:
+           type: SOFT
+           parameters:
+            threshold: 3
+        -
+         match:
+          search: *search
+          shouldFilterReciprocal: true
+          minNumMatches: 1000
+          maxNumMatches: 100000
+          numMatchesSubsetRatio: 0.1
+          maxAngle: 15
+         constraint:
+          matchScalingMethod: SUMMED_AND_WEIGHT_UNCERTAINTY
+          weight: 0.5
+          loss:
+           type: SOFT
+           parameters:
+            threshold: 1
+
+# Filters data for online usage
+onlineRawDataFilter: &online_raw_data_filter
+ # Filter velodyne down
+ type: POINT_CLOUD_STATELESS_FILTER
+ parameters:
+  agents:
+   default:
+    frames:
+     default:
+      filter:
+       type: COMPOUND
+       parameters:
+        filters:
+         # - # Ring
+         #  type: ATTRIBUTE_EQUALS
+         #  parameters:
+         #   name: "ring"
+         #   equals: [4, 5, 6, 7, 8, 9, 10, 11]
+         - # Range
+          type: RANGE
+          parameters:
+           min: 0.6 # Below 0.6 the velodyne reports garbage range values
+           max: 100 # Velodyne drivers can report above the 'max' but we don't want them for slam since the noise is too high
+         - # Voxel
+          type: VOXEL
+          parameters:
+           resolution: 0.2
+
+# Filters data for online output usage
+onlineOutputRawDataFilter: &online_output_raw_data_filter
+ # Filter velodyne down if required
+ type: CONDITIONAL
+ parameters:
+  isEnabled: SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT
+  shouldPassThroughWhenDisabled: true
+  node:
+   type: POINT_CLOUD_STATELESS_FILTER
+   parameters:
+    agents:
+     default:
+      frames:
+       default:
+        filter:
+         type: COMPOUND
+         parameters:
+          filters:
+           # - # Ring
+           #  type: ATTRIBUTE_EQUALS
+           #  parameters:
+           #   name: "ring"
+           #   equals: [4, 5, 6, 7, 8, 9, 10, 11]
+           - # Range
+            type: RANGE
+            parameters:
+             min: 0.6 # Below 0.6 the velodyne reports garbage range values
+             max: 100 # Velodyne drivers can report above the 'max' but we don't want them for slam since the noise is too high
+           - # Voxel
+            type: VOXEL
+            parameters:
+             resolution: 0.2
+
+# Do odom online
+odomOnline: &odom_online
+ type: SIMPLE_WINDOWED_TRAJECTORY_OPTIMIZER
+ parameters:
+  dataBox: *data_box_config
+  shouldPrintState: false
+  shouldEstimateTrajectory: true
+  # Output the initial results for imu integration
+  shouldOutputOptimizingTrajectory: true
+  shouldOutputTipPoseCovariance: true
+  outputTipPoseCovarianceFrame: "wildcat_odom_tip_pose_estimate"
+  shouldOutputTailPoseCovariance: true
+  outputTailPoseCovarianceFrame: *wildcat_odom_pose_estimate_frame
+  poseCovarianceSamplingPeriod: 0.1
+  # @note deviates from the offline odom trajectory estimation so it can update faster
+  trajectoryEstimator:
+   type: IMU_DEAD_RECKONING
+   parameters:
+    forwardAxis: INIT_FORWARD_AXIS
+  state: *odom_state
+  optimization:
+   windowDuration: 3.0
+   shouldDynamicallyShift: true
+   minWindowShiftDuration: 0.25
+   maxWindowShiftDuration: 1.0
+   attemptPeriod: 0.01
+   solver:
+    maxNumIterations: 3
+    iterationConvergenceThreshold: 0.0
+    taskMonitor:
+     shouldMonitor: false
+   problem:
+    correctionSampler: *odom_correction_sampler
+    solver:
+     type: STATIC_LINEAR
+     parameters:
+      maxNumIterations: 3
+      iterationConvergenceThreshold: 0.01
+      enableSafetyChecks: false
+      dampingFactor: 0.01
+  constraints:
+    transform: *odom_transform_estimation_constraint
+    clamp: *odom_clamp_constraint
+    notEnoughMotionClamp: *odom_insufficient_motion_clamp_constraint
+    notEnoughPointsClamp: *odom_insufficient_points_clamp_constraint
+    imus: *odom_imu_constraint
+    lasers: *odom_laser_constraint
+    saxs:
+     type: SIMPLE_SAX
+     parameters:
+      agents:
+       default:
+        provider:
+         type: FIXED_MERGER
+         parameters:
+          provider:
+           type: FIXED_VIEW
+           parameters:
+             duration: &fixed_duration 1.0
+             maxNumSets: 3
+             minNeighbourDistance: 3.0
+             minNeighbourDuration: *fixed_duration
+             startupDelay: 5.0
+             shouldDropEmptyFirstView: false
+             filter:
+              minPlanarity: 0.5
+              minWeightPerResolution: 100
+              maxAngleOfIncidence: 30
+             provider:
+              type: CACHED
+              parameters:
+               duration: 9000
+               shouldMerge: true
+               merge:
+                duration: &saxMaxTime 0.5
+               provider:
+                type: BATCHED
+                parameters:
+                 saxizer: *odom_saxizer
+      constrainer: *odom_sax_constrainer
+
+# Output odom tip results to topics
+odomTipOut: &odom_tip_out
+ type: SIMPLE_WRITER
+ parameters:
+  writers:
+   ros:
+    type: ROS_TOPIC
+    parameters:
+     writer:
+      encoders:
+       pose:
+        type: POSE_STAMPED
+        parameters:
+         agents:
+          default:
+           frames:
+            base_link:
+             topic: slam/odom/tip/pose
+             frame: odom
+             shouldPublishTrajectory: false
+             shouldPublishEstimates: true
+             shouldOnlyPublishLatest: true
+       tf:
+        type: TF
+        parameters:
+         agents:
+          default:
+           frames:
+            base_link:
+             topic: slam/odom/tip/tf
+             parentFrame: odom
+             childFrame: slam_base_link
+             shouldPublishEstimates: true
+       poseWithCov:
+        type: POSE_WITH_COVARIANCE_STAMPED
+        parameters:
+         agents:
+          default:
+           frames:
+            wildcat_odom_tip_pose_estimate:
+             topic: slam/odom/tip/pose_with_covariance
+             frame: odom
+             shouldUseFixedFrameForPositionCovariance: true
+             shouldUseFixedFrameForRotationCovariance: true
+
+# Output odom tail results to topics/files
+odomTailOut: &odom_tail_out
+ type: PIPELINE
+ parameters:
+  dataBox:
+   in:
+    isThreaded: true
+  connections:
+   input: [trajWriter, cloudWriter]
+  flushOrder: [trajWriter, cloudWriter]
+  nodes:
+   # Traj results
+   trajWriter:
+    type: PIPELINE
+    parameters:
+     connections:
+      input: [ros, file]
+     flushOrder: [ros, file]
+     nodes:
+      # ROS
+      ros:
+       type: SIMPLE_WRITER
+       parameters:
+        writers:
+         traj:
+          type: ROS_TOPIC
+          parameters:
+           writer:
+            encoders:
+             pose:
+              type: POSE_STAMPED
+              parameters:
+               agents:
+                default:
+                 frames:
+                  base_link:
+                   topic: slam/odom/tail/pose
+                   frame: odom
+                   shouldPublishTrajectory: true
+                   shouldPublishEstimates: false
+                   shouldOnlyPublishLatest: false
+             tf:
+              type: TF
+              parameters:
+               agents:
+                default:
+                 frames:
+                  base_link:
+                   topic: slam/odom/tail/tf
+                   parentFrame: odom
+                   childFrame: slam_base_link
+                   shouldPublishEstimates: false
+      # File
+      file:
+       type: CONDITIONAL
+       parameters:
+        isEnabled: SHOULD_OUTPUT_ONLINE_MAPS
+        shouldPassThroughWhenDisabled: false
+        node:
+         type: SIMPLE_WRITER
+         parameters:
+          writers:
+           traj:
+            type: TRAJECTORY_STREAM
+            parameters:
+             filestub: "odom_wildcat_traj"
+             writer: &windowed_writer_traj_writer
+              type: COMPOUND
+              parameters:
+               writers:
+                text:
+                 type: TEXT
+                 parameters:
+                  # @note This is matching the original CT output
+                  header: "%time x y z qw qx qy qz userfields"
+                  delimiter: " "
+                  shouldEndRowsWithDelimiter: true
+                  fileExtension: "txt"
+                  decimalPrecision:
+                   time: 16
+                   position: 16
+                   rotation: 16
+           trajWithCov:
+            type: TRAJECTORY_WITH_COVARIANCE_STREAM
+            parameters:
+             filestub: "odom_wildcat_traj_cov"
+             writer: &windowed_writer_traj_with_cov_writer
+              type: COMPOUND
+              parameters:
+               writers:
+                text:
+                 type: TEXT
+                 parameters:
+                  header: "time x y z qw qx qy qz pos_std_dev rot_std_dev pos_rot_std_dev total_std_dev cov_0_0 cov_1_0 cov_2_0 cov_3_0 cov_4_0 cov_5_0 cov_0_1 cov_1_1 cov_2_1 cov_3_1 cov_4_1 cov_5_1 cov_0_2 cov_1_2 cov_2_2 cov_3_2 cov_4_2 cov_5_2 cov_0_3 cov_1_3 cov_2_3 cov_3_3 cov_4_3 cov_5_3 cov_0_4 cov_1_4 cov_2_4 cov_3_4 cov_4_4 cov_5_4 cov_0_5 cov_1_5 cov_2_5 cov_3_5 cov_4_5 cov_5_5"
+                  delimiter: " "
+                  shouldEndRowsWithDelimiter: false
+                  fileExtension: "txt"
+                  decimalPrecision:
+                   time: 6
+                   position: 6
+                   rotation: 8
+                   covariance: 12
+   # Transform the clouds into the fixed frame and write to topics/file
+   cloudWriter:
+    type: PIPELINE
+    parameters:
+     connections:
+      input: transformer
+      transformer: [ros, file]
+     flushOrder: [transformer, ros, file]
+     nodes:
+      # Transform the clouds into the odom frame
+      transformer:
+       type: POINT_CLOUD_TRANSFORMER
+       parameters:
+        state:
+         agents:
+          default:
+           frame:
+            trajectory: *odom_frame
+            baseLink: *base_link_frame
+           sensorTree:
+            transforms: *all_transforms
+            sensors:
+             velodyne: *velodyne_sensor
+        agents:
+         default:
+          targetFrame: *odom_frame
+          cloudChunkDuration: 0.01
+      # Write ROS topics
+      ros:
+       type: SIMPLE_WRITER
+       parameters:
+        writers:
+         cloud:
+          type: ROS_TOPIC
+          parameters:
+           writer:
+            encoders:
+             cloud:
+              type: POINT_CLOUD_2
+              parameters:
+               agents:
+                default:
+                 frames:
+                  odom:
+                   topic: slam/odom/tail/cloud
+                   frame: odom
+                   # ONLY set to true to visualize in RViz, otherwise precision will become a problem.
+                   shouldOutputPositionAsFloat: false
+                   shouldOffsetTimesRelativeToHeader: false
+                   shouldOutputAttributes: true
+      # File
+      file:
+       type: CONDITIONAL
+       parameters:
+        isEnabled: SHOULD_OUTPUT_ONLINE_MAPS
+        shouldPassThroughWhenDisabled: false
+        node:
+         type: PIPELINE
+         parameters:
+          dataBox: *data_box_config
+          connections:
+           input: [writer, previewWriter]
+          flushOrder: [writer, previewWriter]
+          nodes:
+           # Write the data
+           writer:
+            type: SIMPLE_WRITER
+            parameters:
+             dataBox: *data_box_config
+             writers:
+              cloud:
+               type: POINT_CLOUD_STREAM
+               parameters:
+                filestub: "odom_wildcat_velodyne"
+                writer: &windowed_writer_cloud_writer
+                 type: COMPOUND
+                 parameters:
+                  writers:
+                   ply:
+                    type: PLY
+                    parameters:
+                     shouldOutputTime: true
+                     shouldOutputAttributes: true
+           # Write the preview data
+           previewWriter:
+            type: CONDITIONAL
+            parameters:
+             isEnabled: SHOULD_OUTPUT_PREVIEW_CLOUD
+             shouldPassThroughWhenDisabled: false
+             node:
+              type: SIMPLE_WRITER
+              parameters:
+               dataBox: *data_box_config
+               writers:
+                writer:
+                 type: COMPOUND
+                 parameters:
+                  writers:
+                   previewCloud:
+                    type: POINT_CLOUD_STREAM
+                    parameters:
+                     filestub: "odom_wildcat_velodyne_preview"
+                     filter: &windowed_writer_preview_cloud_filter
+                       type: VOXEL
+                       parameters:
+                        resolution: PREVIEW_CLOUD_VOXEL_RESOLUTION
+                        isPersistent: true
+                     writer: &windowed_writer_preview_cloud_writer
+                      type: COMPOUND
+                      parameters:
+                       writers:
+                        ply:
+                         type: PLY
+                         parameters:
+                          shouldOutputTime: true
+                          shouldOutputAttributes: true
+
+# Read in local slam, generate frames and their poses (what will be sent to the groundstation)
+frameGen:
+ type: TEMPLATE
+ parameters:
+  template: &online_frame_generator_template
+   type: PIPELINE
+   parameters:
+    dataBox:
+     in:
+      isThreaded: true
+    connections:
+     input: frameGenner
+     frameGenner: filter
+     filter: outputWriter
+    flushOrder: [frameGenner, filter, outputWriter]
+    nodes:
+     # Frame it
+     frameGenner:
+      type: TEMPLATE
+      parameters:
+       # Template for writing the results of process
+       # Available arguments:
+       #   * __TRAJECTORIES__ : Trajectories to use
+       #   * __OUTPUT_PARENT_POSE_FRAME__ : Frame to set the parent pose
+       #   * __FRAME_PERIOD__ : Period to generate frames at
+       #   * __FRAME_DURATION__ : Duration of frames
+       #   * __FRAME_BUFFER_DURATION__ : Buffer for frame generation
+       template: &frame_generator_template
+        type: SIMPLE_ATLAS_FRAME_GENERATOR
+        parameters:
+         state:
+          agents:
+           default:
+            frame:
+             trajectory: __TRAJECTORIES__
+             baseLink: __BASE_LINK__
+            sensorTree: *full_sensor_tree
+         agents:
+          default:
+           outputFrameFrame: *base_link_frame
+           outputFramePoseFrame: *base_link_frame
+           outputFramePoseParentFrame: __OUTPUT_PARENT_POSE_FRAME__
+           frameAttemptPeriod: 0.1
+           frameProvider:
+            type: BATCHED
+            parameters:
+             frameIdProvider:
+              type: SEQUENTIAL
+             framePeriod: __FRAME_PERIOD__
+             frameDuration: __FRAME_DURATION__
+             frameBufferDuration: __FRAME_BUFFER_DURATION__
+             shouldFirstFrameHaveFirstTime: true
+             shouldLastFrameHaveLastTime: true
+             shouldOnlyOutputOnFlush: false
+             batchedProvider:
+              type: COMPOUND
+              parameters:
+               providers:
+                sax:
+                 type: SAX
+                 parameters:
+                  minValidSaxCount: 25
+                  saxProvider:
+                   type: BATCHED
+                   parameters:
+                    saxizer:
+                     shouldComputeOffset: true
+                     shouldFilterSaxsNearEdge: true
+                     numLevels: 4
+                     baseResolution: 0.4
+                     minTimeDelta: 0.5
+                     maxTimeDelta: 99999
+                     minWeight: 16
+                     maxWeight: 60000
+                     minCylindricality: 0
+                     maxCylindricality: 0.8
+                     minPlanarity: 0.2
+                     maxPlanarity: 1
+                     minSphericity: 0
+                     maxSphericity: 0.5
+                     maxAngleOfIncidence: 90
+                up:
+                 type: UP_VECTOR
+       arguments:
+        __TRAJECTORIES__: [*odom_frame]
+        __BASE_LINK__: __FRAME_GEN_BASE_LINK__
+        __OUTPUT_PARENT_POSE_FRAME__: *odom_frame
+        __FRAME_PERIOD__: __FRAME_GEN_PERIOD__
+        __FRAME_DURATION__: __FRAME_GEN_DURATION__
+        __FRAME_BUFFER_DURATION__: __FRAME_GEN_BUFFER_DURATION__
+     # Filter it
+     filter:
+      type: CONDITIONAL
+      parameters:
+       isEnabled: SHOULD_FILTER_ATLAS_FRAME_OUTPUT
+       shouldPassThroughWhenDisabled: true
+       node:
+        type: SIMPLE_ATLAS_FRAME_OVERLAP_FILTER
+        parameters:
+         agents:
+          default:
+           # If we should send "empty" nodes, this creates a fake empty graph needed to use recent data
+           shouldOnlyFilterPayload: true
+           # Maximum continuous duration of empty frames, we can force frames when stationary to remove odometry drift
+           maxConsecutiveFilteredFramesDuration: 60
+           overlapThreshold: 0.8
+           frameOverlapDetector:
+            type: SAX_OCCUPANCY
+            parameters:
+             voxelSize: 1.0
+             maxNormalAngleDifference: 90
+             minPlanarity: 0.2
+             overlapComputationMethod: LOWEST # (Optimistic->Pessimistic) HIGHEST,MEAN,LOWEST,BLEND
+     # Publish it
+     outputWriter:
+      type: SIMPLE_WRITER
+      parameters:
+       writers:
+        writer:
+         type: ROS_TOPIC
+         parameters:
+          writer:
+           # Ensure the first frame is captured by subs by waiting for a while
+           newPublisherWaitDuration: 1.0
+           encoders:
+            ros:
+             type: ATLAS_LOSSY_SAX_NO_TIMING_FRAME
+             parameters:
+              agents:
+               default:
+                frames:
+                 base_link:
+                  topic: __FRAME_GEN_TOPIC__
+                  frame: odom
+  arguments:
+   __FRAME_GEN_BASE_LINK__: *base_link_frame
+   __FRAME_GEN_PERIOD__: 5.0
+   __FRAME_GEN_DURATION__: 6.0
+   __FRAME_GEN_BUFFER_DURATION__: 0.25
+   __FRAME_GEN_TOPIC__: "slam/odom/frames"
+
+# Take a low freq traj update and fuse with the IMU for high frequency odometry outputting onto ROS the pose and cloud
+highFreqEstimatorPipeline: &high_freq_estimator_node
+ type: PIPELINE
+ parameters:
+  dataBox:
+   in:
+    isThreaded: true
+  connections:
+   input: [estimator, syncedOut, atlasFrames]
+   estimator: [syncedOut, writer, smoothWriter, atlasFrames]
+  flushOrder: [estimator, syncedOut, writer, smoothWriter, atlasFrames]
+  nodes:
+   # Do the estimation
+   estimator:
+    type: SIMPLE_TRAJECTORY_ESTIMATOR
+    parameters:
+     # Provided we get updates faster then below, the trajectory will be continuous
+     integrationPeriod: 0.33
+     shouldOutputTrajectoryAsEstimate: false
+     outputTrajectoryChildFrame: &base_link_high_frame base_link_high
+     # @note deviates from the odom trajectory estimation as it does *not* need to propagate error
+     trajectoryEstimator:
+      type: IMU_DEAD_RECKONING
+      parameters:
+       forwardAxis: INIT_FORWARD_AXIS
+     state:
+      agents:
+        default:
+         frame:
+          optimization: *odom_frame
+          baseLink: *base_link_frame
+         sensorTree:
+          transforms: *all_transforms
+          sensors:
+           imu: *imu_sensor
+   # Smooth output
+   smoothWriter:
+    type: PIPELINE
+    parameters:
+     connections:
+      input: smoother
+      smoother: writer
+     flushOrder: [smoother, writer]
+     nodes:
+      smoother:
+         type: TRAJECTORY_SMOOTHER
+         parameters:
+          agents:
+           default:
+            frames:
+             base_link_high:
+              smoother:
+               type: VELOCITY_MIXER
+               parameters:
+                lossLinearVelocity:
+                 type: EXPONENTIAL
+                 parameters:
+                  threshold: 0.25
+                  exponent: 2.718281828459045
+                lossAngularVelocity:
+                 type: EXPONENTIAL
+                 parameters:
+                  threshold: 1.0
+                  exponent: 2.718281828459045
+                aSmoother:
+                 type: UNCERTAINTY
+                 parameters:
+                  confidence:
+                   stdDev: [0.05, 0.5]
+                  scalePos: 2.718281828459045
+                  scaleRot: 2.718281828459045
+                bSmoother:
+                 type: PASS_THROUGH
+      writer:
+       type: SIMPLE_WRITER
+       parameters:
+        writers:
+         ros:
+          type: ROS_TOPIC
+          parameters:
+           writer:
+            encoders:
+             pose:
+              type: POSE_STAMPED
+              parameters:
+               agents:
+                default:
+                 frames:
+                  base_link_high:
+                   topic: slam/odom/high/pose_smooth
+                   frame: odom
+                   shouldOnlyPublishLatest: true
+             tf:
+              type: TF
+              parameters:
+               agents:
+                default:
+                 frames:
+                  base_link_high:
+                   topic: slam/odom/high/tf_smooth
+                   parentFrame: odom
+                   childFrame: slam_base_link
+   # Output estimation
+   writer:
+    type: SIMPLE_WRITER
+    parameters:
+     writers:
+      ros:
+       type: ROS_TOPIC
+       parameters:
+        writer:
+         encoders:
+          pose:
+           type: POSE_STAMPED
+           parameters:
+            agents:
+             default:
+              frames:
+               base_link_high:
+                topic: slam/odom/high/pose
+                frame: odom
+                shouldOnlyPublishLatest: true
+          velocity:
+           type: TWIST_STAMPED
+           parameters:
+            agents:
+             default:
+              frames:
+               base_link_high:
+                topic: slam/odom/high/velocity
+                frame: slam_base_link
+          tf:
+           type: TF
+           parameters:
+            agents:
+             default:
+              frames:
+               base_link_high:
+                topic: slam/odom/high/tf
+                parentFrame: odom
+                childFrame: slam_base_link
+   # Synced cloud
+   syncedOut:
+    type: PIPELINE
+    parameters:
+     dataBox: *data_box_config
+     connections:
+      input: transformer
+      transformer: writer
+     flushOrder: [transformer, writer]
+     nodes:
+      transformer:
+       type: POINT_CLOUD_TRANSFORMER
+       parameters:
+        state:
+         agents:
+          default:
+           frame:
+            trajectory: *odom_frame
+            baseLink: *base_link_high_frame
+           sensorTree:
+            transforms: *all_transforms
+            sensors:
+             velodyne: *velodyne_sensor
+        agents:
+         default:
+          targetFrame: *odom_frame
+          cloudChunkDuration: 0.01
+      writer:
+       type: SIMPLE_WRITER
+       parameters:
+        writers:
+         ros:
+          type: ROS_TOPIC
+          parameters:
+           writer:
+            encoders:
+             cloud:
+              type: POINT_CLOUD_2
+              parameters:
+               agents:
+                default:
+                 frames:
+                  odom:
+                   topic: slam/odom/high/cloud
+                   frame: odom
+                   # ONLY set to true to visualize in RViz, otherwise precision will become a problem.
+                   shouldOutputPositionAsFloat: false
+                   shouldOffsetTimesRelativeToHeader: false
+                   shouldOutputAttributes: true
+   # Atlas frames for high, good for localization and snappier online stuff
+   atlasFrames:
+    type: CONDITIONAL
+    parameters:
+     isEnabled: SHOULD_OUTPUT_HIGH_ATLAS_FRAMES
+     shouldPassThroughWhenDisabled: false
+     node:
+      type: TEMPLATE
+      parameters:
+       template: *online_frame_generator_template
+       arguments:
+        __FRAME_GEN_BASE_LINK__: *base_link_high_frame
+        __FRAME_GEN_PERIOD__: 1.0
+        __FRAME_GEN_DURATION__: 3.0
+        __FRAME_GEN_BUFFER_DURATION__: 0.25
+        __FRAME_GEN_TOPIC__: "slam/odom/high/frames"
+
+# Do offline odom
+offlineOdom: &offline_odom
+ unusedOverrideSink: [*unused_override_sink, PREVIEW_CLOUD_VOXEL_RESOLUTION, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS, SHOULD_OUTPUT_PREVIEW_CLOUD, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER]
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: PIPELINE
+ parameters:
+  connections:
+   rawBagReader: rawPipeline
+   rawPipeline: odom
+   odom: resultWriter
+  flushOrder: [rawBagReader, rawPipeline, odom, resultWriter]
+  nodes:
+   # Get raw data
+   rawBagReader: *raw_bag_reader
+   # Fix raw data
+   rawPipeline: *raw_data_pipeline
+   # Slam it
+   odom: *odom_offline
+   # Output results for downstream usage
+   resultWriter: &odom_result_writer
+    type: TEMPLATE
+    parameters:
+     # Template for writing the results of process
+     # Available arguments:
+     #   * __FILENAME__ : Filename for the resulting output
+     #   * __TOPIC__ : Topic to write the results for
+     template: &result_writer_template
+      type: PIPELINE
+      parameters:
+       dataBox: *data_box_config
+       connections: &result_writer_connections
+        input: filter
+        filter: splitter
+        splitter: writer
+       flushOrder: &result_writer_flush_order [filter, splitter, writer]
+       nodes:
+        # Filter all data that is not the final output
+        filter: &result_writer_filter
+         type: DATA_FILTER
+         parameters:
+          filter:
+           type: ANY
+           parameters:
+            filters:
+             traj:
+              type: TRAJECTORY
+              parameters:
+               shouldAllowEstimates: false
+             trajCov:
+              type: POSE_WITH_COVARIANCE
+              parameters: {}
+        # Split it into small bites so reading is nicer
+        splitter: &result_writer_splitter
+         type: TRAJECTORY_SPLITTER
+         parameters:
+          maxDuration: 0.1
+        # Write it to file
+        writer:
+         type: SIMPLE_WRITER
+         parameters:
+          writers:
+           bag:
+            type: ROS_BAG
+            parameters:
+             filename: __FILENAME__
+             writer:
+              encoders:
+               everything:
+                type: ALL_TO_WILDCAT_DATA
+                parameters:
+                 topic: __TOPIC__
+     arguments:
+      __FILENAME__: *odom_results_filename
+      __TOPIC__: *odom_results_topic
+
+# Common defines for down-stream usage
+odomDefines:
+ bagReaderReader: &odom_bag_reader_reader
+  type: ROS_BAG
+  parameters:
+   reader:
+    taskMonitor:
+     shouldMonitor: false
+    agents:
+     AGENT_NAME:
+      bags: [*odom_results_filename]
+      decoders:
+       raw:
+        type: WILDCAT
+        topics: [*odom_results_topic]
+
+# Do offline atlas
+offlineAtlas: &offline_atlas
+ unusedOverrideSink: [*unused_override_sink, INIT_FORWARD_AXIS, PREVIEW_CLOUD_VOXEL_RESOLUTION, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS, SHOULD_OUTPUT_PREVIEW_CLOUD]
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: PIPELINE
+ parameters:
+  connections:
+   bagReader: rawPipeline
+   rawPipeline: temporalSorter
+   temporalSorter: [frameGenerator]
+   frameGenerator: atlas
+   atlas: trajResampler
+   trajResampler: resultWriter
+  flushOrder: [bagReader, rawPipeline, temporalSorter, frameGenerator, atlas, trajResampler, resultWriter]
+  nodes:
+   # Read it
+   bagReader:
+    type: TEMPORAL_READER
+    parameters:
+     readers:
+      raw: *raw_bag_reader_reader
+      odom: *odom_bag_reader_reader
+   # Fix raw data
+   rawPipeline: *raw_data_pipeline
+   # Sort the times
+   temporalSorter:
+    type: TEMPORAL_SORTER
+    parameters:
+     bufferDuration: 5.0
+   # Gen frames
+   frameGenerator:
+    type: TEMPLATE
+    parameters:
+     template: *frame_generator_template
+     arguments:
+      __BASE_LINK__: *base_link_frame
+      __TRAJECTORIES__: [*odom_frame]
+      __OUTPUT_PARENT_POSE_FRAME__: *odom_frame
+      __FRAME_PERIOD__: 5.0
+      __FRAME_DURATION__: 6.0
+      __FRAME_BUFFER_DURATION__: 0.25
+   # Slam it
+   atlas:
+    type: SIMPLE_ATLAS_OPTIMIZER
+    parameters:
+     dataBox:
+      in:
+       isThreaded: true
+       maxQueueDuration: 30
+     state:
+      agents:
+       default:
+        frame:
+         optimization: *atlas_frame
+         trajectory: *odom_frame
+         baseLink: *base_link_frame
+        sensorTree:
+         transforms: {}
+         sensors:
+          base_link:
+           type: ATLAS_FRAME
+     shouldOutputOptimizedTrajectoriesOnFlush: true
+     agents:
+      default:
+       frameAttemptPeriod: 0.0
+       frameProvider:
+        type: FRAME_SENSOR
+        parameters:
+         shouldUsePoseInData: true
+     map: &atlas_optimizer_map
+      type: SIMPLE
+      parameters:
+       # If we should merge into the last frame, increases processing speed at the cost of accuracy
+       shouldAllowImmediateMergeIntoLastNode: true
+       # If empty frames should be merged
+       shouldMergeEmptyFrames: true
+       # The maximum distance between empty frames when merging, this causes the graph to maintain flexibility for large traversals of empty.
+       maxEmptyFrameMergeDistance: 10.0
+       # Threshold for merging frames with each other, done via the overlap metric (normals taken into account)
+       minOverlapMergeThreshold: 0.5
+       # Mah dist which determines when a frame is overlapping, this is the mah dist between the bounds of the 2
+       maxMahalanobisDistanceOverlapThreshold: &max_mah_dist_bounds 1.7320508075688772
+       # The errors are the tolerances where sax icp will work, after that loop-closure stuff kicks in
+       highConfidencePositionUncertaintyStdDevThreshold: 1.0
+       highConfidenceRotationUncertaintyStdDevThreshold: 15.0
+       # If wildcat rejects edges that means it's too confident in the edges (confidenceOffset) or there's not enough overlap (confidenceBounds), increasing makes it more accept larger errors
+       maxMahalanobisDistanceHighConfidenceOffset: &max_mah_dist_offset 1.7320508075688772
+       maxMahalanobisDistanceHighConfidenceBounds: *max_mah_dist_bounds
+       maxMahalanobisDistanceLowConfidenceOffset: *max_mah_dist_offset
+       maxMahalanobisDistanceLowConfidenceBounds: *max_mah_dist_bounds
+       # General config
+       shouldRefineMerges: true
+       shouldPruneChildrenNodes: true
+       # connectivityGraphFilename: map.atlas # Set prune to false to get the full map
+       # Allow duplicate frames (id && pose) to be ignored, the cause is currently unknown, but it's most likely comms related
+       shouldIgnoreIdenticalFrames: true
+       # Clear an agent if it recieves a clashing frame id, usually when it's rebooted or something
+       shouldClearAgentOnFrameIdClash: true
+       # Clear an agent if it recieves a frame id lower then the last, usually when it's rebooted or something
+       shouldClearAgentOnFrameIdDecrement: true
+       optimization: &online_atlas_optimizer_optimization
+        problem:
+         solver:
+          type: STATIC_LINEAR
+          parameters:
+           maxNumIterations: 7
+           iterationConvergenceThreshold: 0.01
+           enableSafetyChecks: false
+           dampingFactor: 0.01
+         optimization:
+          minNumIterations: 1
+          maxNumIterations: 7
+          iterationConvergenceThreshold: 0.01
+         constraints:
+          edges:
+           type: EDGE
+           parameters:
+            odometry:
+            match:
+             loss:
+              type: SOFT
+              parameters:
+               threshold: 1
+            fake:
+             loss:
+              type: SOFT
+              parameters:
+               threshold: 1
+          upVector:
+           type: UP_VECTOR
+           parameters:
+            confidences:
+             rotation:
+              stdDev: 1.0
+       agents:
+        default:
+         offset: [0,0,0, 1,0,0,0]
+         confidences:
+          odometry:
+           stdDev: [0.01, 0.1]
+          upVector:
+           stdDev: 1.0
+       confidences: &atlas_confidences
+        match:
+         stdDev: [0.001, 0.1]
+        edgeOffsetConstant:
+         stdDev: [0.1, 5.0]
+       boundsComputer: &atlas_bounds_computer
+        type: SAX_COVARIANCE
+       covarianceComputer: &atlas_covariance_computer
+        type: COMPOUND_COVARIANCE
+        parameters:
+         computers:
+          confidence:
+           type: COMPOUND_CONFIDENCE
+           parameters:
+            computers:
+             sax:
+              type: SAX
+             upVector:
+              type: UP_VECTOR
+              parameters:
+               confidences:
+                pitchAndRoll:
+                 stdDev: 3.0
+             nominal:
+              type: CONSTANT_WITH_UP_VECTOR
+              parameters:
+               confidences:
+                xy:
+                 stdDev: 1.0
+                z:
+                 stdDev: 1.0
+                yaw:
+                 stdDev: 6.0
+                pitchAndRoll:
+                 stdDev: 1.0
+          covariance:
+           type: CONSTANT_WITH_UP_VECTOR
+           parameters:
+            confidences:
+             xy:
+              stdDev: 0.1
+             z:
+              stdDev: 0.1
+             yaw:
+              stdDev: 1.2 # 0.6
+             pitchAndRoll:
+              stdDev: 0.6 # 0.1
+       fineAligner: &atlas_fine_aligner
+        type: SAX_ICP
+        parameters:
+         aligner:
+          translationConvergenceThreshold: 0.001
+          rotationConvergenceThreshold: 0.01
+          maxNumIterations: 25
+          # Ignore overlap for ICP in favour of our frame overlap metric
+          minOriginOverlap: 0.0
+          minTargetOverlap: 0.0
+          minNumMatches: 10
+          match:
+           search:
+            numMatches: 4
+            epsilon: 0.0
+            maxDist: 1.0
+            shouldScalePositionWithRes: true
+            minTimeDelta: 0
+            normalScale: 1
+            resolutionScale: 100
+            maxNumThreads: 4
+           filter:
+            maxNumMatches: 250000
+            shouldFilterReciprocal: true
+            maxAngle: 30
+          loss:
+           type: CAUCHY
+           parameters:
+            threshold: 5.0
+       # Verification for fine alignments
+       fineAlignmentVerifier: &atlas_fine_alignment_verifier
+        type: COMPOUND
+        parameters:
+         verifiers:
+          # Ensure up is up
+          -
+           type: UP_VECTOR
+           parameters:
+            # The maximum accepted error (deg) between the up-vectors.
+            maximumError: 15.0
+          # Make sure there's enough overlap between saxs
+          -
+           type: OVERLAP
+           parameters:
+            minimumOverlap: 0.25
+            overlapDetector:
+             type: SAX_OCCUPANCY
+             parameters:
+              voxelSize: 1.0
+              maxNormalAngleDifference: 90
+              minPlanarity: 0.2
+              overlapComputationMethod: HIGHEST # (Optimistic->Pessimistic) HIGHEST,MEAN,LOWEST,BLEND
+       overlapDetector: &atlas_overlap_detector
+        type: SAX_OCCUPANCY
+        parameters:
+         voxelSize: 1.0
+         maxNormalAngleDifference: 90
+         minPlanarity: 0.2
+         overlapComputationMethod: HIGHEST # (Optimistic->Pessimistic) HIGHEST,MEAN,LOWEST,BLEND
+       merger: &atlas_merger
+        type: COMPOUND
+        parameters:
+         mergers:
+          sax:
+           type: SAX
+          up:
+           type: UP_VECTOR
+       guessAligner: &atlas_guess_aligner
+        type: REFINER
+        parameters:
+         shouldRemoveFailedFineAlignments: true
+         guessAligner:
+          type: EGI_FOURIER
+          parameters:
+           resolution: 0.4
+           angularResolution: 1
+           gridResolution: 1.0
+           gridMaxRadius: 60
+         fineAligner: *atlas_fine_aligner
+       # Verification for guess alignments
+       guessAlignmentVerifier: *atlas_fine_alignment_verifier
+       hypothesisVerifier: &atlas_hyp_verifier
+        type: OVERLAPPING_BOUNDS
+        parameters:
+         # Reject any hypotheses that have a bad match
+         acceptRatio: 1.0
+         rejectRatio: 0.01
+         maxOffsetMahalanobisDistance: *max_mah_dist_offset
+         sigmaScale: 1.0
+   # Resample the trajectory so it plays nice with down-stream users
+   trajResampler: &atlas_traj_resampler
+    type: SIMPLE_STATE_CONTROLLER
+    parameters:
+     state:
+      agents:
+       default:
+        frame:
+         trajectory: *atlas_frame
+         baseLink: *odom_frame
+     controller:
+      type: TRAJECTORY_RESAMPLER
+      parameters:
+       agents:
+        default:
+         samplePeriod: 0.01
+         sampleMethod: CUBIC
+   # Output results for downstream usage
+   resultWriter: &atlas_result_writer
+    type: TEMPLATE
+    parameters:
+     template: *result_writer_template
+     arguments:
+      __FILENAME__: *atlas_results_filename
+      __TOPIC__: *atlas_results_topic
+
+# Common defines for down-stream usage
+atlasDefines:
+ bagReaderReader: &atlas_bag_reader_reader
+  type: ROS_BAG
+  parameters:
+   reader:
+    taskMonitor:
+     shouldMonitor: false
+    agents:
+     AGENT_NAME:
+      bags: [*atlas_results_filename]
+      decoders:
+       raw:
+        type: WILDCAT
+        topics: [*atlas_results_topic]
+
+# Do offline global on atlas results
+offlineGlobal: &offline_global
+ unusedOverrideSink: [*unused_override_sink, INIT_FORWARD_AXIS, PREVIEW_CLOUD_VOXEL_RESOLUTION, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS, SHOULD_OUTPUT_PREVIEW_CLOUD]
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: PIPELINE
+ parameters:
+  connections:
+   bagReader: rawPipeline
+   rawPipeline: temporalSorter
+   temporalSorter: [featureGenerator, global]
+   featureGenerator: global
+   global: resultWriter
+  flushOrder: [bagReader, rawPipeline, temporalSorter, featureGenerator, global, resultWriter]
+  nodes:
+   # Read it
+   bagReader:
+    type: TEMPORAL_READER
+    parameters:
+     readers:
+      raw: *raw_bag_reader_reader
+      odom: *odom_bag_reader_reader
+      atlas: *atlas_bag_reader_reader
+   # Fix raw data
+   rawPipeline: *raw_data_pipeline
+   # Sort the times
+   temporalSorter:
+    type: TEMPORAL_SORTER
+    parameters:
+     bufferDuration: 5.0
+   # Gen features
+   featureGenerator:
+    type: SIMPLE_WINDOWED_STATE_CONTROLLER
+    parameters:
+     dataBox: *data_box_config
+     state:
+      agents:
+       default:
+        frame:
+         optimization: *atlas_frame
+         trajectory: [*odom_frame]
+         baseLink: *base_link_frame
+        sensorTree: *full_sensor_tree
+     windowDuration: &windowed_writer_duration 1.0
+     windowBufferDuration: &windowed_writer_buffer_duration 0.5
+     windowShiftDuration: &windowed_writer_shift_duration 0.9
+     shouldUseTrajectoryTimes: &windowed_writer_should_use_trajectory_times true
+     controller:
+      type: COMPOUND
+      parameters:
+       controllers:
+        # Generate sax features
+        saxGenner:
+         type: SAX_GENERATOR
+         parameters:
+          agents:
+           default:
+            frames:
+             default:
+              saxizer: &global_saxizer
+               shouldComputeOffset: true
+               shouldFilterSaxsNearEdge: true
+               numLevels: 5
+               baseResolution: 0.4
+               minTimeDelta: 0.025
+               maxTimeDelta: 10.0
+               minWeight: 8
+               maxWeight: 1000000
+               minCylindricality: 0
+               maxCylindricality: 0.8
+               minPlanarity: 0.2
+               maxPlanarity: 1
+               minSphericity: 0
+               maxSphericity: 0.5
+               maxAngleOfIncidence: 80
+   # Slam it
+   global:
+    type: SIMPLE_PERIODIC_TRAJECTORY_OPTIMIZER
+    parameters:
+     dataBox: *data_box_config
+     shouldOutputPoseCovariance: true
+     outputPoseCovarianceFrame: *wildcat_global_pose_estimate_frame
+     shouldOnlyPublishOnFlush: true
+     state:
+      agents:
+       default:
+        frame: &global_state_frames
+         optimization: *global_frame
+         trajectory: [*atlas_frame, *odom_frame]
+         baseLink: *base_link_frame
+        sensorTree:
+         transforms: *all_transforms
+         sensors:
+          wildcat_odom_pose_estimate: *odom_pose_estimate_sensor
+          imu: *imu_sensor
+          gps: *gps_sensor
+          landmark: *landmark_sensor
+          velodyne:
+           type: SAX
+           parameters:
+            confidences:
+             range: *laser_confidence_range
+     optimization:
+      period: 999999
+      attemptPeriod: 9999999
+      solver:
+       maxNumIterations: 14
+       iterationConvergenceThreshold: 0.0
+      problem:
+       correctionSampler:
+        type: UNIFORM
+        parameters:
+         delta: 2.5
+         correctionType: CUBIC
+         sampleType: LINEAR
+       solver:
+        type: STATIC_LINEAR
+        parameters:
+         maxNumIterations: 5
+         iterationConvergenceThreshold: 0.01
+         enableSafetyChecks: false
+         dampingFactor: 0.01
+     constraints:
+       transform:
+        type: TRANSFORM_ESTIMATION
+        parameters:
+         agents:
+          default:
+           shouldNormalizeConstraints: &global_should_normalize_constraints false
+           metaParameterResidualOptions: &global_meta_param_residual_options
+            shouldScaleByUsage: false
+            shouldScaleZeroMeanByUsage: true
+       pose:
+        type: POSE
+        parameters:
+         agents:
+          default:
+           shouldNormalizeConstraints: *global_should_normalize_constraints
+           frames:
+            default:
+             type: DIFFERENTIAL
+       imus:
+        type: IMU
+        parameters:
+         agents:
+          default:
+           shouldNormalizeConstraints: *global_should_normalize_constraints
+           metaParameterResidualOptions: *global_meta_param_residual_options
+       gps:
+        type: GPS
+        parameters:
+         agents:
+          default:
+           shouldNormalizeConstraints: *global_should_normalize_constraints
+           metaParameterResidualOptions: *global_meta_param_residual_options
+           shouldComputeFullOffset: false
+           shouldGuessInitialOffsetEachIteration: false
+           # Optimize the offset if required
+           shouldOptimizeOffset: SHOULD_OPTIMIZE_GPS_OFFSET
+           shouldOptimizeOffsetEachIteration: SHOULD_OPTIMIZE_GPS_OFFSET
+           iterations:
+            -
+             loss:
+              type: CAUCHY
+              parameters:
+               threshold: 10.0
+            -
+             loss:
+              type: CAUCHY
+              parameters:
+               threshold: 5.0
+            -
+             loss:
+              type: CAUCHY
+              parameters:
+               threshold: 2.5
+            -
+             loss:
+              type: CAUCHY
+              parameters:
+               threshold: 1.0
+       landmark:
+        type: LANDMARK
+        parameters:
+         agents:
+          default:
+           shouldNormalizeConstraints: *global_should_normalize_constraints
+           metaParameterResidualOptions: *global_meta_param_residual_options
+           landmarkFrames:
+            default:
+             # [optional = POSE] The offset type to compute between the trajectory and landmark frame.
+             # Available options:
+             #  * POSE : Compute the full offset
+             #  * GRAVITY_ALIGNED : Compute translation + yaw, with Z-UP being assumed
+             offsetType: GRAVITY_ALIGNED
+             shouldGuessInitialOffsetEachIteration: false
+             # Optimize the offset if required
+             shouldOptimizeOffset: SHOULD_OPTIMIZE_LANDMARK_OFFSET
+             shouldOptimizeOffsetEachIteration: SHOULD_OPTIMIZE_LANDMARK_OFFSET
+       lasers:
+        type: LASER
+        parameters:
+         agents:
+          default:
+           shouldNormalizeConstraints: *global_should_normalize_constraints
+           metaParameterResidualOptions: *global_meta_param_residual_options
+       saxs:
+        type: SIMPLE_SAX
+        parameters:
+         agents:
+          default:
+           provider:
+            type: SAX
+            parameters:
+             shouldEraseProcessedData: true
+         constrainer:
+          shouldNormalizeConstraints: *global_should_normalize_constraints
+          shouldNormalizeConstraintsWithMatchCounts: false
+          dynamic:
+           -
+            match:
+             search: &search
+              numMatches: 5
+              epsilon: 0.5
+              maxDist: 0.8
+              shouldScalePositionWithRes: true
+              minTimeDelta: *saxMaxTime
+              normalScale: 1
+              resolutionScale: 100
+              maxNumThreads: 4
+             shouldFilterReciprocal: true
+             minNumMatches: 1000
+             maxNumMatches: 10000000
+             numMatchesSubsetRatio: 0.4
+             maxAngle: 30.0
+            constraint:
+             matchScalingMethod: SUMMED_AND_WEIGHT_UNCERTAINTY
+             weight: 1.0
+             loss:
+              type: SOFT
+              parameters:
+               threshold: 10.0
+           -
+            match:
+             search: *search
+             shouldFilterReciprocal: true
+             minNumMatches: 1000
+             maxNumMatches: 10000000
+             numMatchesSubsetRatio: 0.4
+             maxAngle: 15.0
+            constraint:
+             matchScalingMethod: SUMMED_AND_WEIGHT_UNCERTAINTY
+             weight: 1.0
+             loss:
+              type: SOFT
+              parameters:
+               threshold: 5.0
+   # Output results for downstream usage
+   resultWriter:
+    type: TEMPLATE
+    parameters:
+     template: *result_writer_template
+     arguments:
+      __FILENAME__: *global_results_filename
+      __TOPIC__: *global_results_topic
+
+# Common defines for down-stream usage
+globalDefines:
+ bagReaderReader: &global_bag_reader_reader
+  type: ROS_BAG
+  parameters:
+   reader:
+    taskMonitor:
+     shouldMonitor: false
+    agents:
+     AGENT_NAME:
+      bags: [*global_results_filename]
+      decoders:
+       raw:
+        type: WILDCAT
+        topics: [*global_results_topic]
+
+### Georeferencing
+
+# Georeference odom results, producing a projection file and corrections
+# @note all of the georeferences do the same but are templated for the differing inputs/frames/output naming
+offlineOdomGeoreference:
+ unusedOverrideSink: &unused_georeffing_overrides [*unused_override_sink, ENCODER_CALIBRATION_VALUES, INIT_FORWARD_AXIS, LASER_CALIBRATION_VALUES, PREVIEW_CLOUD_VOXEL_RESOLUTION, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS, SHOULD_OUTPUT_PREVIEW_CLOUD, VELODYNE_FILTER]
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: TEMPLATE
+ parameters:
+  # Template for gereffing results
+  # Available arguments:
+  #   * __BAG_READERS__: List of bag readers to get the data from
+  #   * __TRAJECTORIES__: List of trajectories to project with
+  #   * __CORRECTION_FRAME__: Output correction frame to use for the correction
+  #   * __PROJECTION_FILESTUB__: Filestub for the projection files
+  #   * __RESULT_WRITER_FILENAME__: Filename for the results
+  #   * __RESULT_WRITER_TOPIC__: Topic for the results
+  template: &georeference_template
+   type: PIPELINE
+   parameters:
+    connections:
+     bagReader: rawPipeline
+     rawPipeline: georeferencer
+     georeferencer: resultWriter
+    flushOrder: [bagReader, rawPipeline, georeferencer, resultWriter]
+    nodes:
+     # Read bags
+     bagReader:
+      type: TEMPORAL_READER
+      parameters:
+       readers: __BAG_READERS__
+     # Fix raw data
+     rawPipeline: *raw_data_pipeline
+     # Georef it
+     georeferencer:
+      type: SIMPLE_STATE_CONTROLLER
+      parameters:
+       state:
+        agents:
+         default:
+          frame:
+           trajectory: __TRAJECTORIES__
+           baseLink: *base_link_frame
+          sensorTree:
+           # Only GPS data is required for projection
+           transforms: *all_transforms
+           sensors:
+            gps: *gps_sensor
+       controller:
+        type: GPS_PROJECTOR
+        parameters:
+         correctionFrame: __CORRECTION_FRAME__
+         correctionSamplePeriod: 1.0
+         shouldUseSameOriginForAllAgents: true
+         # Note we treat them all rigid, so only a single transform, ensuring global consistency is kept
+         shouldTreatAllAgentsRigid: true
+         shouldCorrectPitchAndRoll: false
+         # Some projections cant deal with altitude offsets, in this case PROJ so disable it
+         shouldOffsetAltitude: false
+         alignmentLoss:
+          type: CAUCHY
+          parameters:
+           threshold: 1.0
+         # Write out the projection information
+         projectionFilestub: __PROJECTION_FILESTUB__
+         projectionWriter:
+          type: COMPOUND
+          parameters:
+           writers:
+            proj:
+             type: PROJ
+            esri:
+             type: ESRI
+     # Output results for downstream usage
+     resultWriter:
+      type: TEMPLATE
+      parameters:
+       template: *result_writer_template
+       arguments:
+        __FILENAME__: __RESULT_WRITER_FILENAME__
+        __TOPIC__: __RESULT_WRITER_TOPIC__
+  arguments:
+   __BAG_READERS__:
+    # only read the required data (gps/traj)
+    raw: &raw_gps_only_bag_reader_reader
+     type: ROS_BAG
+     parameters:
+      reader:
+       taskMonitor:
+        shouldMonitor: false
+       agents:
+        AGENT_NAME:
+         bags: INPUT_RAW_BAG_FILES
+         decoders:
+          gps: *gps_decoder
+    odom: *odom_bag_reader_reader
+   __TRAJECTORIES__: [*odom_frame]
+   __CORRECTION_FRAME__: *odom_georeferenced_frame
+   __PROJECTION_FILESTUB__: "odom_georeferenced_projection"
+   __RESULT_WRITER_FILENAME__: *odom_georeferenced_results_filename
+   __RESULT_WRITER_TOPIC__: *odom_georeferenced_results_topic
+# Georeference atlas results, producing a projection file and corrections
+offlineAtlasGeoreference:
+ unusedOverrideSink: *unused_georeffing_overrides
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: TEMPLATE
+ parameters:
+  template: *georeference_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_gps_only_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+   __TRAJECTORIES__: [*atlas_frame, *odom_frame]
+   __CORRECTION_FRAME__: *atlas_georeferenced_frame
+   __PROJECTION_FILESTUB__: "atlas_georeferenced_projection"
+   __RESULT_WRITER_FILENAME__: *atlas_georeferenced_results_filename
+   __RESULT_WRITER_TOPIC__: *atlas_georeferenced_results_topic
+# Georeference global results, producing a projection file and corrections
+offlineGlobalGeoreference: &offline_global_georeference
+ unusedOverrideSink: *unused_georeffing_overrides
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: TEMPLATE
+ parameters:
+  template: *georeference_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_gps_only_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    global: *global_bag_reader_reader
+   __TRAJECTORIES__: [*global_frame, *atlas_frame, *odom_frame]
+   __CORRECTION_FRAME__: *global_georeferenced_frame
+   __PROJECTION_FILESTUB__: "global_georeferenced_projection"
+   __RESULT_WRITER_FILENAME__: *global_georeferenced_results_filename
+   __RESULT_WRITER_TOPIC__: *global_georeferenced_results_topic
+
+# Define all readers etc. for all permutations of reffed data
+georeferencingDefines:
+ # Odom
+ odomGeoreferenced: &odom_georeffed_bag_reader_reader
+  type: ROS_BAG
+  parameters:
+   reader:
+    taskMonitor:
+     shouldMonitor: false
+    agents:
+     AGENT_NAME:
+      bags: ["odom_georeferenced.bag"]
+      decoders:
+       raw:
+        type: WILDCAT
+        topics: ["wildcat/odom_georeferenced/raw"]
+ # Atlas
+ atlasGeoreferenced: &atlas_georeffed_bag_reader_reader
+  type: ROS_BAG
+  parameters:
+   reader:
+    taskMonitor:
+     shouldMonitor: false
+    agents:
+     AGENT_NAME:
+      bags: ["atlas_georeferenced.bag"]
+      decoders:
+       raw:
+        type: WILDCAT
+        topics: ["wildcat/atlas_georeferenced/raw"]
+ # Global
+ globalGeoreferenced: &global_georeffed_bag_reader_reader
+  type: ROS_BAG
+  parameters:
+   reader:
+    taskMonitor:
+     shouldMonitor: false
+    agents:
+     AGENT_NAME:
+      bags: ["global_georeferenced.bag"]
+      decoders:
+       raw:
+        type: WILDCAT
+        topics: ["wildcat/global_georeferenced/raw"]
+
+### Landmarkreferencing
+
+# Landmarkreference odom results, producing a projection file and corrections
+# @note all of the landmarkreferences do the same but are templated for the differing inputs/frames/output naming
+offlineOdomLandmarkreference:
+ unusedOverrideSink: &unused_landmarkreffing_overrides [*unused_override_sink, LASER_CALIBRATION_VALUES, INIT_FORWARD_AXIS, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, ENCODER_CALIBRATION_VALUES, SHOULD_OUTPUT_PREVIEW_CLOUD, PREVIEW_CLOUD_VOXEL_RESOLUTION, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, VELODYNE_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: TEMPLATE
+ parameters:
+  # Template for gereffing results
+  # Available arguments:
+  #   * __BAG_READERS__: List of bag readers to get the data from
+  #   * __TRAJECTORIES__: List of trajectories to project with
+  #   * __CORRECTION_FRAME__: Output correction frame to use for the correction
+  #   * __PROJECTION_FILESTUB__: Filestub for the projection files
+  #   * __RESULT_WRITER_FILENAME__: Filename for the results
+  #   * __RESULT_WRITER_TOPIC__: Topic for the results
+  template: &landmarkreference_template
+   type: PIPELINE
+   parameters:
+    connections:
+     bagReader: rawPipeline
+     rawPipeline: referencer
+     referencer: resultWriter
+    flushOrder: [bagReader, rawPipeline, referencer, resultWriter]
+    nodes:
+     # Read bags
+     bagReader:
+      type: TEMPORAL_READER
+      parameters:
+       readers: __BAG_READERS__
+     # Fix raw data
+     rawPipeline: *raw_data_pipeline
+     # Ref it
+     referencer:
+      type: SIMPLE_STATE_CONTROLLER
+      parameters:
+       state:
+        agents:
+         default:
+          frame:
+           trajectory: __TRAJECTORIES__
+           baseLink: *base_link_frame
+          sensorTree:
+           # Only Landmark data is required for projection
+           transforms: *all_transforms
+           sensors:
+            landmark: *landmark_sensor
+       controller:
+        type: LANDMARK_PROJECTOR
+        parameters:
+         landmarkFrame: *landmark_projection_frame
+         correctionFrame: __CORRECTION_FRAME__
+         correctionSamplePeriod: 1.0
+         # Note we treat them all rigid, so only a single transform, ensuring global consistency is kept
+         shouldTreatAllAgentsRigid: true
+         # [optional = POSE] The offset type to compute between the trajectory and landmark frame.
+         # Available options:
+         #  * POSE : Compute the full offset
+         #  * GRAVITY_ALIGNED : Compute translation + yaw, with Z-UP being assumed
+         offsetType: GRAVITY_ALIGNED
+     # Output results for downstream usage
+     resultWriter:
+      type: TEMPLATE
+      parameters:
+       template: *result_writer_template
+       arguments:
+        __FILENAME__: __RESULT_WRITER_FILENAME__
+        __TOPIC__: __RESULT_WRITER_TOPIC__
+  arguments:
+   __BAG_READERS__:
+    # only read the required data (landmark/traj)
+    raw: &raw_landmark_only_bag_reader_reader
+     type: ROS_BAG
+     parameters:
+      reader:
+       agents:
+        AGENT_NAME:
+         bags: INPUT_RAW_BAG_FILES
+         decoders:
+          sphericalLandmark: *spherical_landmark_decoder
+          sphericalLandmarkObservation: *spherical_landmark_observation_decoder
+    odom: *odom_bag_reader_reader
+   __TRAJECTORIES__: [*odom_frame]
+   __CORRECTION_FRAME__: *odom_landmarkreferenced_frame
+   __RESULT_WRITER_FILENAME__: *odom_landmarkreferenced_results_filename
+   __RESULT_WRITER_TOPIC__: *odom_landmarkreferenced_results_topic
+# Landmarkreference atlas results, producing a projection file and corrections
+offlineAtlasLandmarkreference:
+ unusedOverrideSink: *unused_landmarkreffing_overrides
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: TEMPLATE
+ parameters:
+  template: *landmarkreference_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_landmark_only_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+   __TRAJECTORIES__: [*atlas_frame, *odom_frame]
+   __CORRECTION_FRAME__: *atlas_landmarkreferenced_frame
+   __RESULT_WRITER_FILENAME__: *atlas_landmarkreferenced_results_filename
+   __RESULT_WRITER_TOPIC__: *atlas_landmarkreferenced_results_topic
+# Landmarkreference global results, producing a projection file and corrections
+offlineGlobalLandmarkreference: &offline_global_landmarkreference
+ unusedOverrideSink: *unused_landmarkreffing_overrides
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: TEMPLATE
+ parameters:
+  template: *landmarkreference_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_landmark_only_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    global: *global_bag_reader_reader
+   __TRAJECTORIES__: [*global_frame, *atlas_frame, *odom_frame]
+   __CORRECTION_FRAME__: *global_landmarkreferenced_frame
+   __RESULT_WRITER_FILENAME__: *global_landmarkreferenced_results_filename
+   __RESULT_WRITER_TOPIC__: *global_landmarkreferenced_results_topic
+
+# Define all readers etc. for all permutations of reffed data
+landmarkreferencingDefines:
+ # Odom
+ odomLandmarkreferenced: &odom_landmarkreffed_bag_reader_reader
+  type: ROS_BAG
+  parameters:
+   reader:
+    taskMonitor:
+     shouldMonitor: false
+    agents:
+     AGENT_NAME:
+      bags: ["odom_landmarkreferenced.bag"]
+      decoders:
+       raw:
+        type: WILDCAT
+        topics: ["wildcat/odom_landmarkreferenced/raw"]
+ # Atlas
+ atlasLandmarkreferenced: &atlas_landmarkreffed_bag_reader_reader
+  type: ROS_BAG
+  parameters:
+   reader:
+    taskMonitor:
+     shouldMonitor: false
+    agents:
+     AGENT_NAME:
+      bags: ["atlas_landmarkreferenced.bag"]
+      decoders:
+       raw:
+        type: WILDCAT
+        topics: ["wildcat/atlas_landmarkreferenced/raw"]
+ # Global
+ globalLandmarkreferenced: &global_landmarkreffed_bag_reader_reader
+  type: ROS_BAG
+  parameters:
+   reader:
+    taskMonitor:
+     shouldMonitor: false
+    agents:
+     AGENT_NAME:
+      bags: ["global_landmarkreferenced.bag"]
+      decoders:
+       raw:
+        type: WILDCAT
+        topics: ["wildcat/global_landmarkreferenced/raw"]
+
+### Writing misc
+
+# Write a bag file that contains normalized data where all transforms/calibrations have been applied
+#  i.e. the bag file will contain data which is all contained within the same frame
+# Only data for the following sensors will be kept:
+#
+#  * IMU
+#  * LASER
+#
+# This is largely for making the data easier to use with when comparing SLAM methods
+writeNormalizedBag:
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: PIPELINE
+ parameters:
+  connections:
+   bagReader: rawPipeline
+   rawPipeline: [streamWriter]
+  flushOrder: [bagReader, rawPipeline, streamWriter]
+  nodes:
+   # Read it
+   bagReader:
+    type: TEMPORAL_READER
+    parameters:
+     readers:
+      raw: *raw_bag_reader_reader
+   # Fix raw data
+   rawPipeline: *raw_data_pipeline
+   # Write the state given a stream of input data
+   streamWriter:
+    type: PIPELINE
+    parameters:
+     dataBox: *data_box_config
+     connections:
+      input: [windowedStateController, rawOutputFilter]
+      rawOutputFilter: writer
+      windowedStateController: writer
+     flushOrder: [windowedStateController, rawOutputFilter, writer]
+     nodes:
+      # Project and output all required data as the stream comes in
+      windowedStateController:
+       type: SIMPLE_WINDOWED_STATE_CONTROLLER
+       parameters:
+        dataBox: *data_box_config
+        state:
+         agents:
+          default:
+           frame:
+            baseLink: *base_link_frame
+           sensorTree: *full_sensor_tree
+        windowDuration: 1.0
+        windowBufferDuration: 5.0
+        windowShiftDuration: 0.05
+        shouldUseTrajectoryTimes: false
+        controller:
+         type: COMPOUND
+         parameters:
+          controllers:
+           # Transform points to the fixed frame
+           cloudTransformer:
+            type: POINT_CLOUD_TRANSFORMER
+            parameters:
+             agents:
+              default:
+               targetFrame: *base_link_frame
+      # Filter the raw data stream to the IMU only, everything else is projected in the windowed controller
+      rawOutputFilter:
+       type: DATA_FILTER
+       parameters:
+        filter:
+         type: ANY
+         parameters:
+          filters:
+           imu:
+            type: IMU
+      # Write the data
+      writer:
+       type: SIMPLE_WRITER
+       parameters:
+        dataBox: *data_box_config
+        writers:
+         bag:
+          type: ROS_BAG
+          parameters:
+           filename: "normalized_wildcat.bag"
+           writer:
+            encoders:
+             cloud:
+              type: POINT_CLOUD_2
+              parameters:
+               agents:
+                default:
+                 frames:
+                  base_link:
+                   topic: cloud
+                   frame: *base_link_frame
+                   shouldOutputPositionAsFloat: true
+                   shouldOffsetTimesRelativeToHeader: true
+                   shouldOutputAttributes: true
+             imu:
+              type: IMU
+              parameters:
+               agents:
+                default:
+                 frames:
+                  imu:
+                   topic: imu
+                   frame: *base_link_frame
+# Write out a pointcloud of the baseLink results.
+# i.e. a cloud where all points are projected into the baseLink frame of the system.
+#
+# This is largely for debugging purposes as it requires the system to be stationary to be valid
+writeBaseLink:
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: PIPELINE
+ parameters:
+  connections:
+   bagReader: rawPipeline
+   rawPipeline: [streamWriter]
+  flushOrder: [bagReader, rawPipeline, streamWriter]
+  nodes:
+   # Read it
+   bagReader:
+    type: TEMPORAL_READER
+    parameters:
+     readers:
+      raw: *raw_bag_reader_reader
+   # Fix raw data
+   rawPipeline: *raw_data_pipeline
+   # Write the state given a stream of input data
+   streamWriter:
+    type: PIPELINE
+    parameters:
+     dataBox: *data_box_config
+     connections:
+      input: windowedStateController
+      windowedStateController: writer
+     flushOrder: [windowedStateController, writer]
+     nodes:
+      # Project and output all required data as the stream comes in
+      windowedStateController:
+       type: SIMPLE_WINDOWED_STATE_CONTROLLER
+       parameters:
+        dataBox: *data_box_config
+        state:
+         agents:
+          default:
+           frame:
+            baseLink: *base_link_frame
+           sensorTree: *full_sensor_tree
+        windowDuration: 1.0
+        windowBufferDuration: 5.0
+        windowShiftDuration: 0.05
+        shouldUseTrajectoryTimes: false
+        controller:
+         type: COMPOUND
+         parameters:
+          controllers:
+           # Transform points to the fixed frame
+           cloudTransformer:
+            type: POINT_CLOUD_TRANSFORMER
+            parameters:
+             agents:
+              default:
+               targetFrame: *base_link_frame
+      # Write the data
+      writer:
+       type: SIMPLE_WRITER
+       parameters:
+        dataBox: *data_box_config
+        writers:
+         cloud:
+          type: POINT_CLOUD_STREAM
+          parameters:
+           filestub: "base_link_wildcat_velodyne"
+           writer: *windowed_writer_cloud_writer
+
+### Writing maps
+
+# Write odom results
+# @note all of the writers do the same but are templated for the differing inputs/frames/output naming
+writeOdom: &write_odom
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  # Templated writer for offline results
+  # Arguments:
+  #   __BAG_READERS__: List of bag readers to read the data from, including raw
+  #   __TRAJECTORIES__: State trajectories to use for the projection of the data
+  #   __TARGET_FRAME__: Target frame to use (should be the root of the state trajectories frame)
+  #   __TRAJ_FILESTUB__: Filestub for the trajectory output
+  #   __TRAJ_WITH_ODOM_COV_FILESTUB__ : Filesub for the trajectory with odom covariance output overlaid
+  #   __TRAJ_WITH_GLOBAL_COV_FILESTUB__ : Filesub for the trajectory with global covariance output overlaid
+  #   __CLOUD_FILESTUB__: Filestub for the pointcloud output
+  #   __POSE_EVENT_FILESTUB__: Filestub for pose event output
+  #   __PREVIEW_CLOUD_FILESTUB__: Filestub for the preview pointcloud output
+  template: &offline_writer_template
+   type: PIPELINE
+   parameters:
+    connections:
+     bagReader: rawPipeline
+     rawPipeline: [streamWriter]
+    flushOrder: [bagReader, rawPipeline, streamWriter]
+    nodes:
+     # Read it
+     bagReader:
+      type: TEMPORAL_READER
+      parameters:
+       readers: __BAG_READERS__
+     # Fix raw data
+     rawPipeline: *raw_data_pipeline
+     # Write the state given a stream of input data
+     streamWriter:
+      type: PIPELINE
+      parameters:
+       dataBox: *data_box_config
+       connections:
+        input: windowedStateController
+        windowedStateController: [writer, previewWriter]
+       flushOrder: [windowedStateController, writer, previewWriter]
+       nodes:
+        # Project and output all required data as the stream comes in
+        windowedStateController:
+         type: SIMPLE_WINDOWED_STATE_CONTROLLER
+         parameters:
+          dataBox: *data_box_config
+          state:
+           agents:
+            default:
+             frame:
+              trajectory: __TRAJECTORIES__
+              baseLink: *base_link_frame
+             sensorTree: *full_sensor_tree
+          windowDuration: &windowed_writer_duration 1.0
+          windowBufferDuration: &windowed_writer_buffer_duration 10.0
+          windowShiftDuration: &windowed_writer_shift_duration 0.9
+          shouldUseTrajectoryTimes: &windowed_writer_should_use_trajectory_times true
+          controller:
+           type: COMPOUND
+           parameters:
+            controllers:
+             # Squash the traj down to the fixed frame
+             trajectorySquasher:
+              type: TRAJECTORY_SQUASHER
+             # Transform odom traj cov into the fixed frame
+             trajectoryWithOdomCovTransformer:
+              type: POSE_TRANSFORMER
+              parameters:
+               agents:
+                default:
+                 transformType: RELATIVE
+                 originFrame: *wildcat_odom_pose_estimate_frame
+                 targetFrame: __TARGET_FRAME__
+                 outputFrame: *wildcat_odom_pose_estimate_frame
+             # Transform global traj cov into the fixed frame
+             trajectoryWithGlobalCovTransformer:
+              type: POSE_TRANSFORMER
+              parameters:
+               agents:
+                default:
+                 transformType: RELATIVE
+                 originFrame: *wildcat_global_pose_estimate_frame
+                 targetFrame: __TARGET_FRAME__
+                 outputFrame: *wildcat_global_pose_estimate_frame
+             # Transform points to the world frame
+             cloudTransformer:
+              type: POINT_CLOUD_TRANSFORMER
+              parameters:
+               agents:
+                default:
+                 targetFrame: __TARGET_FRAME__
+             # Project events to the world frame
+             eventProjector:
+              type: EVENT_PROJECTOR
+              parameters:
+               agents:
+                default:
+                 targetFrame: __TARGET_FRAME__
+             # Project pose events to the world frame
+             poseEventProjector:
+              type: POSE_EVENT_PROJECTOR
+              parameters:
+               agents:
+                default:
+                 targetFrame: __TARGET_FRAME__
+        # Write the data
+        writer:
+         type: SIMPLE_WRITER
+         parameters:
+          dataBox: *data_box_config
+          writers:
+           writer:
+            type: COMPOUND
+            parameters:
+             writers:
+              trajectory:
+               type: TRAJECTORY_STREAM
+               parameters:
+                filestub: __TRAJ_FILESTUB__
+                writer: *windowed_writer_traj_writer
+              trajectoryWithOdomCov:
+               type: DATA_FILTER
+               parameters:
+                filter:
+                 type: POSE_WITH_COVARIANCE
+                 parameters:
+                  frame: *wildcat_odom_pose_estimate_frame
+                writer:
+                 type: TRAJECTORY_WITH_COVARIANCE_STREAM
+                 parameters:
+                  filestub: __TRAJ_WITH_ODOM_COV_FILESTUB__
+                  writer: *windowed_writer_traj_with_cov_writer
+              trajectoryWithGlobalCov:
+               type: DATA_FILTER
+               parameters:
+                filter:
+                 type: POSE_WITH_COVARIANCE
+                 parameters:
+                  frame: *wildcat_global_pose_estimate_frame
+                writer:
+                 type: TRAJECTORY_WITH_COVARIANCE_STREAM
+                 parameters:
+                  filestub: __TRAJ_WITH_GLOBAL_COV_FILESTUB__
+                  writer: *windowed_writer_traj_with_cov_writer
+              cloud:
+               type: POINT_CLOUD_STREAM
+               parameters:
+                filestub: __CLOUD_FILESTUB__
+                writer: *windowed_writer_cloud_writer
+              event:
+               type: POSE_EVENT_STAMPED_STREAM
+               parameters:
+                filestub: __POSE_EVENT_FILESTUB__
+                writer:
+                 type: TEXT
+                 parameters:
+                  header: "event_id time x y z qw qx qy qz"
+                  delimiter: " "
+                  shouldEndRowsWithDelimiter: false
+                  fileExtension: "txt"
+        # Write the preview data
+        previewWriter:
+         type: CONDITIONAL
+         parameters:
+          isEnabled: SHOULD_OUTPUT_PREVIEW_CLOUD
+          shouldPassThroughWhenDisabled: false
+          node:
+           type: SIMPLE_WRITER
+           parameters:
+            dataBox: *data_box_config
+            writers:
+             writer:
+              type: COMPOUND
+              parameters:
+               writers:
+                previewCloud:
+                 type: POINT_CLOUD_STREAM
+                 parameters:
+                  filestub: __PREVIEW_CLOUD_FILESTUB__
+                  filter: *windowed_writer_preview_cloud_filter
+                  writer: *windowed_writer_preview_cloud_writer
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+   __TRAJECTORIES__: [*odom_frame]
+   __TARGET_FRAME__: *odom_frame
+   __TRAJ_FILESTUB__: "odom_wildcat_traj"
+   __TRAJ_WITH_ODOM_COV_FILESTUB__: "odom_wildcat_traj_odom_cov"
+   __TRAJ_WITH_GLOBAL_COV_FILESTUB__: "odom_wildcat_traj_global_cov"
+   __CLOUD_FILESTUB__: "odom_wildcat_velodyne"
+   __POSE_EVENT_FILESTUB__: "odom_wildcat_events"
+   __PREVIEW_CLOUD_FILESTUB__: "odom_wildcat_velodyne_preview"
+# Write odom georeffed results
+writeOdomGeoreferenced:
+ unusedOverrideSink: *unused_writing_overrides
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *offline_writer_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    odomGeoreferenced: *odom_georeffed_bag_reader_reader
+   __TRAJECTORIES__: [*odom_georeferenced_frame, *odom_frame]
+   __TARGET_FRAME__: *odom_georeferenced_frame
+   __TRAJ_FILESTUB__: "odom_georeferenced_wildcat_traj"
+   __TRAJ_WITH_ODOM_COV_FILESTUB__: "odom_georeferenced_wildcat_traj_odom_cov"
+   __TRAJ_WITH_GLOBAL_COV_FILESTUB__: "odom_georeferenced_wildcat_traj_global_cov"
+   __CLOUD_FILESTUB__: "odom_georeferenced_wildcat_velodyne"
+   __POSE_EVENT_FILESTUB__: "odom_georeferenced_wildcat_events"
+   __PREVIEW_CLOUD_FILESTUB__: "odom_georeferenced_wildcat_velodyne_preview"
+# Write odom landmarkreffed results
+writeOdomLandmarkreferenced:
+ unusedOverrideSink: *unused_writing_overrides
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *offline_writer_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    odomLandmarkreferenced: *odom_landmarkreffed_bag_reader_reader
+   __TRAJECTORIES__: [*odom_landmarkreferenced_frame, *odom_frame]
+   __TARGET_FRAME__: *odom_landmarkreferenced_frame
+   __TRAJ_FILESTUB__: "odom_landmarkreferenced_wildcat_traj"
+   __TRAJ_WITH_ODOM_COV_FILESTUB__: "odom_landmarkreferenced_wildcat_traj_odom_cov"
+   __TRAJ_WITH_GLOBAL_COV_FILESTUB__: "odom_landmarkreferenced_wildcat_traj_global_cov"
+   __CLOUD_FILESTUB__: "odom_landmarkreferenced_wildcat_velodyne"
+   __POSE_EVENT_FILESTUB__: "odom_landmarkreferenced_wildcat_events"
+   __PREVIEW_CLOUD_FILESTUB__: "odom_landmarkreferenced_wildcat_velodyne_preview"
+# Write atlas results
+writeAtlas: &write_atlas
+ unusedOverrideSink: *unused_writing_overrides
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *offline_writer_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+   __TRAJECTORIES__: [*atlas_frame, *odom_frame]
+   __TARGET_FRAME__: *atlas_frame
+   __TRAJ_FILESTUB__: "atlas_wildcat_traj"
+   __TRAJ_WITH_ODOM_COV_FILESTUB__: "atlas_wildcat_traj_odom_cov"
+   __TRAJ_WITH_GLOBAL_COV_FILESTUB__: "atlas_wildcat_traj_global_cov"
+   __CLOUD_FILESTUB__: "atlas_wildcat_velodyne"
+   __POSE_EVENT_FILESTUB__: "atlas_wildcat_events"
+   __PREVIEW_CLOUD_FILESTUB__: "atlas_wildcat_velodyne_preview"
+# Write atlas georeffed results
+writeAtlasGeoreferenced:
+ unusedOverrideSink: *unused_writing_overrides
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *offline_writer_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    atlasGeoreferenced: *atlas_georeffed_bag_reader_reader
+   __TRAJECTORIES__: [*atlas_georeferenced_frame, *atlas_frame, *odom_frame]
+   __TARGET_FRAME__: *atlas_georeferenced_frame
+   __TRAJ_FILESTUB__: "atlas_georeferenced_wildcat_traj"
+   __TRAJ_WITH_ODOM_COV_FILESTUB__: "atlas_georeferenced_wildcat_traj_odom_cov"
+   __TRAJ_WITH_GLOBAL_COV_FILESTUB__: "atlas_georeferenced_wildcat_traj_global_cov"
+   __CLOUD_FILESTUB__: "atlas_georeferenced_wildcat_velodyne"
+   __POSE_EVENT_FILESTUB__: "atlas_georeferenced_wildcat_events"
+   __PREVIEW_CLOUD_FILESTUB__: "atlas_georeferenced_wildcat_velodyne_preview"
+# Write atlas landmarkreffed results
+writeAtlasLandmarkreferenced:
+ unusedOverrideSink: *unused_writing_overrides
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *offline_writer_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    atlasLandmarkreferenced: *atlas_landmarkreffed_bag_reader_reader
+   __TRAJECTORIES__: [*atlas_landmarkreferenced_frame, *atlas_frame, *odom_frame]
+   __TARGET_FRAME__: *atlas_landmarkreferenced_frame
+   __TRAJ_FILESTUB__: "atlas_landmarkreferenced_wildcat_traj"
+   __TRAJ_WITH_ODOM_COV_FILESTUB__: "atlas_landmarkreferenced_wildcat_traj_odom_cov"
+   __TRAJ_WITH_GLOBAL_COV_FILESTUB__: "atlas_landmarkreferenced_wildcat_traj_global_cov"
+   __CLOUD_FILESTUB__: "atlas_landmarkreferenced_wildcat_velodyne"
+   __POSE_EVENT_FILESTUB__: "atlas_landmarkreferenced_wildcat_events"
+   __PREVIEW_CLOUD_FILESTUB__: "atlas_landmarkreferenced_wildcat_velodyne_preview"
+# Write global results
+writeGlobal: &write_global
+ unusedOverrideSink: *unused_writing_overrides
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *offline_writer_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    global: *global_bag_reader_reader
+   __TRAJECTORIES__: [*global_frame, *atlas_frame, *odom_frame]
+   __TARGET_FRAME__: *global_frame
+   __TRAJ_FILESTUB__: "global_wildcat_traj"
+   __TRAJ_WITH_ODOM_COV_FILESTUB__: "global_wildcat_traj_odom_cov"
+   __TRAJ_WITH_GLOBAL_COV_FILESTUB__: "global_wildcat_traj_global_cov"
+   __CLOUD_FILESTUB__: "global_wildcat_velodyne"
+   __POSE_EVENT_FILESTUB__: "global_wildcat_events"
+   __PREVIEW_CLOUD_FILESTUB__: "global_wildcat_velodyne_preview"
+# Write global georeffed results
+writeGlobalGeoreferenced: &write_global_georeferenced
+ unusedOverrideSink: *unused_writing_overrides
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *offline_writer_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    global: *global_bag_reader_reader
+    globalGeoreferenced: *global_georeffed_bag_reader_reader
+   __TRAJECTORIES__: [*global_georeferenced_frame, *global_frame, *atlas_frame, *odom_frame]
+   __TARGET_FRAME__: *global_georeferenced_frame
+   __TRAJ_FILESTUB__: "global_georeferenced_wildcat_traj"
+   __TRAJ_WITH_ODOM_COV_FILESTUB__: "global_georeferenced_wildcat_traj_odom_cov"
+   __TRAJ_WITH_GLOBAL_COV_FILESTUB__: "global_georeferenced_wildcat_traj_global_cov"
+   __CLOUD_FILESTUB__: "global_georeferenced_wildcat_velodyne"
+   __POSE_EVENT_FILESTUB__: "global_georeferenced_wildcat_events"
+   __PREVIEW_CLOUD_FILESTUB__: "global_georeferenced_wildcat_velodyne_preview"
+# Write global landmarkreffed results
+writeGlobalLandmarkreferenced: &write_global_landmarkreferenced
+ unusedOverrideSink: *unused_writing_overrides
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *offline_writer_template
+  arguments:
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    global: *global_bag_reader_reader
+    globalLandmarkreferenced: *global_landmarkreffed_bag_reader_reader
+   __TRAJECTORIES__: [*global_landmarkreferenced_frame, *global_frame, *atlas_frame, *odom_frame]
+   __TARGET_FRAME__: *global_landmarkreferenced_frame
+   __TRAJ_FILESTUB__: "global_landmarkreferenced_wildcat_traj"
+   __TRAJ_WITH_ODOM_COV_FILESTUB__: "global_landmarkreferenced_wildcat_traj_odom_cov"
+   __TRAJ_WITH_GLOBAL_COV_FILESTUB__: "global_landmarkreferenced_wildcat_traj_global_cov"
+   __CLOUD_FILESTUB__: "global_landmarkreferenced_wildcat_velodyne"
+   __POSE_EVENT_FILESTUB__: "global_landmarkreferenced_wildcat_events"
+   __PREVIEW_CLOUD_FILESTUB__: "global_landmarkreferenced_wildcat_velodyne_preview"
+
+# Online odom
+onlineOdom:
+ unusedOverrideSink: [*unused_override_sink, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER]
+ debug: *debug
+ connections:
+  rawTopicReader: rawPipeline
+  rawPipeline: [odom, outRawFilter, frameGenerator]
+  outRawFilter: [odomTailOut, highFreqEstimator]
+  odom: [odomTipOut, odomTailOut, highFreqEstimator, frameGenerator, resultWriter]
+ flushOrder: [rawTopicReader, rawPipeline, outRawFilter, odom, odomTipOut, odomTailOut, highFreqEstimator, frameGenerator, resultWriter]
+ nodes:
+  # Get raw data
+  rawTopicReader: *raw_topic_reader
+  # Fix raw data
+  rawPipeline: *raw_data_pipeline
+  # Slam it
+  odom: &odom_online_filter_and_slam
+   type: PIPELINE
+   parameters:
+    connections:
+     input: filter
+     filter: slam
+     slam: output
+    flushOrder: [filter, slam]
+    nodes:
+     # Filter
+     filter: *online_raw_data_filter
+     # Slam
+     slam: *odom_online
+  # Output raw filter
+  outRawFilter: *online_output_raw_data_filter
+  # Output odom tip
+  odomTipOut: *odom_tip_out
+  # Output odom tail (final traj and clouds)
+  odomTailOut: *odom_tail_out
+  # Output high-freq output
+  highFreqEstimator: *high_freq_estimator_node
+  # Output frames
+  frameGenerator:
+    type: CONDITIONAL
+    parameters:
+     isEnabled: SHOULD_OUTPUT_TAIL_ATLAS_FRAMES
+     shouldPassThroughWhenDisabled: false
+     node:
+      type: TEMPLATE
+      parameters:
+       template: *online_frame_generator_template
+       arguments:
+        __FRAME_GEN_BASE_LINK__: *base_link_frame
+        __FRAME_GEN_PERIOD__: 5.0
+        __FRAME_GEN_DURATION__: 6.0
+        __FRAME_GEN_BUFFER_DURATION__: 0.25
+        __FRAME_GEN_TOPIC__: "slam/odom/frames"
+  # Output results for downstream usage
+  resultWriter:
+   type: CONDITIONAL
+   parameters:
+    isEnabled: SHOULD_OUTPUT_ONLINE_RESULTS
+    shouldPassThroughWhenDisabled: false
+    node: *odom_result_writer
+
+# Online odom for the sim, bypassing synchronization
+onlineOdomSim:
+ unusedOverrideSink: [*unused_override_sink, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_RESULTS]
+ debug: *debug
+ connections:
+  rawTopicReader: rawPipeline
+  rawPipeline: [odom, odomTailOut, highFreqEstimator, frameGenerator]
+  odom: [odomTipOut, odomTailOut, highFreqEstimator, frameGenerator]
+ flushOrder: [rawTopicReader, rawPipeline, odom, odomTipOut, odomTailOut, highFreqEstimator, frameGenerator]
+ nodes:
+  # Get raw data
+  rawTopicReader: *raw_topic_reader_sim
+  # Fix raw data
+  rawPipeline: *raw_data_filter
+  # Slam it
+  odom: *odom_online_filter_and_slam
+  # Output odom tip
+  odomTipOut: *odom_tip_out
+  # Output odom tail (final traj and clouds)
+  odomTailOut: *odom_tail_out
+  # Output high-freq output
+  highFreqEstimator: *high_freq_estimator_node
+  # Output frames
+  frameGenerator:
+   type: TEMPLATE
+   parameters:
+    template: *online_frame_generator_template
+    arguments:
+     __FRAME_GEN_BASE_LINK__: *base_link_frame
+     __FRAME_GEN_PERIOD__: 5.0
+     __FRAME_GEN_DURATION__: 6.0
+     __FRAME_GEN_BUFFER_DURATION__: 0.25
+     __FRAME_GEN_TOPIC__: "slam/odom/frames"
+
+# Online atlas
+# This does NOT share with any other agents
+onlineAtlas:
+ unusedOverrideSink: [*unused_override_sink, ADDITIONAL_SELF_STRIKE_FILTER, ENCODER_CALIBRATION_VALUES, ENCODER_FIXED_STATIC_TRANSFORM_POSE_OFFSET, ENCODER_ROTATING_DYNAMIC_TRANSFORM_TIME_OFFSET, IMU_IMU_ANGULAR_VELOCITY_TIME_OFFSET, IMU_IMU_LINEAR_ACCELERATION_TIME_OFFSET, IMU_STATIC_TRANSFORM_POSE_OFFSET, INIT_FORWARD_AXIS, LASER_CALIBRATION_VALUES, PREVIEW_CLOUD_VOXEL_RESOLUTION, SELF_STRIKE_SPHERICAL_IMAGE_VALUES, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SPHERE_ORIGIN, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_PREVIEW_CLOUD, TIMING_STD_DEV, TRANSFORM_STD_DEV, VELODYNE_FILTER, VELODYNE_LASER_TIME_OFFSET, VELODYNE_STATIC_TRANSFORM_POSE_OFFSET]
+ debug: *debug
+ connections:
+  frameReader: atlas
+  atlas: trajResampler
+  trajResampler: resultWriter
+ flushOrder: [frameReader, atlas, trajResampler, resultWriter]
+ nodes:
+  # Get frames
+  frameReader: &online_atlas_frame_reader
+   type: SIMPLE_READER
+   parameters:
+    dataBox:
+     in:
+      isThreaded: true
+    readers:
+     rosbag:
+      type: ROS_TOPIC
+      parameters:
+       reader:
+        agents:
+         AGENT_NAME:
+          decoders:
+           ros:
+            type: ATLAS_LOSSY_SAX_NO_TIMING_FRAME
+            topics: ["slam/odom/frames"]
+            parameters: &frame_decoder
+             frame: *base_link_frame
+  # Slam it
+  atlas:
+   type: SIMPLE_ATLAS_OPTIMIZER
+   parameters:
+    dataBox:
+     in:
+      isThreaded: true
+    state:
+     agents:
+      default:
+       frame:
+        optimization: *atlas_frame
+        trajectory: *odom_frame
+        baseLink: *base_link_frame
+       sensorTree:
+        transforms: {}
+        sensors:
+         base_link:
+          type: ATLAS_FRAME
+    shouldOutputOptimizedTrajectoriesOnFlush: SHOULD_OUTPUT_ONLINE_RESULTS
+    controller:
+     type: COMPOUND
+     parameters:
+      controllers:
+       tfCorrection:
+        type: ROS_GLOBAL_CORRECTION_TF_PUBLISHER
+        parameters:
+         agents:
+          AGENT_NAME:
+           topic: "tf"
+           globalFrame: *tf_map_frame
+           localFrame: odom
+       mapServer:
+        type: ROS_ATLAS_MAP_SERVER
+        parameters:
+         ns: slam/map
+       mapClearer:
+        type: ROS_CLEAR_MAP_SERVICE
+        parameters:
+         service: slam/map/clear
+       agentClearer:
+        type: ROS_CLEAR_AGENT_SERVICE
+        parameters:
+         service: /slam_atlas_map/clear_agent
+    agents:
+     default:
+      frameAttemptPeriod: 0.0
+      frameProvider:
+       type: FRAME_SENSOR
+       parameters:
+        shouldUsePoseInData: true
+    map: *atlas_optimizer_map
+  # Resample the trajectory so it plays nice with down-stream users
+  trajResampler: *atlas_traj_resampler
+  # Output results for downstream usage
+  resultWriter:
+   type: CONDITIONAL
+   parameters:
+    isEnabled: SHOULD_OUTPUT_ONLINE_RESULTS
+    shouldPassThroughWhenDisabled: false
+    node: *atlas_result_writer
+
+# Write basemaps using the various results
+# Odom basemap
+writeBasemapOdom: &write_basemap_odom
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  # Templated writer for offline results
+  # Arguments:
+  #   __BAG_READERS__: List of bag readers to read the data from, including raw
+  #   __AGENT_TRAJECTORIES__: State trajectories to use for the projection of the data
+  #   __TARGET_FRAME__: Target frame to use
+  template: &write_basemap_template
+   type: PIPELINE
+   parameters:
+    connections:
+     bagReader: rawPipeline
+     rawPipeline: temporalSorter
+     temporalSorter: [frameGenerator]
+     frameGenerator: agentRenamer
+     agentRenamer: atlas
+    flushOrder: [bagReader, rawPipeline, temporalSorter, frameGenerator, agentRenamer, atlas]
+    nodes:
+     # Read it
+     bagReader:
+      type: TEMPORAL_READER
+      parameters:
+       readers: __BAG_READERS__
+     # Fix raw data
+     rawPipeline: *raw_data_pipeline
+     # Sort the times
+     temporalSorter:
+      type: TEMPORAL_SORTER
+      parameters:
+       bufferDuration: 5.0
+     # Gen frames
+     frameGenerator:
+      type: TEMPLATE
+      parameters:
+       template: *frame_generator_template
+       arguments:
+        __BASE_LINK__: *base_link_frame
+        __TRAJECTORIES__: __AGENT_TRAJECTORIES__
+        __OUTPUT_PARENT_POSE_FRAME__: __TARGET_FRAME__
+        __FRAME_PERIOD__: 5.0
+        __FRAME_DURATION__: 6.0
+        __FRAME_BUFFER_DURATION__: 0.25
+     # Rename the agent to the fixed name for querying later on
+     agentRenamer:
+      type: AGENT_RENAMER
+      parameters:
+       agents:
+        default:
+         frame: &basemap_agent_frame "basemap/wildcat"
+     # Generate atlas graph
+     # This does no optimization and can not change the poses
+     atlas:
+      type: SIMPLE_ATLAS_OPTIMIZER
+      parameters:
+       dataBox:
+        in:
+         isThreaded: true
+         maxQueueDuration: 30
+       state:
+        agents:
+         default:
+          frame:
+           optimization: basemap
+           trajectory: __AGENT_TRAJECTORIES__
+           baseLink: *base_link_frame
+          sensorTree:
+           transforms: {}
+           sensors:
+            base_link:
+             type: ATLAS_FRAME
+       agents:
+        default:
+         frameAttemptPeriod: 0.0
+         frameProvider:
+          type: FRAME_SENSOR
+          parameters:
+           shouldUsePoseInData: true
+       controller:
+        type: COMPOUND
+        parameters:
+         controllers: {}
+       map:
+        type: SIMPLE
+        parameters:
+         # If we should merge into the last frame, increases processing speed at the cost of accuracy
+         shouldAllowImmediateMergeIntoLastNode: true
+         # If empty frames should be merged
+         shouldMergeEmptyFrames: true
+         # The maximum distance between empty frames when merging, this causes the graph to maintain flexibility for large traversals of empty.
+         maxEmptyFrameMergeDistance: 10.0
+         # Threshold for merging frames with each other, done via the overlap metric (normals taken into account)
+         minOverlapMergeThreshold: 0.5
+         # Mah dist which determines when a frame is overlapping, this is the mah dist between the bounds of the 2
+         maxMahalanobisDistanceOverlapThreshold: *max_mah_dist_bounds
+         # Disable guess alignment under the assumption the map is correct
+         highConfidencePositionUncertaintyStdDevThreshold: 9999999999
+         highConfidenceRotationUncertaintyStdDevThreshold: 9999999999
+         # If wildcat rejects edges that means it's too confident in the edges (confidenceOffset) or there's not enough overlap (confidenceBounds), increasing makes it more accept larger errors
+         maxMahalanobisDistanceHighConfidenceOffset: *max_mah_dist_offset
+         maxMahalanobisDistanceHighConfidenceBounds: *max_mah_dist_bounds
+         maxMahalanobisDistanceLowConfidenceOffset: *max_mah_dist_offset
+         maxMahalanobisDistanceLowConfidenceBounds: *max_mah_dist_bounds
+         # General config
+         shouldRefineMerges: false
+         shouldPruneChildrenNodes: true
+         # Disable all optimization
+         optimization:
+          problem:
+           solver:
+            type: STATIC_LINEAR
+            parameters:
+             maxNumIterations: 0
+             iterationConvergenceThreshold: 0.01
+             enableSafetyChecks: false
+             dampingFactor: 0.01
+           optimization:
+            minNumIterations: 0
+            maxNumIterations: 0
+            iterationConvergenceThreshold: 0.01
+           constraints: {}
+         agents:
+          default:
+           offset: [0,0,0, 1,0,0,0]
+           confidences:
+            odometry:
+             stdDev: [0.01, 0.1]
+            upVector:
+             stdDev: 1.0
+         confidences: *atlas_confidences
+         basemapManager:
+          type: SIMPLE
+          parameters:
+           inputFilename: "" # Do not read a basemap for generation
+           outputFilename: BASEMAP_OUTPUT_FILE
+         # Use the standard configs, except accept all fine alignments, the verifier will fail if not enough overlap which means the connectivity will remain valid
+         boundsComputer: *atlas_bounds_computer
+         covarianceComputer: *atlas_covariance_computer
+         fineAligner:
+          type: PASS_THROUGH
+         fineAlignmentVerifier: *atlas_fine_alignment_verifier
+         overlapDetector: *atlas_overlap_detector
+         merger: *atlas_merger
+  arguments:
+   __TARGET_FRAME__: *odom_frame
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+   __AGENT_TRAJECTORIES__: [*odom_frame]
+# Odom georeferenced basemap
+writeBasemapOdomGeoreferenced: &write_basemap_odom_georeferenced
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *write_basemap_template
+  arguments:
+   __TARGET_FRAME__: *odom_georeferenced_frame
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    odomGeoreferenced: *odom_georeffed_bag_reader_reader
+   __AGENT_TRAJECTORIES__: [*odom_georeferenced_frame, *odom_frame]
+# Odom landmarkreferenced basemap
+writeBasemapOdomLandmarkreferenced: &write_basemap_odom_landmark_referenced
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *write_basemap_template
+  arguments:
+   __TARGET_FRAME__: *odom_landmarkreferenced_frame
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    odomLandmarkreferenced: *odom_landmarkreffed_bag_reader_reader
+   __AGENT_TRAJECTORIES__: [*odom_landmarkreferenced_frame, *odom_frame]
+# Atlas basemap
+writeBasemapAtlas: &write_basemap_atlas
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *write_basemap_template
+  arguments:
+   __TARGET_FRAME__: *atlas_frame
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+   __AGENT_TRAJECTORIES__: [*atlas_frame, *odom_frame]
+# Atlas geoferenced basemap
+writeBasemapAtlasGeoreferenced: &write_basemap_atlas_georeferenced
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *write_basemap_template
+  arguments:
+   __TARGET_FRAME__: *atlas_georeferenced_frame
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    atlasGeoreferenced: *atlas_georeffed_bag_reader_reader
+   __AGENT_TRAJECTORIES__: [*atlas_georeferenced_frame, *atlas_frame, *odom_frame]
+# Atlas landmarkreferenced basemap
+writeBasemapAtlasLandmarkreferenced: &write_basemap_atlas_landmarkreferenced
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *write_basemap_template
+  arguments:
+   __TARGET_FRAME__: *atlas_landmarkreferenced_frame
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    atlasLandmarkreferenced: *atlas_landmarkreffed_bag_reader_reader
+   __AGENT_TRAJECTORIES__: [*atlas_landmarkreferenced_frame, *atlas_frame, *odom_frame]
+# Global basemap
+writeBasemapGlobal: &write_basemap_global
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *write_basemap_template
+  arguments:
+   __TARGET_FRAME__: *global_frame
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    global: *global_bag_reader_reader
+   __AGENT_TRAJECTORIES__: [*global_frame, *atlas_frame, *odom_frame]
+# Global georeferenced basemap
+writeBasemapGlobalGeoreferenced: &write_basemap_global_georeferenced
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *write_basemap_template
+  arguments:
+   __TARGET_FRAME__: *global_georeferenced_frame
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    global: *global_bag_reader_reader
+    globalGeoreferenced: *global_georeffed_bag_reader_reader
+   __AGENT_TRAJECTORIES__: [*global_georeferenced_frame, *global_frame, *atlas_frame, *odom_frame]
+# Global landmarkreferenced basemap
+writeBasemapGlobalLandmarkreferenced: &write_basemap_global_landmarkreferenced
+ unusedOverrideSink: &unused_writing_overrides [*unused_override_sink, INIT_FORWARD_AXIS, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS]
+ taskMonitor: *task_monitor
+ debug: *debug
+ type: TEMPLATE
+ parameters:
+  template: *write_basemap_template
+  arguments:
+   __TARGET_FRAME__: *global_landmarkreferenced_frame
+   __BAG_READERS__:
+    raw: *raw_bag_reader_reader
+    odom: *odom_bag_reader_reader
+    atlas: *atlas_bag_reader_reader
+    global: *global_bag_reader_reader
+    globalLandmarkreferenced: *global_landmarkreffed_bag_reader_reader
+   __AGENT_TRAJECTORIES__: [*global_landmarkreferenced_frame, *global_frame, *atlas_frame, *odom_frame]
+
+# offline sequence to do global slam processing and write odom, atlas and global maps
+offlineFull:
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: SEQUENCE
+ parameters:
+  nodes:
+   -
+    *offline_odom
+   -
+    *write_odom
+   -
+    *offline_atlas
+   -
+    *write_atlas
+   -
+    *offline_global
+   -
+    *write_global
+
+# offline sequence to do global slam processing and write a global map
+offlineFullGlobal:
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: SEQUENCE
+ parameters:
+  nodes:
+   -
+    *offline_odom
+   -
+    *offline_atlas
+   -
+    *offline_global
+   -
+    *write_global
+
+# offline sequence to do global slam processing, but writes no maps
+offlineFullSlam:
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: SEQUENCE
+ parameters:
+  nodes:
+   -
+    *offline_odom
+   -
+    *offline_atlas
+   -
+    *offline_global
+
+# offline sequence to do global slam processing and write a georeferenced global map
+offlineFullGlobalGeoref:
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: SEQUENCE
+ parameters:
+  nodes:
+   -
+    *offline_odom
+   -
+    *offline_atlas
+   -
+    *offline_global
+   -
+    *offline_global_georeference
+   -
+    *write_global_georeferenced
+
+# offline sequence to do global landmark referencing and write a landmark referenced global map
+offlineGlobalLMref:
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: SEQUENCE
+ parameters:
+  nodes:
+   -
+    *offline_global_landmarkreference
+   -
+    *write_global_landmarkreferenced
+
+# offline sequence to do global slam processing and write a global map basemap
+offlineMakeBasemapGlobal:
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: SEQUENCE
+ parameters:
+  nodes:
+   -
+    *offline_odom
+   -
+    *offline_atlas
+   -
+    *offline_global
+   -
+    *write_global
+   -
+    *write_basemap_global
+
+# offline sequence to do global slam processing and write a georeferenced global basemap
+offlineMakeBasemapGlobalGeoref:
+ debug: *debug
+ taskMonitor: *task_monitor
+ type: SEQUENCE
+ parameters:
+  nodes:
+   -
+    *offline_odom
+   -
+    *offline_atlas
+   -
+    *offline_global
+   -
+    *offline_global_georeference
+   -
+    *write_global_georeferenced
+   -
+    *write_basemap_global_georeferenced
+
+# Online atlas with a basemap, the basemap used is configured via the overrides
+# This does NOT share with any other agents
+onlineAtlasWithBasemap:
+ unusedOverrideSink: [*unused_override_sink, ADDITIONAL_SELF_STRIKE_FILTER, ENCODER_CALIBRATION_VALUES, ENCODER_FIXED_STATIC_TRANSFORM_POSE_OFFSET, ENCODER_ROTATING_DYNAMIC_TRANSFORM_TIME_OFFSET, IMU_IMU_ANGULAR_VELOCITY_TIME_OFFSET, IMU_IMU_LINEAR_ACCELERATION_TIME_OFFSET, IMU_STATIC_TRANSFORM_POSE_OFFSET, INIT_FORWARD_AXIS, LASER_CALIBRATION_VALUES, PREVIEW_CLOUD_VOXEL_RESOLUTION, SELF_STRIKE_SPHERICAL_IMAGE_VALUES, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SPHERE_ORIGIN, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_PREVIEW_CLOUD, TIMING_STD_DEV, TRANSFORM_STD_DEV, VELODYNE_FILTER, VELODYNE_LASER_TIME_OFFSET, VELODYNE_STATIC_TRANSFORM_POSE_OFFSET]
+ debug: *debug
+ connections:
+  frameReader: atlas
+  atlas: trajResampler
+  trajResampler: resultWriter
+ flushOrder: [frameReader, atlas, trajResampler, resultWriter]
+ nodes:
+  # Get frames
+  frameReader: *online_atlas_frame_reader
+  # Slam it
+  atlas:
+   type: SIMPLE_ATLAS_OPTIMIZER
+   parameters:
+    dataBox:
+     in:
+      isThreaded: true
+    state:
+     agents:
+      default:
+       frame:
+        optimization: *atlas_frame
+        trajectory: *odom_frame
+        baseLink: *base_link_frame
+       sensorTree:
+        transforms: {}
+        sensors:
+         base_link:
+          type: ATLAS_FRAME
+    shouldOutputOptimizedTrajectoriesOnFlush: SHOULD_OUTPUT_ONLINE_RESULTS
+    controller:
+     type: COMPOUND
+     parameters:
+      controllers:
+       # Only publish tf if connected to the basemap
+       tfCorrection:
+        type: ROS_GLOBAL_CORRECTION_TF_PUBLISHER
+        parameters:
+         agents:
+          AGENT_NAME:
+           topic: "tf"
+           globalFrame: *tf_map_frame
+           localFrame: odom
+           requiredAgentConnections: [*basemap_agent_frame]
+       mapServer:
+        type: ROS_ATLAS_MAP_SERVER
+        parameters:
+         ns: slam/map
+       mapClearer:
+        type: ROS_CLEAR_MAP_SERVICE
+        parameters:
+         service: slam/map/clear
+       agentClearer:
+        type: ROS_CLEAR_AGENT_SERVICE
+        parameters:
+         service: /slam_atlas_map/clear_agent
+       # Publish connectivity if localized
+       agentConnectivityPublisher:
+        type: ROS_AGENT_CONNECTIVITY_PUBLISHER
+        parameters:
+         areAllAgentsConnectedTopic: ""
+         connectionSets:
+          -
+           agents: [AGENT_NAME, *basemap_agent_frame]
+           areAllAgentsConnectedTopic: slam/map/is_localized_to_basemap
+       # Initial pose inputs (disabled by default)
+       sameStartPoseHintProvider: ATLAS_SAME_START_POSE_PROVIDER
+       initialPoseSupplier: ATLAS_INITIAL_POSE_PROVIDER
+       # Allow map-frame hint inputs
+       basemapHintProvider:
+        type: ROS_BASEMAP_POSE_HINT_PROVIDER
+        parameters:
+         service: slam/map/add_basemap_hint
+         maxMahalanobisBoundsDistance: 1.7320508075688772
+       # Allow map-frame hint inputs
+       hintProvider:
+        type: ROS_POSE_HINT_PROVIDER
+        parameters:
+         service: slam/map/add_hint
+    agents:
+     default:
+      frameAttemptPeriod: 0.0
+      frameProvider:
+       type: FRAME_SENSOR
+       parameters:
+        shouldUsePoseInData: true
+    map:
+     type: SIMPLE
+     parameters:
+      # If we should merge into the last frame, increases processing speed at the cost of accuracy
+      shouldAllowImmediateMergeIntoLastNode: true
+      # If empty frames should be merged
+      shouldMergeEmptyFrames: true
+      # The maximum distance between empty frames when merging, this causes the graph to maintain flexibility for large traversals of empty.
+      maxEmptyFrameMergeDistance: 10.0
+      # Threshold for merging frames with each other, done via the overlap metric (normals taken into account)
+      minOverlapMergeThreshold: 0.5
+      # Mah dist which determines when a frame is overlapping, this is the mah dist between the bounds of the 2
+      maxMahalanobisDistanceOverlapThreshold: &max_mah_dist_bounds 1.0
+      # The errors are the tolerances where sax icp will work, after that loop-closure stuff kicks in
+      highConfidencePositionUncertaintyStdDevThreshold: 1.0
+      highConfidenceRotationUncertaintyStdDevThreshold: 15.0
+      # If wildcat rejects edges that means it's too confident in the edges (confidenceOffset) or there's not enough overlap (confidenceBounds), increasing makes it more accept larger errors
+      maxMahalanobisDistanceHighConfidenceOffset: &max_mah_dist_offset 1.7320508075688772
+      maxMahalanobisDistanceHighConfidenceBounds: *max_mah_dist_bounds
+      maxMahalanobisDistanceLowConfidenceOffset: *max_mah_dist_offset
+      maxMahalanobisDistanceLowConfidenceBounds: *max_mah_dist_bounds
+      # General config
+      shouldRefineMerges: true
+      shouldPruneChildrenNodes: true
+      # connectivityGraphFilename: map.atlas # Set prune to false to get the full map
+      # Allow duplicate frames (id && pose) to be ignored, the cause is currently unknown, but it's most likely comms related
+      shouldIgnoreIdenticalFrames: true
+      # Clear an agent if it recieves a clashing frame id, usually when it's rebooted or something
+      shouldClearAgentOnFrameIdClash: true
+      # Clear an agent if it recieves a frame id lower then the last, usually when it's rebooted or something
+      shouldClearAgentOnFrameIdDecrement: true
+      optimization: *online_atlas_optimizer_optimization
+      agents:
+       default:
+        offset: [0,0,0, 1,0,0,0]
+        confidences:
+         odometry:
+          stdDev: [0.01, 0.1]
+         upVector:
+          stdDev: 1.0
+      confidences: *atlas_confidences
+      # Force basemap usage
+      basemapManager:
+       type: SIMPLE
+       parameters:
+        inputFilename: BASEMAP_INPUT_FILE
+        outputFilename: "" # Do not write the basemap for online usage
+        shouldFixNodes: true
+        shouldFailWhenMissing: true
+      boundsComputer: *atlas_bounds_computer
+      covarianceComputer: *atlas_covariance_computer
+      fineAligner: *atlas_fine_aligner
+      # Verification for fine alignments
+      fineAlignmentVerifier: *atlas_fine_alignment_verifier
+      overlapDetector: *atlas_overlap_detector
+      merger: *atlas_merger
+      guessAligner: &atlas_guess_aligner
+       type: REFINER
+       parameters:
+        shouldRemoveFailedFineAlignments: true
+        guessAligner:
+         type: EGI_FOURIER
+         parameters:
+          resolution: 0.4
+          angularResolution: 1
+          gridResolution: 1.0
+          gridMaxRadius: 30
+        fineAligner: *atlas_fine_aligner
+      # Verification for guess alignments
+      guessAlignmentVerifier: *atlas_fine_alignment_verifier
+      hypothesisVerifier: *atlas_hyp_verifier
+  # Resample the trajectory so it plays nice with down-stream users
+  trajResampler: *atlas_traj_resampler
+  # Output results for downstream usage
+  resultWriter:
+   type: CONDITIONAL
+   parameters:
+    isEnabled: SHOULD_OUTPUT_ONLINE_RESULTS
+    shouldPassThroughWhenDisabled: false
+    node: *atlas_result_writer
+
+# Generate a self strike spherical image mask from a bag
+generateSelfStrikeSphericalImage:
+ unusedOverrideSink: [*unused_override_sink, INIT_FORWARD_AXIS, PREVIEW_CLOUD_VOXEL_RESOLUTION, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS, SHOULD_OUTPUT_PREVIEW_CLOUD]
+ debug: *debug
+ taskMonitor: *task_monitor
+ connections:
+  rawBagReader: rawPipeline
+  rawPipeline: generator
+ flushOrder: [rawBagReader, rawPipeline, generator]
+ nodes:
+  # Get raw data
+  rawBagReader: *raw_bag_reader
+  # Fix raw data
+  rawPipeline: *raw_data_pipeline
+  # Generate it
+  generator: &self_strike_image_generator
+   type: SIMPLE_STATE_WRITER
+   parameters:
+    state: *base_link_state
+    writers:
+     selfStrikeSphericalImage:
+      type: SELF_STRIKE_SPHERICAL_IMAGE
+      parameters:
+       targetFrame: *base_link_frame
+       sphereOrigin: *self_strike_sphere_origin
+       filestub: "self_strike"
+       width: 360
+       height: 180
+       blurRadius: 5
+       filter: SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER
+
+# Generate a self strike spherical image mask from a bag of sim data
+# This is the same as above but reading from sim bags and not doing timing corrections etc.
+generateSelfStrikeSphericalImageSim:
+ unusedOverrideSink: [*unused_override_sink, INIT_FORWARD_AXIS, PREVIEW_CLOUD_VOXEL_RESOLUTION, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS, SHOULD_OUTPUT_PREVIEW_CLOUD]
+ debug: *debug
+ connections:
+  rawBagReader: rawPipeline
+  rawPipeline: generator
+ flushOrder: [rawBagReader, rawPipeline, generator]
+ nodes:
+  # Get raw data
+  rawBagReader: *raw_bag_reader_sim
+  # Fix raw data without timing
+  rawPipeline: *raw_data_filter
+  # Generate it
+  generator: *self_strike_image_generator
+
+# Perform a static calibration, placing the new calibration into static_calibration.yaml
+# This assumes the system is static during the ENTIRE scan, and placed into the designated location as per the benchmark scan.
+# This calibrates errors in the encoders and lasers.
+staticCalibration:
+ unusedOverrideSink: [*unused_override_sink, INIT_FORWARD_AXIS, PREVIEW_CLOUD_VOXEL_RESOLUTION, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS, SHOULD_OUTPUT_PREVIEW_CLOUD]
+ debug: *debug
+ taskMonitor: *task_monitor
+ connections:
+  rawBagReader: rawPipeline
+  rawPipeline: calibrator
+ flushOrder: [rawBagReader, rawPipeline, calibrator]
+ nodes:
+  # Get raw data
+  rawBagReader: *raw_bag_reader
+  # Fix raw data
+  rawPipeline: *raw_data_pipeline
+  # Calibrate
+  calibrator:
+   type: SIMPLE_STATE_CONTROLLER
+   parameters:
+    state: *base_link_state
+    controller:
+     type: LASER_CALIBRATOR
+     parameters:
+      pose: [0,0,0, 1,0,0,0]
+      featureResolution: 0.4
+      referenceCloudFilename: "bench_points.txt"
+      numIterations: 25
+      encoderFixedFrame: *encoder_fixed_frame
+      encoderRotatingFrame: *encoder_rotating_frame
+      numRings: 16
+      outputFilename: "static_calibration.yaml"
+      # Dodgy VLP-16 have missing beams so print a warning rather than aborting the calib.
+      shouldAssertNumRings: false
+
+# Perform a dynamic calibration, placing the new calibration into dynamic_calibration.yaml
+# This assumes the system has all axes excited during the scan (calibration dance).
+# This calibrates timing and pose extrinsincs for the entire system.
+dynamicCalibration:
+ unusedOverrideSink: [*unused_override_sink, PREVIEW_CLOUD_VOXEL_RESOLUTION, SHOULD_FILTER_ATLAS_FRAME_OUTPUT, SHOULD_FILTER_ONLINE_POINT_CLOUD_OUTPUT, SHOULD_OUTPUT_ONLINE_MAPS, SHOULD_OUTPUT_ONLINE_RESULTS, SHOULD_OUTPUT_PREVIEW_CLOUD, SELF_STRIKE_SPHERICAL_IMAGE_GENERATION_SELF_FILTER]
+ debug: *debug
+ taskMonitor: *task_monitor
+ connections:
+  rawBagReader: rawPipeline
+  rawPipeline: slam
+  slam: writer
+ flushOrder: [rawBagReader, rawPipeline, slam, writer]
+ nodes:
+  # Get raw data
+  rawBagReader: *raw_bag_reader
+  # Fix raw data
+  rawPipeline: *raw_data_pipeline
+  # Slam it
+  slam:
+   type: SIMPLE_WINDOWED_TRAJECTORY_OPTIMIZER
+   parameters:
+    dataBox: *data_box_config
+    shouldPrintState: true
+    shouldEstimateTrajectory: true
+    trajectoryEstimator: *traj_estimator_imu
+    state:
+     agents:
+      default:
+       frame:
+        optimization: *odom_frame
+        baseLink: *base_link_frame
+       sensorTree: *full_sensor_tree
+    optimization:
+     windowDuration: 60
+     windowShiftDuration: 1.0
+     attemptPeriod: 0.1
+     solver:
+      maxNumIterations: 3
+      iterationConvergenceThreshold: 0.0
+     problem:
+      correctionSampler:
+       type: UNIFORM
+       parameters:
+        delta: 0.1
+        correctionType: CUBIC
+        sampleType: LINEAR
+      solver:
+       type: STATIC_LINEAR
+       parameters:
+        maxNumIterations: 5
+        iterationConvergenceThreshold: 0.01
+        enableSafetyChecks: false
+        dampingFactor: 0.01
+    constraints:
+      transform:
+       type: TRANSFORM_ESTIMATION
+       parameters:
+        agents:
+         default:
+          shouldOutputIntrinsics: true
+          shouldNormalizeConstraints: &d_calib_should_normalize_constraints false
+          metaParameterResidualOptions: &d_calib_meta_param_residual_options
+           shouldScaleByUsage: true
+           shouldScaleZeroMeanByUsage: true
+      imus:
+       type: IMU
+       parameters:
+        agents:
+         default:
+          shouldOutputIntrinsics: true
+          shouldNormalizeConstraints: *d_calib_should_normalize_constraints
+          metaParameterResidualOptions: *d_calib_meta_param_residual_options
+      gps:
+       type: GPS
+       parameters:
+        agents:
+         default:
+          shouldComputeFullOffset: false
+          # For calibration we have sufficent samples to continuously re-fit and optimize more frequently
+          shouldGuessInitialOffsetEachIteration: false
+          shouldOptimizeOffset: true
+          shouldOptimizeOffsetEachIteration: true
+          shouldNormalizeConstraints: *d_calib_should_normalize_constraints
+          metaParameterResidualOptions: *d_calib_meta_param_residual_options
+          iterations:
+           -
+            loss:
+             type: CAUCHY
+             parameters:
+              threshold: 1.0
+      lasers:
+       type: LASER
+       parameters:
+        agents:
+         default:
+          shouldOutputIntrinsics: true
+          shouldNormalizeConstraints: *d_calib_should_normalize_constraints
+          metaParameterResidualOptions: *d_calib_meta_param_residual_options
+      saxs:
+       type: SIMPLE_SAX
+       parameters:
+        agents:
+         default:
+          provider:
+           type: BATCHED
+           parameters:
+            saxizer:
+             shouldComputeOffset: true
+             shouldFilterSaxsNearEdge: true
+             numLevels: 5
+             baseResolution: 0.4
+             minTimeDelta: 0.025
+             maxTimeDelta: &saxMaxTime 0.5
+             minWeight: 8
+             maxWeight: 1000000
+             minCylindricality: 0
+             maxCylindricality: 0.8
+             minPlanarity: 0.2
+             maxPlanarity: 1
+             minSphericity: 0
+             maxSphericity: 0.5
+             maxAngleOfIncidence: 90
+        constrainer:
+         shouldNormalizeConstraints: *d_calib_should_normalize_constraints
+         shouldNormalizeConstraintsWithMatchCounts: false
+         dynamic:
+          -
+           match:
+            search: &search
+             numMatches: 4
+             epsilon: 0.0
+             maxDist: 0.8
+             shouldScalePositionWithRes: true
+             minTimeDelta: *saxMaxTime
+             normalScale: 1
+             resolutionScale: 100
+             maxNumThreads: 4
+            shouldFilterReciprocal: true
+            minNumMatches: 1000
+            maxNumMatches: 10000000
+            numMatchesSubsetRatio: 0.1
+            maxAngle: 30
+           constraint:
+            matchScalingMethod: SUMMED_AND_WEIGHT_UNCERTAINTY
+            weight: 1.0
+            loss:
+             type: SOFT
+             parameters:
+              threshold: 5
+          -
+           match:
+            search: *search
+            shouldFilterReciprocal: true
+            minNumMatches: 1000
+            maxNumMatches: 10000000
+            numMatchesSubsetRatio: 0.1
+            maxAngle: 15
+           constraint:
+            matchScalingMethod: SUMMED_AND_WEIGHT_UNCERTAINTY
+            weight: 1.0
+            loss:
+             type: SOFT
+             parameters:
+              threshold: 3
+          -
+           match:
+            search: *search
+            shouldFilterReciprocal: true
+            minNumMatches: 1000
+            maxNumMatches: 10000000
+            numMatchesSubsetRatio: 0.1
+            maxAngle: 15
+           constraint:
+            matchScalingMethod: SUMMED_AND_WEIGHT_UNCERTAINTY
+            weight: 1.0
+            loss:
+             type: SOFT
+             parameters:
+              threshold: 1
+
+
+  # Write out the calibration results to a yaml file
+  writer:
+   type: SIMPLE_WRITER
+   parameters:
+    writers:
+     yaml:
+      type: YAML_OVERRIDES_CALIBRATION
+      parameters:
+       filename: dynamic_calibration.yaml
+       shouldOutputNamesInUppercase: true
+
+---

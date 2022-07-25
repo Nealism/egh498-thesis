@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+
+  <!-- Output logging -->
+  <arg name="output" default="screen" doc="Where should nodes write log output to?"/>
+  <arg name="ROSCONSOLE_FORMAT" default="${severity} ${time} ${node}: ${message}"/>
+  <env name="ROSCONSOLE_FORMAT" value="$(arg ROSCONSOLE_FORMAT)"/>
+
+  <!-- Are simulating the dynamic titan?-->
+  <arg name="dynamic_sim" default="false"/>
+
+  <!-- Extra URDF to add to the description and args to give to xacro -->
+  <arg name="extra_urdf" default=""/>
+  <arg name="extra_urdf_args" default=""/>
+
+  <!-- Initial position -->
+  <arg name="init_pose" default=""/>
+
+  <!-- Is the velocity command timestamped? -->
+  <arg name="is_ros_cmd_vel_stamped" default="true"/>
+
+  <!-- Titan drive limits -->
+  <arg name="max_track_vel" default="1.6"/>
+  <arg name="track_accel" default="3.0"/>
+
+  <!-- Relative namespace (must not start or end with "/") -->
+  <arg name="namespace" default="titan"/>
+
+  <!-- Are we using the panda arm? -->
+  <arg name="panda_arm" default="false"/>
+
+  <!-- Is the panda arm using moveit? -->
+  <arg name="panda_moveit" default="true"/>
+
+  <!-- If the most recent command is more than this many seconds old, stop moving -->
+  <arg name="timeout" default="10.0"/>
+
+  <!-- Model name for Gazebo -->
+  <arg name="model_name" default="$(eval arg('namespace').replace('/', '_'))"/>
+
+  <!-- Model type to load -->
+  <arg     if="$(arg dynamic_sim)" name="model_type" default="dynamic_titan"/>
+  <arg unless="$(arg dynamic_sim)" name="model_type" default="titan"/>
+
+  <!-- Topic to subscribe to for velocity command Twist messages -->
+  <arg name="ros_cmd_vel_topic" default="$(arg namespace)/cmd_vel"/>
+
+  <!-- Use namespaced tf -->
+  <remap from="/tf" to="tf"/>
+  <remap from="/tf_static" to="tf_static"/>
+
+  <!-- The colour to set the Titan chassis to -->
+  <arg name="colour" default="$(eval ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple'][(id(arg('model_name')) // 64) % 6])"/>
+
+  <!-- Load the description -->
+  <param name="robot_description"
+      command="$(find xacro)/xacro
+                $(find titan_gazebo)/models/$(arg model_type)/model.urdf.xacro
+                colour:=$(arg colour)
+                extra_urdf:=$(arg extra_urdf)
+                is_ros_cmd_vel_stamped:=$(arg is_ros_cmd_vel_stamped)
+                max_track_vel:=$(arg max_track_vel)
+                model_name:=$(arg model_name)
+                namespace:=$(arg namespace)
+                ros_cmd_vel_topic:=$(arg ros_cmd_vel_topic)
+                spawn_arm:=$(arg panda_arm)
+                timeout:=$(arg timeout)
+                track_accel:=$(arg track_accel)
+                $(arg extra_urdf_args)"/>
+
+  <!-- Spawn the controller(s) -->
+  <group if="$(arg dynamic_sim)">
+    <rosparam command="load" file="$(find titan_gazebo)/config/dynamic_controllers.yaml"/>
+    <node name="joint_state_controller_spawner" pkg="controller_manager" type="spawner" output="$(arg output)"
+        args="joint_state_controller
+              left_1_suspension_joint left_1_wheel_joint
+              left_2_suspension_joint left_2_wheel_joint
+              left_3_suspension_joint left_3_wheel_joint
+              left_4_suspension_joint left_4_wheel_joint
+              left_5_suspension_joint left_5_wheel_joint
+              left_6_suspension_joint left_6_wheel_joint
+              left_7_suspension_joint left_7_wheel_joint
+              left_8_suspension_joint left_8_wheel_joint
+              left_9_suspension_joint left_9_wheel_joint
+              left_10_suspension_joint left_10_wheel_joint
+              left_11_suspension_joint left_11_wheel_joint
+
+              right_1_suspension_joint right_1_wheel_joint
+              right_2_suspension_joint right_2_wheel_joint
+              right_3_suspension_joint right_3_wheel_joint
+              right_4_suspension_joint right_4_wheel_joint
+              right_5_suspension_joint right_5_wheel_joint
+              right_6_suspension_joint right_6_wheel_joint
+              right_7_suspension_joint right_7_wheel_joint
+              right_8_suspension_joint right_8_wheel_joint
+              right_9_suspension_joint right_9_wheel_joint
+              right_10_suspension_joint right_10_wheel_joint
+              right_11_suspension_joint right_11_wheel_joint"/>
+  </group>
+  <group unless="$(arg dynamic_sim)">
+    <rosparam command="load" file="$(find titan_gazebo)/config/default_controllers.yaml"/>
+    <node name="joint_state_controller_spawner" pkg="controller_manager" type="spawner" output="$(arg output)"
+        args="joint_state_controller"/>
+  </group>
+
+  <group if="$(arg panda_arm)">
+
+    <!-- Include panda launch config -->
+    <include file="$(find panda_arm_gazebo)/launch/panda.launch">
+      <arg name="namespace" value="$(arg model_name)"/>
+      <arg name="interactive" value="false"/>
+      <arg name="moveit" value="$(arg panda_moveit)"/>
+      <arg name="joint_state_publisher" value="false"/>
+    </include>
+
+    <include file="$(find panda_arm_gazebo)/launch/panda_moveit.launch" if="$(arg panda_moveit)">
+      <arg name="namespace" value="$(arg model_name)"/>
+      <arg name="interactive" value="false"/>
+    </include>
+
+    <!-- Spawn the model with initial panda arm joint states -->
+    <node name="agent_spawner" pkg="gazebo_ros" type="spawn_model" output="$(arg output)"
+        args="-urdf
+              -param robot_description
+              -model $(arg model_name)
+              $(arg init_pose)
+              -J panda_joint1 0
+              -J panda_joint2 -1.3962634
+              -J panda_joint3 0
+              -J panda_joint4 -2.9670597
+              -J panda_joint5 0
+              -J panda_joint6 1.5707963
+              -J panda_joint7 -0.7853982
+              -J panda_finger_joint1 0.001
+              -J panda_finger_joint2 0.001"/>
+
+  </group>
+  <group unless="$(arg panda_arm)">
+
+    <!-- Spawn the mmodel -->
+    <node name="agent_spawner" pkg="gazebo_ros" type="spawn_model" output="$(arg output)"
+        args="-urdf
+              -unpause
+              -param robot_description
+              -model $(arg model_name)
+              $(arg init_pose)"/>
+
+  </group>
+
+  <!-- Robot state publisher -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="$(arg output)"/>
+
+</launch>

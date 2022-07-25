@@ -1,0 +1,191 @@
+joint_state_controller:
+  type: "joint_state_controller/JointStateController"
+  publish_rate: 200
+
+########################################## LEFT TRACK ##########################################
+
+# SUSPENSION
+left_1_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: left_1_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+left_2_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: left_2_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+left_3_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: left_3_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+left_4_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: left_4_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+left_5_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: left_5_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+left_6_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: left_6_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+left_7_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: left_7_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+left_8_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: left_8_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+left_9_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: left_9_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+left_10_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: left_10_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+left_11_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: left_11_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+
+# TRACK (Wheels)
+left_1_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: left_1_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+left_2_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: left_2_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+left_3_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: left_3_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+left_4_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: left_4_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+left_5_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: left_5_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+left_6_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: left_6_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+left_7_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: left_7_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+left_8_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: left_8_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+left_9_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: left_9_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+left_10_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: left_10_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+left_11_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: left_11_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+
+########################################## RIGHT TRACK ##########################################
+
+# SUSPENSION
+right_1_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: right_1_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+right_2_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: right_2_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+right_3_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: right_3_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+right_4_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: right_4_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+right_5_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: right_5_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+right_6_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: right_6_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+right_7_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: right_7_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+right_8_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: right_8_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+right_9_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: right_9_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+right_10_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: right_10_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+right_11_suspension_joint:
+  type: "effort_controllers/JointEffortController"
+  joint: right_11_suspension_joint
+  pid: {p: 1, i: 0.0, d: 0.0}
+
+# TRACK (Wheels)
+right_1_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: right_1_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+right_2_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: right_2_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+right_3_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: right_3_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+right_4_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: right_4_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+right_5_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: right_5_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+right_6_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: right_6_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+right_7_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: right_7_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+right_8_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: right_8_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+right_9_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: right_9_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+right_10_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: right_10_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}
+right_11_wheel_joint:
+  type: "effort_controllers/JointVelocityController"
+  joint: right_11_wheel_joint
+  pid: {p: 0.75, i: 100.0, d: 0.0, i_clamp_min: -100.0, i_clamp_max: 100.0, antiwindup: true}

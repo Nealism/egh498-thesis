@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+
+  <!-- Output logging -->
+  <arg name="output" default="screen" doc="Where should nodes write log output to?"/>
+  <arg name="ROSCONSOLE_FORMAT" default="${severity} ${time} ${node}: ${message}"/>
+  <env name="ROSCONSOLE_FORMAT" value="$(arg ROSCONSOLE_FORMAT)"/>
+
+  <node name="check_depends" pkg="nav_backpack" type="check_depends.py" output="$(arg output)">
+    <rosparam command="load" file="$(find nav_backpack)/config/versions.yaml"/>
+    <param name="gazebo_version_is" command="bash -c &quot;gazebo --version | grep -oP 'version \K(\d+\.\d+\.\d+)' | head -n 1 || echo none&quot;"/>
+    <param name="wildcat_version_is" command="bash -c &quot;rosrun wildcat_ros pipeline --version | grep -oP '[^ ]+ \- \d+\.\d+\.\d+(?:\-dirty)? \- [a-z0-9]+' | sed 's/ //g' | sed -E 's/[^a-zA-Z0-9_\.\-]/_/g' || echo none&quot;"/>
+  </node>
+
+</launch>

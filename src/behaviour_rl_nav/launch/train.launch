@@ -1,0 +1,564 @@
+<?xml version="1.0"?>
+<launch>
+
+  <env name="ROSCONSOLE_FORMAT" value="[${severity}] [${node}]: ${message}"/>
+
+  <!-- For debugging purposes -->
+  <arg name="output" default="screen"/>
+  <arg name="paused" default="false"/>
+
+  <!-- Number of agents -->
+  <!-- <arg name="agents" default="16"/> -->
+  <arg name="agents" default="14"/>
+  <!-- <arg name="agents" default="2"/> -->
+  <!-- <arg name="agents" default="4"/> -->
+
+  <!-- Fine-grained agent specification -->
+  <arg name="r1_enabled" default="$(eval arg('agents') >= 1)"/>
+  <arg name="r2_enabled" default="$(eval arg('agents') >= 2)"/>
+  <arg name="r3_enabled" default="$(eval arg('agents') >= 3)"/>
+  <arg name="r4_enabled" default="$(eval arg('agents') >= 4)"/>
+  <arg name="r5_enabled" default="$(eval arg('agents') >= 5)"/>
+  <arg name="r6_enabled" default="$(eval arg('agents') >= 6)"/>
+  <arg name="r7_enabled" default="$(eval arg('agents') >= 7)"/>
+  <arg name="r8_enabled" default="$(eval arg('agents') >= 8)"/>
+  <arg name="r9_enabled" default="$(eval arg('agents') >= 9)"/>
+  <arg name="r10_enabled" default="$(eval arg('agents') >= 10)"/>
+  <arg name="r11_enabled" default="$(eval arg('agents') >= 11)"/>
+  <arg name="r12_enabled" default="$(eval arg('agents') >= 12)"/>
+  <arg name="r13_enabled" default="$(eval arg('agents') >= 13)"/>
+  <arg name="r14_enabled" default="$(eval arg('agents') >= 14)"/>
+  <arg name="r15_enabled" default="$(eval arg('agents') >= 15)"/>
+  <arg name="r16_enabled" default="$(eval arg('agents') >= 16)"/>
+
+  <!-- Agent platforms -->
+  <!-- Options: dsh1, kitten -->
+  <!-- <arg name="r1_plat" default="dynamic_kitten"/> -->
+  <arg name="r1_plat" default="kitten"/>
+  <arg name="r2_plat" default="kitten"/>
+  <arg name="r3_plat" default="kitten"/>
+  <arg name="r4_plat" default="kitten"/>
+  <arg name="r5_plat" default="kitten"/>
+
+  <!-- RVIZ nav guis for individual agents -->
+  <arg name="r1_debug_gui" default="false"/>
+  <arg name="r2_debug_gui" default="false"/>
+  <arg name="r3_debug_gui" default="false"/>
+  <arg name="r4_debug_gui" default="false"/>
+  <arg name="r5_debug_gui" default="false"/>
+
+  <!-- Spawn distance (m) between agents in the y-axis -->
+  <arg name="agent_spacing" default="0.8"/>
+
+  <!-- Base specification -->
+  <arg name="base_enabled" default="true"/>
+
+  <!-- Multimaster + Mule-->
+  <!-- Enabling multimaster will run the base or a single agent in their own ROS+Gazebo system -->
+  <!-- This is necessary for simulating multiple isolated agents using Mule for inter-agent communication -->
+  <!-- Unfortunately, it incurs the overhead of multiple simulation processes due to the ROS+Gazebo design -->
+  <!-- Set multimaster_role to one of the following: base, r1, r2, r3, r4, r5 -->
+  <arg name="multimaster" default="false"/>
+  <arg name="multimaster_role" default=""/>
+  <arg name="mule_code" default=""/>
+  <arg name="mule_network" default="darpa"/>
+
+  <!-- Simulation -->
+  <arg name="load_world" default="true"/>
+  <arg name="use_osrf_path" default="true"/>
+  <arg name="scenario" default="cave_practice_1"/>
+  <!-- <arg name="scenario_path" default="$(find gazebo_assets)/worlds/$(arg scenario).world" unless="$(arg use_osrf_path)"/> -->
+  <!-- <arg name="scenario_path" default="$(find subt_gazebo)/worlds/$(arg scenario).world" if="$(arg use_osrf_path)"/> -->
+  <arg name="scenario_path" default="$(find behaviour_rl_nav)/gazebo/worlds/test.world"/>
+
+  <arg name="gazebo_gui" default="false"/>
+  <arg name="auto_gate_insertion" default="true"/>
+  <arg name="sim_object_detection" default="true"/>
+  <arg name="operations_gui_primary" default="true"/>
+  <arg name="operations_gui_secondary" default="true"/>
+
+  <!-- Scoring server -->
+  <arg name="darpa_interface_enabled" default="false"/>
+  <arg name="darpa_interface_url" default="http://localhost:8001/"/>
+  <arg name="darpa_interface_token" default="tokentokentoken1"/>
+  <arg name="darpa_interface_load_artifacts" default="$(arg darpa_interface_enabled)"/>
+  <!-- <arg name="darpa_interface_load_artifacts_file" default="$(eval arg('scenario_path').replace('.world', '_artifacts.yaml'))"/> -->
+
+  <!-- Mapping server -->
+  <arg name="darpa_mapping_server_enabled" default="false"/>
+  <arg name="darpa_mapping_server_port" default="8000"/>
+
+  <!-- Recording -->
+  <arg name="auto_bag_autonomy" default="false"/>
+  <arg name="auto_bag_perception" default="false"/>
+  <arg name="auto_bag_operations" default="false"/>
+  <arg name="run_description" default="false"/>
+
+  <!-- Should joy nodes be started. MUST be different to base_joy_node -->
+  <arg name="joy_start_nodes" default="false"/>
+
+  <!-- Should base station to agent teleop be started -->
+  <arg name="base_joy_node" default="true"/>
+  <arg name="joy_topic" default="base_to_agent_joy"/>
+
+  <!-- Task allocation arguments -->
+  <arg name="task_allocate" default="true"/>
+
+  <!-- Check runtime dependencies and versions -->
+  <!-- <include file="$(find nav_backpack)/launch/check_depends.launch"/> -->
+
+  <param name="fake_gate_detection" type="bool" value="$(arg auto_gate_insertion)"/>
+  <param name="fake_object_detection" type="bool" value="$(eval not sim_object_detection)"/>
+  <!-- <arg name="world" default="$(find behaviours_rl)/gazebo/worlds/blank.world"/> -->
+
+  <!-- <include file="$(find gazebo_ros)/launch/empty_world.launch"> -->
+  <include file="$(find behaviour_rl_nav)/launch/empty_world.launch">
+    <arg name="debug" value="false"/>
+    <arg name="extra_gazebo_args" value=""/>
+    <arg name="gui" value="$(arg gazebo_gui)"/>
+    <arg name="headless" value="false"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="verbose" value="true"/>
+    <arg name="world_name" value="$(arg scenario_path)"/>
+  </include>
+
+  <!-- Modify starting locations for the robots based on the scenario. Most should work from 0,0,0 -->
+  <!-- <arg name="x_offset" default="0.0" if="$(eval arg('scenario') not in ('urban_underground'))"/>
+  <arg name="x_offset" default="2.0" if="$(eval arg('scenario') == 'urban_underground')"/> -->
+  <!-- <arg name="x_offset" default="-10.0" if="$(eval arg('scenario') not in ('urban_underground'))"/> -->
+
+  <!-- <arg name="y_offset" default="0.0" if="$(eval arg('scenario') not in ('urban_qual'))"/>
+  <arg name="y_offset" default="25.0" if="$(eval arg('scenario') == 'urban_qual')"/>
+
+  <arg name="z_offset" default="0.2" if="$(eval arg('scenario') not in ('urban_underground','urban_qual','virtual_stix', 'cave_practice_1'))"/>
+  <arg name="z_offset" default="0.1" if="$(eval arg('scenario') == 'urban_underground')"/>
+  <arg name="z_offset" default="7.7" if="$(eval arg('scenario') == 'urban_qual')"/>
+  <arg name="z_offset" default="0.15" if="$(eval arg('scenario') == 'virtual_stix')"/>
+  <arg name="z_offset" default="0.15" if="$(eval arg('scenario') == 'cave_practice_1')"/> -->
+
+  <arg name="y_offset" default="0.0"/>
+  <arg name="z_offset" default="0.15"/>
+  <arg name="x_offset" default="0.0"/>
+
+
+  <!-- Start the agents -->
+  <!-- <include file="$(find subt_launch)/launch/simulation_agent.launch" if="$(eval (not multimaster and r2_enabled) or (multimaster and multimaster_role == 'r2'))"> -->
+
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r1_enabled)">
+    <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+    <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+    <arg name="init_y_position" value="$(eval arg('y_offset'))"/>
+    <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+    <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+    <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+    <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+    <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+    <arg name="multimaster" default="$(arg multimaster)"/>
+    <arg name="mule_code" default="$(arg mule_code)"/>
+    <arg name="mule_network" default="$(arg mule_network)"/>
+    <arg name="output" value="$(arg output)"/>
+    <arg name="platform" value="$(arg r1_plat)"/>
+    <arg name="robot_name" value="r1"/>
+    <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+    <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+    <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r2_enabled)">
+    <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+    <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+    <arg name="init_y_position" value="15"/>
+    <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+    <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+    <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+    <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+    <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+    <arg name="multimaster" default="$(arg multimaster)"/>
+    <arg name="mule_code" default="$(arg mule_code)"/>
+    <arg name="mule_network" default="$(arg mule_network)"/>
+    <arg name="output" value="$(arg output)"/>
+    <arg name="platform" value="$(arg r1_plat)"/>
+    <arg name="robot_name" value="r2"/>
+    <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+    <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+    <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r3_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="30"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r3"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r4_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="45"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r4"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+  
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r5_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="60"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r5"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r6_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="75"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r6"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+  
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r7_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="90"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r7"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r8_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="105"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r8"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r9_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="120"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r9"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r10_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="135"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r10"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r11_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="150"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r11"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r12_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="165"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r12"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r13_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="180"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r13"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+  
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r14_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="195"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r14"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+  
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r15_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="210"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r15"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+      
+  <include file="$(find behaviour_rl_nav)/launch/simulation_agent.launch" if="$(eval r16_enabled)">
+      <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+      <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+      <arg name="init_y_position" value="225"/>
+      <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+      <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+      <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+      <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+      <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+      <arg name="multimaster" default="$(arg multimaster)"/>
+      <arg name="mule_code" default="$(arg mule_code)"/>
+      <arg name="mule_network" default="$(arg mule_network)"/>
+      <arg name="output" value="$(arg output)"/>
+      <arg name="platform" value="$(arg r1_plat)"/>
+      <arg name="robot_name" value="r16"/>
+      <!-- <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/> -->
+      <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+      <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include>
+  <!-- r1 -->
+  <!-- <include file="$(find subt_launch)/launch/simulation_agent.launch" if="$(eval (not multimaster and r1_enabled) or (multimaster and multimaster_role == 'r1'))">
+    <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+    <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+    <arg name="init_y_position" value="$(eval arg('y_offset'))"/>
+    <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+    <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+    <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+    <arg name="joy_dev" value="/dev/input/js0" if="$(arg joy_start_nodes)"/>
+    <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+    <arg name="multimaster" default="$(arg multimaster)"/>
+    <arg name="mule_code" default="$(arg mule_code)"/>
+    <arg name="mule_network" default="$(arg mule_network)"/>
+    <arg name="output" value="$(arg output)"/>
+    <arg name="platform" value="$(arg r1_plat)"/>
+    <arg name="robot_name" value="r1"/>
+    <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r1.yaml"/>
+    <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+    <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include> -->
+
+  <!-- r2 -->
+  <!-- <include file="$(find subt_launch)/launch/simulation_agent.launch" if="$(eval (not multimaster and r2_enabled) or (multimaster and multimaster_role == 'r2'))">
+    <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+    <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+    <arg name="init_y_position" value="$(eval arg('y_offset') + arg('agent_spacing'))"/>
+    <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+    <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+    <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+    <arg name="joy_dev" value="/dev/input/js1" if="$(arg joy_start_nodes)"/>
+    <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+    <arg name="multimaster" default="$(arg multimaster)"/>
+    <arg name="mule_code" default="$(arg mule_code)"/>
+    <arg name="mule_network" default="$(arg mule_network)"/>
+    <arg name="output" value="$(arg output)"/>
+    <arg name="platform" value="$(arg r2_plat)"/>
+    <arg name="robot_name" value="r2"/>
+    <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r2.yaml"/>
+    <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+    <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include> -->
+
+  <!-- r3 -->
+  <!-- <include file="$(find subt_launch)/launch/simulation_agent.launch" if="$(eval (not multimaster and r3_enabled) or (multimaster and multimaster_role == 'r3'))">
+    <arg name="auto_bag_autonomy" value="$(arg auto_bag_autonomy)"/>
+    <arg name="auto_bag_perception" value="$(arg auto_bag_perception)"/>
+    <arg name="init_y_position" value="$(eval arg('y_offset') - arg('agent_spacing'))"/>
+    <arg name="init_x_position" value="$(eval arg('x_offset'))"/>
+    <arg name="init_z_position" value="$(eval arg('z_offset'))"/>
+    <arg name="joy_start_node" value="$(arg joy_start_nodes)"/>
+    <arg name="joy_dev" value="/dev/input/js2" if="$(arg joy_start_nodes)"/>
+    <arg name="joy_topic" value="$(arg joy_topic)" if="$(arg base_joy_node)"/>
+    <arg name="multimaster" default="$(arg multimaster)"/>
+    <arg name="mule_code" default="$(arg mule_code)"/>
+    <arg name="mule_network" default="$(arg mule_network)"/>
+    <arg name="output" value="$(arg output)"/>
+    <arg name="platform" value="$(arg r3_plat)"/>
+    <arg name="robot_name" value="r3"/>
+    <arg name="wildcat_robot_name_file" value="$(find subt_launch)/config/wildcat/robot_name/r3.yaml"/>
+    <arg name="sim_object_detection" value="$(arg sim_object_detection)"/>
+    <arg name="task_allocate" value="$(arg task_allocate)"/>
+  </include> -->
+
+  
+
+  <!-- Operations -->
+  <!-- <include file="$(find subt_launch)/launch/operations_station.launch" if="$(eval (not multimaster and base_enabled) or (multimaster and multimaster_role == 'base'))">
+    <arg name="base_joy_node" value="$(arg base_joy_node)"/>
+    <arg name="course" default="test"/>
+    <arg name="darpa_interface_enabled" value="$(arg darpa_interface_enabled)"/>
+    <arg name="darpa_interface_load_artifacts_file" value="$(arg darpa_interface_load_artifacts_file)"/>
+    <arg name="darpa_interface_load_artifacts" value="$(arg darpa_interface_load_artifacts)"/>
+    <arg name="darpa_interface_token" value="$(arg darpa_interface_token)"/>
+    <arg name="darpa_interface_url" value="$(arg darpa_interface_url)"/>
+    <arg name="darpa_mapping_interface_url" value="http://localhost:$(arg darpa_mapping_server_port)/"/>
+    <arg name="darpa_mapping_server_enabled" value="$(arg darpa_mapping_server_enabled)"/>
+    <arg name="darpa_mapping_server_port" default="8000"/>
+    <arg name="mule_code" default="$(arg mule_code)"/>
+    <arg name="mule_network" default="$(arg mule_network)"/>
+    <arg name="multimaster" value="$(arg multimaster)"/>
+    <arg name="operations_gui_primary" value="$(arg operations_gui_primary)"/>
+    <arg name="operations_gui_secondary" value="$(arg operations_gui_secondary)"/>
+    <arg name="output" value="$(arg output)"/>
+    <arg name="r1_debug_gui" value="$(arg r1_debug_gui)"/>
+    <arg name="r2_debug_gui" value="$(arg r2_debug_gui)"/>
+    <arg name="r3_debug_gui" value="$(arg r3_debug_gui)"/>
+    <arg name="r4_debug_gui" value="$(arg r4_debug_gui)"/>
+    <arg name="r5_debug_gui" value="$(arg r5_debug_gui)"/>
+    <arg name="record_run" value="$(arg auto_bag_operations)"/>
+    <arg name="run_description" value="$(arg run_description)"/>
+    <arg name="simulation" value="true"/>
+  </include> -->
+
+
+    <!-- <node name="behaviour_rl_nav" pkg="behaviour_rl_nav" type="behaviour_rl_nav.py" output="screen" respawn="false"> -->
+    <!-- </node> -->
+
+</launch>

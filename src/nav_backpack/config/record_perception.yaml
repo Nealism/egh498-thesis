@@ -1,0 +1,34 @@
+directory: /ssd/record # must exist
+bag_size: 5000 # Megabytes
+min_space: 10000 # Megabytes
+topics: [
+    annotated/camera0,
+    bounding_box,
+    camera0,
+    camera0/compressed,
+    camera1/compressed,
+    camera2/compressed,
+    encoder/pps_timestamp,
+    imu/data,
+    imu/pps_timestamp,
+    slam/odom/high/cloud,
+    slam/odom/high/pose,
+    slam/odom/tail/cloud,
+    slam/odom/tail/pose,
+    slam/odom/tail/tf,
+    slam/odom/tip/pose,
+    slam/odom/tip/tf,
+    tf,
+    velodyne_points,
+    wildcat/atlas/map/child_to_root_connections,
+    wildcat/atlas/map/child_poses,
+    wildcat/atlas/map/root_bounds_merged,
+    wildcat/atlas/map/root_edges,
+    wildcat/atlas/map/root_frames_up_vectors,
+    wildcat/atlas/map/root_frames_saxs,
+    wildcat/atlas/map/root_poses,
+  ]
+static_files: [
+    $(arg wildcat_calibration_file),
+    $(find nav_backpack)/config/wildcat/wildcat.yaml,
+  ]

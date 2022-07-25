@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="titan_track">
+
+  <xacro:macro name="titan_track_segment" params="visual:=true collision:=true width r0 x0 z0 r1 x1 z1">
+
+    <!-- Wheel -->
+    <xacro:if value="${visual}">
+      <visual>
+        <origin xyz="${x0} 0 ${z0}" rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="${r0}" length="${width}"/>
+        </geometry>
+      </visual>
+    </xacro:if>
+    <xacro:if value="${collision}">
+      <collision>
+        <origin xyz="${x0} 0 ${z0}" rpy="${pi / 2} 0 0"/>
+        <geometry>
+          <cylinder radius="${r0}" length="${width}"/>
+        </geometry>
+      </collision>
+    </xacro:if>
+
+    <!-- Between the wheels -->
+    <xacro:property name="r_small" value="${r1 if (r0 >= r1) else r0}"/>
+    <xacro:property name="r_big" value="${r0 if (r0 >= r1) else r1}"/>
+    <xacro:property name="x_small" value="${x1 if (r0 >= r1) else x0}"/>
+    <xacro:property name="x_big" value="${x0 if (r0 >= r1) else x1}"/>
+    <xacro:property name="z_small" value="${z1 if (r0 >= r1) else z0}"/>
+    <xacro:property name="z_big" value="${z0 if (r0 >= r1) else z1}"/>
+    <xacro:property name="d_x" value="${x_big - x_small}"/>
+    <xacro:property name="d_z" value="${z_big - z_small}"/>
+    <xacro:property name="d_s" value="${(d_x ** 2 + d_z ** 2) ** 0.5}"/>
+    <xacro:property name="angle" value="${atan2(d_z, -d_x) + pi}"/>
+
+    <!-- Along the segment -->
+    <xacro:property name="seg_d_s" value="${(d_s ** 2 - (r_big - r_small) ** 2) ** 0.5}"/>
+    <xacro:property name="seg_d_angle" value="${acos(seg_d_s / d_s)}"/>
+    <xacro:property name="seg_angle" value="${angle + (-seg_d_angle if (r0 >= r1) else +seg_d_angle)}"/>
+    <xacro:property name="big_seg_d_s" value="${r_big - r_small}"/>
+    <xacro:property name="seg_x_big" value="${x_big + big_seg_d_s * cos(seg_angle + pi / 2)}"/>
+    <xacro:property name="seg_z_big" value="${z_big + big_seg_d_s * sin(seg_angle + pi / 2)}"/>
+
+    <!-- Track segment -->
+    <xacro:if value="${visual}">
+      <visual>
+        <origin xyz="${(x_small + seg_x_big) / 2} 0 ${(z_small + seg_z_big) / 2}" rpy="0 ${seg_angle} 0"/>
+        <geometry>
+          <box size="${seg_d_s} ${width} ${2 * r_big}"/>
+        </geometry>
+      </visual>
+    </xacro:if>
+    <xacro:if value="${collision}">
+      <collision>
+        <origin xyz="${(x_small + seg_x_big) / 2} 0 ${(z_small + seg_z_big) / 2}" rpy="0 ${seg_angle} 0"/>
+        <geometry>
+          <box size="${seg_d_s} ${width} ${2 * r_big}"/>
+        </geometry>
+      </collision>
+    </xacro:if>
+
+  </xacro:macro>
+
+  <xacro:macro name="titan_track_geometry" params="visual:=true collision:=true width">
+
+    <xacro:titan_track_segment visual="${visual}" collision="${collision}" width="${width}"
+      x0="+0.57" z0="0.355" r0="0.10"
+      x1="-0.55" z1="0.335" r1="0.12"/>
+
+    <xacro:titan_track_segment visual="${visual}" collision="${collision}" width="${width}"
+      x0="-0.55" z0="0.335" r0="0.12"
+      x1="-0.48" z1="0.100" r1="0.10"/>
+
+    <xacro:titan_track_segment visual="${visual}" collision="${collision}" width="${width}"
+      x0="-0.48" z0="0.100" r0="0.10"
+      x1="+0.41" z1="0.100" r1="0.10"/>
+
+    <xacro:titan_track_segment visual="${visual}" collision="${collision}" width="${width}"
+      x0="+0.41" z0="0.100" r0="0.10"
+      x1="+0.57" z1="0.355" r1="0.10"/>
+
+  </xacro:macro>
+
+  <xacro:macro name="titan_track" params="name width">
+
+    <link name="${name}">
+
+      <inertial>
+        <origin xyz="0 0 0"/>
+        <mass value="100"/>
+        <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+      </inertial>
+
+      <xacro:titan_track_geometry visual="true" collision="true" width="${width}"/>
+
+    </link>
+
+  </xacro:macro>
+
+</robot>

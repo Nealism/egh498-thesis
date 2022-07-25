@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+
+  <!-- Output logging -->
+  <arg name="output" default="screen" doc="Where should nodes write log output to?"/>
+  <arg name="ROSCONSOLE_FORMAT" default="${severity} ${time} ${node}: ${message}"/>
+  <env name="ROSCONSOLE_FORMAT" value="$(arg ROSCONSOLE_FORMAT)"/>
+
+  <!-- Automatically bag autonomy topics as per the record_perception.yaml config -->
+  <arg name="auto_bag" default="false"/>
+  <arg name="auto_bag_config" default="$(find nav_backpack)/config/record_perception.yaml"/>
+
+  <!-- The namespace of the controller_manager services -->
+  <arg name="controller_manager_namespace" default="~"/>
+
+  <!-- Absolute namespace (must start with "/" but not end with "/") -->
+  <arg name="namespace" default=""/>
+
+  <!-- Speed of the laser rotor in Hz -->
+  <arg name="rotor_speed" default="0.5"/>
+  <!-- Interval to publish rotor velocity commands (ms) -->
+  <arg name="rotor_publish_interval" default="5.0"/>
+
+  <!-- Is in a simulation -->
+  <arg name="simulation" default="false"/>
+
+  <!-- Is in replay? -->
+  <arg name="replay" default="false"/>
+
+  <!-- tf topic to use -->
+  <arg name="tf" default="/tf"/>
+
+  <!-- Calibration file for wildcat -->
+  <arg name="wildcat_calibration_file"/>
+  <!-- Chassis calibration file for wildcat -->
+  <arg name="wildcat_chassis_calibration_file"/>
+  <!-- Name file to use to assign an agent name, can be empty for 'wildcat' -->
+  <arg name="wildcat_robot_name_file" default=""/>
+  <!-- Run individual global map -->
+  <arg name="wildcat_global" default="true"/>
+
+  <!-- Remap to use given tf -->
+  <remap from="/tf" to="$(arg tf)"/>
+  <remap from="tf" to="$(arg tf)"/>
+  <remap from="/tf_static" to="$(arg tf)_static"/>
+  <remap from="tf_static" to="$(arg tf)_static"/>
+
+  <!-- Simulated components -->
+  <group if="$(arg simulation)">
+
+    <!-- The model xacro must have already been included in the agent -->
+
+    <!-- Joint controller for the rotor -->
+    <rosparam file="$(find nav_backpack)/config/rotor_control.yaml" command="load" subst_value="true"/>
+    <node name="rotor_controller_spawner" pkg="controller_manager" type="spawner" output="$(arg output)"
+      args="--namespace $(arg controller_manager_namespace) $(arg namespace)/rotor"/>
+
+    <!-- Rotate the LIDAR rotor-->
+    <node name="rotor_rotator" pkg="nav_backpack" type="rotor_rotator" output="$(arg output)">
+      <param name="topic" value="rotor/command"/>
+      <param name="frequency" value="$(arg rotor_speed)"/>
+      <param name="period_in_ms" value="$(arg rotor_publish_interval)"/>
+    </node>
+
+  </group>
+
+  <!-- IO components -->
+  <group unless="$(eval arg('simulation') or arg('replay'))">
+
+    <!-- Timing board -->
+    <node pkg="timing_board" name="timing" type="timing_node"  output="$(arg output)">
+      <param name="port"  type="string" value="/dev/serial/by-id/usb-CSIRO_Zeb_IMU_Timing-if02"/>
+      <param name="encoder_fixed_frame" type="string" value="encoder"/>
+    </node>
+
+    <!-- IMU -->
+    <node pkg="microstrain_3dmgx2_imu" type="imu_node" name="microstrain_3dmgx2_node"  output="$(arg output)">
+      <param name="port"  type="string" value="/dev/serial/by-id/usb-CSIRO_Zeb_IMU_Timing-if00"/>
+      <param name="frameid"  type="string" value="imu0"/>
+      <param name="autocalibrate" type="bool" value="false"/>
+      <param name="angular_velocity_stdev" type="double" value="0.00017"/>
+      <param name="use_mip_protocol" type="bool" value="true"/>
+    </node>
+
+    <!-- Velodyne -->
+    <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch">
+      <!-- Uncap max since it can return values above it's max range that can be used for clearing purposes-->
+      <arg name="max_range" value="1000.0" />
+      <!-- Ranges <= 0.6 exhibit warping artifacts and are fairly useless-->
+      <arg name="min_range" value="0.6" />
+    </include>
+
+    <!-- Enable the motors -->
+    <node name="motor_start" pkg="rostopic" type="rostopic" args="pub Motor_power std_msgs/UInt8 1"  output="$(arg output)"/>
+
+  </group>
+
+  <!-- Shared components -->
+
+  <!-- Wildcat -->
+  <group>
+    <!-- Local odom -->
+    <arg name="wildcat_node" value="onlineOdomSim" if="$(arg simulation)"/>
+    <arg name="wildcat_node" value="onlineOdom" unless="$(arg simulation)"/>
+    <node name="wildcat_odom" pkg="wildcat_ros" type="pipeline" args="-p $(find nav_backpack)/config/wildcat/wildcat.yaml $(arg wildcat_calibration_file) $(arg wildcat_chassis_calibration_file) $(arg wildcat_robot_name_file) -n $(arg wildcat_node) -o nominalOverrides onlineOverrides --spin_rate=100"  output="$(arg output)" required="true">
+      <!-- Publish high frequency tf to primary tf -->
+      <remap from="slam/odom/high/tf" to="$(arg tf)"/>
+    </node>
+
+    <!-- Global mapper -->
+    <node name="wildcat_map" pkg="wildcat_ros" type="pipeline" if="$(arg wildcat_global)" args="-p $(find nav_backpack)/config/wildcat/wildcat.yaml $(arg wildcat_robot_name_file) -o nominalOverrides -n onlineAtlas --spin_rate 100"  output="$(arg output)"  required="true"/>
+  </group>
+
+  <!-- Auto bag perception topics listed in record_perception.yaml -->
+  <node name="ras_record_perception" pkg="ras_ros" type="record" if="$(arg auto_bag)" output="$(arg output)">
+    <rosparam command="load" subst_value="true" file="$(arg auto_bag_config)"/>
+  </node>
+
+</launch>
