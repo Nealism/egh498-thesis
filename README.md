@@ -76,7 +76,9 @@ This is a repo of environments from various simulations including MuJoCo and PyB
 
 #### HPC helpful info ####
 - https://confluence.csiro.au/display/SC/CSIRO+SC+Shared+Cluster+-+Petrichor and https://confluence.csiro.au/display/SC/Quick+Start+Guide+for+Linux
-- I can't remember if you need to get added to HPC cluster by sending a request to schelp@csiro.au if you can't log in.
+- To get access to the HPC you need to go to this link: https://sc.it.csiro.au/hpc.
+- Then click "Register for Account" and "Find your Project"
+- Then enter your project's O2D Id or name. This will then be submitted to the project manager for approval.
 - On the CSIRO network, ssh in to petrichor:
 `ssh -X <ident>@petrichor.hpc.csiro.au`<br/>
 - Mount directory to easily see files
