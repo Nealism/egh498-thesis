@@ -76,12 +76,12 @@ class Env(EnvBaseMJ):
         state = self.joints + self.joint_vel + self.joint_force + self.end_effector + self.target
         return state
 
-    def step(self, actions=None, state=None, target=None, target_point=None):
+    def step(self, actions=None, replay_state=None, target=None, target_point=None):
 
-        if state is not None:
+        if replay_state is not None:
             if not self.args.use_ball:
                 self.set_target(target, target_point)
-            self.set_position(state)
+            self.set_position(replay_state)
         else:
             if self.render:
                 if not self.args.use_ball:
@@ -161,7 +161,7 @@ class Env(EnvBaseMJ):
 
     def save_sim_state(self):
         if self.args.record_sim and self.rank == 0:  
-            # self.sim_data.append(self.self.joints)     
+            # self.sim_data.append(self.self.joints) 
             self.sim_data.append(self.sim.get_state())     
 
     def log_stuff(self, logger, writer, iters_so_far):
