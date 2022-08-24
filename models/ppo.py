@@ -172,7 +172,7 @@ class PPOBuffer:
 
 def ppo(env_fn, ac_kwargs=dict(), seed=0, 
         steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
-        vf_lr=1e-3, train_pi_iters=100, train_v_iters=100, lam=0.97, max_ep_len=2048,
+        vf_lr=1e-3, train_pi_iters=100, train_v_iters=100, lam=0.97, max_ep_len=2048, local_epoch_len=2048,
         target_kl=0.01, logger_kwargs=dict(), save_freq=10, PATH=None, writer=None, perception=False):
     """
     Proximal Policy Optimization (by clipping), 
@@ -319,8 +319,8 @@ def ppo(env_fn, ac_kwargs=dict(), seed=0,
 
     # Set up experience buffer
     # local_steps_per_epoch = int(steps_per_epoch / num_procs())
-    local_steps_per_epoch = 2048
-    steps_per_epoch = 2048 * num_procs()
+    local_steps_per_epoch = local_epoch_len
+    steps_per_epoch = local_epoch_len * num_procs()
     if perception:
         buf = PPOBufferPerception(obs_dim, im_dim, act_dim, local_steps_per_epoch, gamma, lam)
     else:
@@ -417,8 +417,8 @@ def ppo(env_fn, ac_kwargs=dict(), seed=0,
     if perception:
         im = env.terrain
 
-    local_lens = [0]
-    local_rews = [0]
+    local_lens = []
+    local_rews = []
     t1 = time.time()
 
     # Main loop: collect experience in env and update/log each epoch
@@ -451,7 +451,7 @@ def ppo(env_fn, ac_kwargs=dict(), seed=0,
 
             if terminal or epoch_ended:
                 # if trajectory didn't reach terminal state, bootstrap value target
-                if timeout or epoch_ended:
+                if (timeout or epoch_ended) and not d:
                     if perception:
                         _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                     else:
@@ -467,12 +467,13 @@ def ppo(env_fn, ac_kwargs=dict(), seed=0,
                 o, ep_ret, ep_len = env.reset(), 0, 0
                 if perception:
                     im = env.terrain
-
+        
         if (epoch % save_freq == 0) or (epoch == epochs-1):
             if proc_id() == 0:
                 print("Saving model")
                 torch.save(ac, PATH + "model.pt")
-            
+            # Wait for all processes before doing an update
+            comm.Barrier()
             save_state = env.get_env_state()
             test_success = run_test(env, PATH + "model.pt")
             if proc_id() == 0:
@@ -505,8 +506,8 @@ def ppo(env_fn, ac_kwargs=dict(), seed=0,
             writer.add_scalar("Lr_vf", learning_rate_vf, epoch)
             writer.add_scalar("time_per_rollout", time.time() - t1, epoch)
 
-        local_lens = [0]
-        local_rews = [0]
+        local_lens = []
+        local_rews = []
 
         # Log info about epoch
         logger.log_tabular('Epoch', epoch)
@@ -542,9 +543,11 @@ def run_test(env, model):
     env.args.disturbances = False
     ob = env.reset()
     done = False
-    while not done:
+    while True:
         act, _, _ = ac.step(torch.as_tensor(ob, dtype=torch.float32), stochastic=False)
         ob, rew, done, _ = env.step(act)
+        if done or env.steps > env.args.max_ep_len:
+            break
     success = env.get_success()
     successes = MPI.COMM_WORLD.allgather(success)
     return successes
