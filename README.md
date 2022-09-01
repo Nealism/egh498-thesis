@@ -83,7 +83,7 @@ This is a repo of environments from various simulations including MuJoCo and PyB
 `ssh -X <ident>@petrichor.hpc.csiro.au`<br/>
 - Mount directory to easily see files
     - first time: `mkdir ~/hpc-home` <br/>
-    `sudo mount -t cifs //petrichorhome.csiro.au/home_intel/<ident> /home/<ident>/hpc-home -o user=<ident>,dom=NEXUS,uid=1000`<br/>
+    `sudo mount -t cifs //petrichorhome.hpc.csiro.au/home_intel/<ident> /home/<ident>/hpc-home -o user=<ident>,dom=NEXUS,uid=1000`<br/>
 - Mount scratch workspace, this is where results and data are typically saved (there isn't much room on the cluster for saving results). This is for temporary storage only. Need to use the datastore if need to save things for longer periods.
     - first time: `mkdir ~/hpc-scratch` <br/>
     `sudo sshfs -o allow_other <ident>@petrichor.hpc.csiro.au:/scratch1/<ident> ~/hpc-scratch`
@@ -92,7 +92,7 @@ This is a repo of environments from various simulations including MuJoCo and PyB
 - Copy code to HPC: <br/>
 `rsync -avP --exclude-from=rsync_excludes.txt source destination`
 - e.g.<br/>
-`rsync -avP --exclude-from=rsync_excludes.txt ~/<ident>/behaviour_rl <ident>@petrichorhome.csiro.au:/home/<ident>`
+`rsync -avP --exclude-from=rsync_excludes.txt ~/behaviour_rl <ident>@petrichorhome.hpc.csiro.au:/home/<ident>`
 - setup environment on the HPC (for the first time, or when you need to add a package):
     - Load a module that you want to install packages on:
         - `module load openmpi/4.1.2-ofed51-simple python/3.9.4`
@@ -108,7 +108,7 @@ This is a repo of environments from various simulations including MuJoCo and PyB
 - Run bash script of commands: <br/>
     - Add experiment name, and arguments to Experiments and Arguments lists in `bashies/multi_experiment.sh`
     - rsync changes to HPC <br/>
-        `rsync -avP --exclude-from=rsync_excludes.txt ~/<ident>/behaviour_rl <ident>@petrichorhome.csiro.au:/home/<ident>`
+        `rsync -avP --exclude-from=rsync_excludes.txt ~/<ident>/behaviour_rl <ident>@petrichorhome.hpc.csiro.au:/home/<ident>`
     - Run on HPC: <br/>
     `cd bashies` <br/>
     `./multi_experiment.sh`<br/>
