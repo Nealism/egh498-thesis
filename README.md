@@ -1,5 +1,5 @@
 ## behaviour_rl ##
-This is a repo of environments from various simulations including MuJoCo and PyBullet 
+This is a repo of environments from various simulations including MuJoCo and PyBullet.
 
 ### Environments ###
 #### MuJoCo: ####
@@ -77,7 +77,7 @@ This is a repo of environments from various simulations including MuJoCo and PyB
 #### HPC helpful info ####
 - https://confluence.csiro.au/display/SC/CSIRO+SC+Shared+Cluster+-+Petrichor and https://confluence.csiro.au/display/SC/Quick+Start+Guide+for+Linux
 - To get access to the HPC you need to go to this link: https://sc.it.csiro.au/hpc.
-- Then click "Register for Account" and "Find your Project"
+- Then click "Register for Account" and "Find your Project".
 - Then enter your project's O2D Id or name. This will then be submitted to the project manager for approval.
 - On the CSIRO network, ssh in to petrichor:
 `ssh -X $USER@petrichor.hpc.csiro.au`<br/>
@@ -138,12 +138,12 @@ This is a repo of environments from various simulations including MuJoCo and PyB
 #### Adding Code - Follow the ideas from the reimagine farming / subt projects
 - Develop on a new branch using naming conventions: feature/some_cool_feature, bugfix/some_bug_fix.
 - Commit when code has been tested, treat commits as checkpoints to working code that you can easily return to if needed.
-- Once happy that a feature works, submit a PR (pull request) to get the feature merged in with the master branch. The merged branch is deleted
-- Try to get things merged into master so that cool features are available to other users (a branch should only be alive for days to weeks, not months)
+- Once happy that a feature works, submit a PR (pull request) to get the feature merged in with the master branch. The merged branch is deleted.
+- Try to get things merged into master so that cool features are available to other users (a branch should only be alive for days to weeks, not months).
 - Create "tags" for meaningful checkpoints, for example for a code base used for a paper.
 
 #### TODOs:
-- Separate training from running behaviours for refarm stack (i.e. behavour_nav_rl)
-- Run each env, train on HPC (esp mujoco)
-- Fix gazebo env
-- Move behaviour_rl into own space, check build works for ros stuff
+- Separate training from running behaviours for refarm stack (i.e. behavour_nav_rl).
+- Run each env, train on HPC (esp mujoco).
+- Fix gazebo env.
+- Move behaviour_rl into own space, check build works for ros stuff.
