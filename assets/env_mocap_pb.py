@@ -26,7 +26,7 @@ class EnvExp(EnvBasePB):
             self.load_robot()
 
         if self.args.perception:
-            self.policy = torch.load("/scratch1/tid010/results/checkpoint/22_06_2022_15_25_24/pyt_save/model.pt")
+            self.policy = torch.load("/scratch1/$USER/results/checkpoint/22_06_2022_15_25_24/pyt_save/model.pt")
         else:
             self.load_mocap()
 

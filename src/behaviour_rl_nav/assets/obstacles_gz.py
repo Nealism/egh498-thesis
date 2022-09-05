@@ -29,7 +29,7 @@ class Obstacles():
         self.orn = [0,0,0,1]
         # self.size = [100, 100, 3]
         self.colour = [1.0, 0.2, 0.0, 1.0]
-        self.path = "/home/tid010/Dropbox/csiro_ws/src/behaviour_rl_nav/gazebo/worlds/heightmap_test.png"
+        self.path = "$HOME/Dropbox/csiro_ws/src/behaviour_rl_nav/gazebo/worlds/heightmap_test.png"
     
     def initialise_ros_stuff(self):
         self.req = SpawnModelRequest()
@@ -103,7 +103,7 @@ class Obstacles():
 
         # hm = np.zeros([129,129])
         # hm = (np.random.random(self.world_shape)*255.0).astype(np.uint8)
-        path = "/home/tid010/Dropbox/csiro_ws/src/behaviour_rl_nav/gazebo/worlds/heightmap_test.png"
+        path = "$HOME/Dropbox/csiro_ws/src/behaviour_rl_nav/gazebo/worlds/heightmap_test.png"
         cv2.imwrite(path, hm)   
         cv2.imshow("frame", hm)
         cv2.waitKey(0)

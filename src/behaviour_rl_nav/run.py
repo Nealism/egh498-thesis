@@ -9,7 +9,7 @@ from assets.env_gz import Env
 import default_arguments
 
 def run(args):
-    MY_WORKSPACE_NAME = "tid010"
+    MY_WORKSPACE_NAME = "$USER"
 
     if args.render:
         args.test = True

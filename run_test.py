@@ -4,7 +4,7 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 import default_arguments
 
-MY_WORKSPACE_NAME = "tid010"
+MY_WORKSPACE_NAME = "$USER"
 
 def run(args): 
 

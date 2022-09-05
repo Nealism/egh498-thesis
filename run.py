@@ -8,8 +8,6 @@ from utils.mpi_tools import mpi_fork
 from utils.run_utils import setup_logger_kwargs
 import default_arguments
 
-MY_WORKSPACE_NAME = "tid010"
-
 def run(args): 
 
     Env, args = default_arguments.get_env(args)   
@@ -19,6 +17,7 @@ def run(args):
     now = datetime.now()
     now = comm.bcast(now.strftime("%d_%m_%Y_%H_%M_%S"), root=0)  
 
+    MY_WORKSPACE_NAME = args.ident
     SAVE_PATH = "/scratch1/" + MY_WORKSPACE_NAME + "/results/"
     PATH = SAVE_PATH + "walker/" + args.exp + "/" + now + "/"
 
