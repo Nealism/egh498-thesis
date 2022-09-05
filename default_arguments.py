@@ -29,7 +29,8 @@ def get_defaults():
     # ========================================================================
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--save_freq', type=int, default=10)
-    parser.add_argument('--steps', type=int, default=2048)
+    parser.add_argument('--local_epoch_len', type=int, default=4096)
+    parser.add_argument('--max_ep_len', type=int, default=1048)
     parser.add_argument('--epochs', type=int, default=8000)
     parser.add_argument('--cpu', type=int, default=1)
     parser.add_argument('--episodes', type=int, default=100)

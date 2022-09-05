@@ -29,7 +29,7 @@ def run(args):
     logger_kwargs = setup_logger_kwargs(args.exp, args.seed)
     logger_kwargs["output_dir"] = PATH
 
-    ppo(lambda : Env(PATH=PATH, args=args, writer=writer), ac_kwargs=dict(hidden_sizes=[64]*2), epochs=args.epochs, PATH=PATH, writer=writer, logger_kwargs=logger_kwargs, perception=args.perception)
+    ppo(lambda : Env(PATH=PATH, args=args, writer=writer), ac_kwargs=dict(hidden_sizes=[64]*2), epochs=args.epochs, PATH=PATH, writer=writer, max_ep_len=args.max_ep_len, local_epoch_len=args.local_epoch_len, logger_kwargs=logger_kwargs, perception=args.perception)
 
 if __name__=="__main__":
     args = default_arguments.get_defaults() 

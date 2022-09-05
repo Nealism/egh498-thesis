@@ -1,6 +1,7 @@
 '''
 Script used to display robot stuff while training (loads in save robot state)
 '''
+import numpy as np
 import glob
 import time
 from pathlib import Path
@@ -39,50 +40,53 @@ def run(args):
 
     Env, args = default_arguments.get_env(args)   
 
+    args.render = True
+    args.test = True
+    args.record_data = False
+
     env = Env(PATH=PATH, args=args)
 
-    if args.emitter != "":
-        args.emitter += "_"
     while True:
         try:
-            print("Loading terrain and sim data", PATH + "/" + args.emitter)
+            print("Loading terrain and sim data", PATH)
             if args.best:
-                data = pickle.load(open(PATH + "/" + args.emitter + "sim_data_best", "rb"))
+                data = pickle.load(open(PATH + "/sim_data_best", "rb"))
             else:
-                data = pickle.load(open(PATH + "/" + args.emitter + "sim_data", "rb"))
-            print(data.shape)
-            if len(data[-1]) != 3:
-                terrain = data[-1]
-                data = data[:-1]
-                print("loaded ", data.shape, terrain.shape)
+                data = pickle.load(open(PATH + "/sim_data", "rb"))
+            if "mj" in args.env:
+                print("Data len", len(data))
+                if len(data[-1]) != 5:
+                    target = data[-1]
+                    data = data[:-1]
             else:
-                terrain = None
-                print("loaded ", data.shape)
-
+                print("Data shape", data.shape)
+                if len(data[-1]) != 3:
+                    terrain = data[-1]
+                    data = data[:-1]
+                    print("loaded ", data.shape, terrain.shape)
+                else:
+                    terrain = None
+                    print("loaded ", data.shape)
 
         except Exception as e:
             print("couldn't load terrain or data")
             print(e)
             exit()
         
-        
-        env.terrain = terrain
-        env.reset(terrain)
+        if "mj" in args.env:
+            env.reset()
+        else:
+            env.terrain = terrain
+            env.reset(terrain)
         
         for d in data:
-            pos, orn, joints = d
-
-            for j,m in zip(env.motor_names, joints):
-                if "x" in j:
-                    print(j,m)
-            # print(pos)
-            env.set_position(pos, orn, joints)
-            time.sleep(args.sleep)
-
+            if "mj" in args.env:
+                env.step(replay_state=d, target=target[:3], target_point=target[3:])
+            else:
+                pos, orn, joints = d
+                env.set_position(pos, orn, joints)
+                time.sleep(args.sleep)
 
 if __name__=="__main__":
     args = default_arguments.get_defaults() 
-    args.render = True
-    args.test = True
-    args.record_data = False
     run(args)

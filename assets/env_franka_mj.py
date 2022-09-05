@@ -40,6 +40,7 @@ class Env(EnvBaseMJ):
         self.episodes = 0
         self.states = ["joints", "pos", "orn", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
+        self.steps = 0
         self.success = deque([0.0], maxlen=5)
 
     @property
@@ -47,41 +48,33 @@ class Env(EnvBaseMJ):
         return self.sim.model.opt.timestep * self.sim.nsubsteps
 
     def get_success(self):
-        return self.steps >= 1500
+        return np.sqrt(np.sum((np.array(self.end_effector) - np.array(self.target_point))**2)) < 0.1
 
     def reset(self, timeout=False):
-        self.sim.reset()
+        
+        if self.steps > 0:
+            self.success.append(self.get_success())
+
+        self.sim.reset()        
         self.steps = 0
-        
-        self.ep_success = False
-        self.success.append(self.get_success())
-        
         # state = self.sim.get_state()
         # state = list(self.sim.data.qpos) + list(self.sim.data.qvel) + list(self.sim.data.actuator_force)
         
         self.record_sim_state(timeout)
         self.episodes += 1
 
-        if self.args.use_ball:
-            dist, angle = np.random.uniform(0.2, 0.4), np.random.uniform(-0.5, 0.5)
-            self.target = [dist*np.cos(angle), dist*np.sin(angle), 2.0]
-            self.target_point = [0,0,0] 
-            self.sim.data.set_joint_qpos("ball", self.target + [1.0, 0, 0, 0])
-        else:
-            self.target = [np.random.uniform(0.25, 0.5),np.random.uniform(-0.5, 0.5), np.random.uniform(0.2, 0.8)] 
-            self.target_point = [self.target[0] + np.random.uniform(-0.1, 0.1), self.target[1] + np.random.uniform(-0.1, 0.1), self.target[2] + np.random.uniform(-0.1, 0.1)] 
-
+        self.get_target()
         self.get_observation()
 
         state = self.joints + self.joint_vel + self.joint_force + self.end_effector + self.target
         return state
 
-    def step(self, actions=None, state=None, target=None, target_point=None):
+    def step(self, actions=None, replay_state=None, target=None, target_point=None):
 
-        if state is not None:
+        if replay_state is not None:
             if not self.args.use_ball:
                 self.set_target(target, target_point)
-            self.set_position(state)
+            self.set_position(replay_state)
         else:
             if self.render:
                 if not self.args.use_ball:
@@ -118,10 +111,7 @@ class Env(EnvBaseMJ):
                 done = True
         else:
             end_effector_error = np.sqrt(np.sum((np.array(self.end_effector) - np.array(self.target_point))**2))
-            reward = np.exp(-2.5*end_effector_error)
-        
-        if self.steps > 2000:
-            done = True
+            reward = np.exp(-5*end_effector_error)
         return reward, done
 
     
@@ -146,6 +136,17 @@ class Env(EnvBaseMJ):
         xpos = self.sim.data.xipos
         return (np.sum(mass * xpos, 0) / np.sum(mass))[0]
 
+    def get_target(self):
+        if self.args.use_ball:
+            dist, angle = np.random.uniform(0.2, 0.4), np.random.uniform(-0.5, 0.5)
+            self.target = [dist*np.cos(angle), dist*np.sin(angle), 2.0]
+            self.target_point = [0,0,0] 
+            self.sim.data.set_joint_qpos("ball", self.target + [1.0, 0, 0, 0])
+        else:
+            # self.target = [np.random.uniform(0.25, 0.5),np.random.uniform(-0.5, 0.5), np.random.uniform(0.2, 0.8)] 
+            self.target = [np.random.uniform(0.3, 0.4),np.random.uniform(-0.3, 0.3), np.random.uniform(0.5, 0.8)] 
+            self.target_point = [self.target[0] + np.random.uniform(-0.1, 0.1), self.target[1] + np.random.uniform(-0.1, 0.1), self.target[2] + np.random.uniform(-0.1, 0.1)] 
+
     def set_target(self, target=[0.5,0,0.5], target_point=[0.1, 0.1, 0.1]):
         self.viewer.add_marker(pos=np.array(target), type=2, label="", size=np.array([0.05, 0.05, 0.05]), rgba=np.array([0.0, 0.0, 1.0, 1.0]))
         self.viewer.add_marker(pos=np.array(target), type=2, label="", size=np.array([0.1, 0.1, 0.1]), rgba=np.array([0.0, 1.0, 0.0, 0.2]))
@@ -161,7 +162,7 @@ class Env(EnvBaseMJ):
 
     def save_sim_state(self):
         if self.args.record_sim and self.rank == 0:  
-            # self.sim_data.append(self.self.joints)     
+            # self.sim_data.append(self.self.joints) 
             self.sim_data.append(self.sim.get_state())     
 
     def log_stuff(self, logger, writer, iters_so_far):
