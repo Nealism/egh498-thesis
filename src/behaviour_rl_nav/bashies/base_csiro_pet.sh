@@ -8,7 +8,7 @@ sbatch <<EOT
 #SBATCH --nodes=1
 ulimit -s 10240
 module load openmpi/4.1.2-ofed51-simple python/3.9.4
-cd /home/tid010/terrain_curriculum
+cd $HOME/terrain_curriculum
 echo python $1 --exp $2 $3
 python $1 --exp $2 $3
 

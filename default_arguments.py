@@ -8,6 +8,7 @@ def get_defaults():
     # ========================================================================
     parser.add_argument('--render', default=False, action="store_true")
     parser.add_argument('--env', default="franka_reach_mj")
+    parser.add_argument('--ident', default="tid010")
     parser.add_argument('--urdf', default=False, action="store_true")
     parser.add_argument('--cur', default=False, action="store_true")
     parser.add_argument('--hpc', default=False, action="store_true")

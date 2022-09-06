@@ -8,8 +8,8 @@ declare -a Experiments=(
                         "first_franka_reach"
                         )
 declare -a Arguments=(
-                      "--cpu 64 --env franka_ball_mj"
-                      "--cpu 64 --env franka_reach_mj"
+                      "--cpu 64 --ident $USER --env franka_ball_mj"
+                      "--cpu 64 --ident $USER --env franka_reach_mj"
                       )
 
 for (( i=0; i<${#Arguments[@]}; i++ )); do 

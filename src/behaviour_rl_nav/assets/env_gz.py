@@ -141,7 +141,7 @@ class Env():
         return hm_coords
 
     def get_world_map(self):
-        self.world_map = cv2.imread("/home/tid010/Dropbox/csiro_ws/src/behaviour_rl_nav/gazebo/worlds/heightmap_test.png", cv2.IMREAD_GRAYSCALE)
+        self.world_map = cv2.imread("$HOME/Dropbox/csiro_ws/src/behaviour_rl_nav/gazebo/worlds/heightmap_test.png", cv2.IMREAD_GRAYSCALE)
         # print(self.world_map.shape); exit()
 
     def reset_robot(self):

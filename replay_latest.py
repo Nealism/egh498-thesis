@@ -18,7 +18,7 @@ def run(args):
         # path_home = home + "/hpc-home/ale"
         path_home = home + "/hpc-scratch-pet"
     else:
-        path_home = "/scratch1/tid010"
+        path_home = "/scratch1/$USER"
         # path_home = home + "/ale"
 
     if args.folder == "":

@@ -8,7 +8,7 @@ sbatch <<EOT
 #SBATCH --nodes=1
 ulimit -s 10240
 module load openmpi tensorflow/1.15.5-py37-cuda102
-cd /home/tid010/terrain_curriculum
+cd $HOME/behaviour_rl
 echo python $1 --exp $2 $3
 python $1 --exp $2 $3
 

@@ -395,7 +395,7 @@ class TitanRL():
 
 
 def run(args):
-    MY_WORKSPACE_NAME = "tid010"
+    MY_WORKSPACE_NAME = "$USER"
 
     if args.render:
         args.test = True
