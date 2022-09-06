@@ -79,6 +79,7 @@ This is a repo of environments from various simulations including MuJoCo and PyB
 - To get access to the HPC you need to go to this link: https://sc.it.csiro.au/hpc.
 - Then click "Register for Account" and "Find your Project".
 - Then enter your project's O2D Id or name. This will then be submitted to the project manager for approval.
+- You will not be notified when your project manager adds you to the project, so check the registration form regularly. Once they do, follow the remaining prompts.
 - On the CSIRO network, ssh in to petrichor:
 `ssh -X $USER@petrichor.hpc.csiro.au`<br/>
 - Mount directory to easily see files
