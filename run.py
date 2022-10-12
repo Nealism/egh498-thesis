@@ -19,7 +19,7 @@ def run(args):
 
     MY_WORKSPACE_NAME = args.ident
     SAVE_PATH = "/scratch1/" + MY_WORKSPACE_NAME + "/results/"
-    PATH = SAVE_PATH + "walker/" + args.exp + "/" + now + "/"
+    PATH = SAVE_PATH + args.env + "/" + args.exp + "/" + now + "/"
 
     if rank == 0:
         writer = tensorboardX.SummaryWriter(log_dir=PATH)

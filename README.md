@@ -16,8 +16,11 @@ This is a repo of environments from various simulations including MuJoCo and PyB
 - Humanoid walker </br>
 `python3 run.py --env humanoid_pb`
 
-- Humanoid walker - no feet</br>
-`python3 run.py --env humanoid_pb_no_feet`
+- Titan</br>
+`python3 run.py --env titan_pb`
+
+- Pumpkin</br>
+`python3 run.py --env pumpkin_pb`
 
 - Biped</br>
 `python3 run.py --env biped_pb`

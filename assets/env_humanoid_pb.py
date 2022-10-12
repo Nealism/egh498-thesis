@@ -14,7 +14,7 @@ from assets.env_mocap_pb import EnvExp
 
 class Env(EnvBasePB):
 
-    def __init__(self, PATH=None, args=None, writer=None, frameless=True, with_feet=True):
+    def __init__(self, PATH=None, args=None, writer=None, frameless=True):
 
         self.rank = comm.Get_rank()
         self.args = args
@@ -23,7 +23,6 @@ class Env(EnvBasePB):
         self.writer = writer
         self.master = True 
         self.frameless = frameless
-        self.with_feet = with_feet
 
         self.simStep = 1/240
         self.timeStep = 1/120
@@ -47,12 +46,100 @@ class Env(EnvBasePB):
 
         if self.args.add_terrain:
             self.terrain_difficulty = self.args.initial_terrain_difficulty
-        
+        else:
+            self.terrain_difficulty = 0
+            self.terrain = None
+
         self.max_disturbance = 250
         self.final_disturbance = 1600
 
-        self.states = ["joints", "pos", "orn", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
+        self.states_to_save = ["joints", "pos", "orn", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
+
+    def load_specific_robot(self):
         
+        self.load_xml_robot("./assets/xmls/humanoid.xml")
+
+        self.jdict = {}
+        self.feet_dict = {}
+        self.leg_dict = {}
+        self.body_dict = {}
+        self.feet = ["left_foot", "right_foot"]
+        self.feet_contact = {f:True for f in self.feet}
+        self.ordered_joints = []
+        self.ordered_joint_indices = []
+        self.shin_dict = {}
+        self.arm_dict = {}
+        self.shins = ["left_shin", "right_shin", "left_thigh", "right_thigh"]
+        self.arms = ["left_upper_arm", "left_lower_arm", "right_upper_arm", "right_lower_arm"]
+        for j in range( p.getNumJoints(self.Id) ):
+            info = p.getJointInfo(self.Id, j)
+            link_name = info[12].decode("ascii")
+            # print(link_name)
+            if link_name in self.feet: self.feet_dict[link_name] = j
+            if link_name in self.shins: self.shin_dict[link_name] = j
+            if link_name in self.arms: self.arm_dict[link_name] = j
+            if link_name=="pelvis": self.body_dict["body_link"] = j
+            self.ordered_joint_indices.append(j)
+            if info[2] != p.JOINT_REVOLUTE: continue
+            jname = info[1].decode("ascii")
+            lower, upper = (info[8], info[9])
+            self.ordered_joints.append( (j, lower, upper) )
+            self.jdict[jname] = j
+        
+        # Do not change this order!! Else joint postions will be wrong
+        self.motor_names = ["abdomen_z"]
+        self.motor_names += ["abdomen_y"]
+        self.motor_names += ["abdomen_x"]
+        self.motor_names += ["right_hip_x"] #1 
+        self.motor_names += ["right_hip_z"] #0 
+        self.motor_names += ["right_hip_y"] #2 5
+        self.motor_names += ["right_knee"]  #3 6
+        self.motor_names += ["right_ankle_y"] #5 7
+        self.motor_names += ["right_ankle_x"] #4
+        self.motor_names += ["left_hip_x"] #7
+        self.motor_names += ["left_hip_z"] #6
+        self.motor_names += ["left_hip_y"] #8 11
+        self.motor_names += ["left_knee"] #9 12
+        self.motor_names += ["left_ankle_y"] #11 13
+        self.motor_names += ["left_ankle_x"] #10
+        self.motor_names += ["right_shoulder1"]
+        self.motor_names += ["right_shoulder2"]
+        self.motor_names += ["right_elbow"]
+        self.motor_names += ["left_shoulder1"]
+        self.motor_names += ["left_shoulder2"]
+        self.motor_names += ["left_elbow"]
+        self.motor_power =  [10]#"abdomen_z"]
+        self.motor_power += [10]#"abdomen_y"]
+        self.motor_power += [10]#"abdomen_x"]
+        self.motor_power += [20]#"right_hip_x"]
+        self.motor_power += [20]#"right_hip_z"]
+        self.motor_power += [30]#"right_hip_y"]
+        self.motor_power += [20]#"right_knee"]
+        self.motor_power += [10]#"right_ankle_y"]
+        self.motor_power += [10]#"right_ankle_x"]
+        self.motor_power += [20]#"left_hip_x"]
+        self.motor_power += [20]#"left_hip_z"]
+        self.motor_power += [30]#"left_hip_y"]
+        self.motor_power += [20]#"left_knee"]
+        self.motor_power += [10]#"left_ankle_y"]
+        self.motor_power += [10]#"left_ankle_x"]
+        self.motor_power += [10]#"right_shoulder1"]
+        self.motor_power += [10]#"right_shoulder2"]
+        self.motor_power += [10]#"right_elbow"]
+        self.motor_power += [10]#"left_shoulder1"]
+        self.motor_power += [10]#"left_shoulder2"]
+        self.motor_power += [10]#"left_elbow"]
+
+        self.motors = [self.jdict[n] for n in self.motor_names]
+            
+        forces = np.ones(len(self.motors))*240
+        self.actions = {key:0.0 for key in self.motor_names}
+
+        p.setJointMotorControlArray(self.Id, self.motors, controlMode=p.VELOCITY_CONTROL, forces=[0.] * len(self.motor_names))
+
+        for key in self.feet_dict:
+            p.changeDynamics(self.Id, self.feet_dict[key],lateralFriction=0.9, spinningFriction=0.9)
+
     def check_for_success(self):
         return len(self.cur_success) == 5 and (np.array(self.cur_success) == True).all()
 
@@ -60,7 +147,7 @@ class Env(EnvBasePB):
         return self.body_xyz[0] > 15
 
     def reset(self, terrain=None):
-        self.load_robot()
+        self.load_robot()   
 
         # Wait until both feet are on the ground before starting walking
         self.paused = True
@@ -396,9 +483,7 @@ class Env(EnvBasePB):
         p.setJointMotorControlArray(self.Id, self.motors, controlMode=p.TORQUE_CONTROL, forces=forces)
 
     def get_env_state(self):
-        # For some reason getting the entire class dict doesn't work with MPI
-        states = ["joints", "pos", "orn", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
-        return deepcopy({state:self.__dict__[state] for state in states})
+        return deepcopy({state:self.__dict__[state] for state in self.states_to_save})
 
 
     def log_stuff(self, logger, writer, iters_so_far):
@@ -412,40 +497,3 @@ class Env(EnvBasePB):
             if self.rank == 0:
                 print(thing, things)
                 writer.add_scalar(thing, np.mean(things), iters_so_far)
-        
-        # Kp = MPI.COMM_WORLD.allgather(self.Kp) 
-        # success = MPI.COMM_WORLD.allgather(np.mean(self.cur_success))
-        # disturbances = MPI.COMM_WORLD.allgather(self.max_disturbance)
-        # terrain_difficulty = MPI.COMM_WORLD.allgather(self.terrain_difficulty)
-        # # logger.store(Kp=np.mean(Kp))
-        # logger.log_tabular("Kp", np.mean(Kp))
-        # logger.log_tabular("Disturb", np.mean(disturbances))
-        # logger.log_tabular("Success", np.mean(success))
-        # logger.log_tabular("Terrain Difficulty", np.mean(terrain_difficulty))
-        # if self.rank == 0:
-        #     # Like to print the values from all processes for debugging
-        #     print("Gain", Kp)
-        #     print("Success", success)
-        #     print("Disturb", disturbances)
-        #     print("Terrain Difficulty", terrain_difficulty)
-        #     writer.add_scalar("Kp", np.mean(Kp), iters_so_far)
-        #     writer.add_scalar("Success", np.mean(success), iters_so_far)
-        #     writer.add_scalar("Disturb", np.mean(disturbances), iters_so_far)
-        #     writer.add_scalar("Difficulty", np.mean(terrain_difficulty), iters_so_far)
-
-            # Might be worth adding these at some stage
-            # writer.add_scalar("breakdown/goal", np.mean(self.reward_breakdown['goal']), self.iters_so_far)                
-            # writer.add_scalar("breakdown/jump_length", np.mean(self.reward_breakdown['jump_length']), self.iters_so_far)                
-            # writer.add_scalar("breakdown/force", np.mean(self.reward_breakdown['force']), self.iters_so_far)                
-            # writer.add_scalar("breakdown/end_effector", np.mean(self.reward_breakdown['end_effector']), self.iters_so_far)                
-            # writer.add_scalar("breakdown/pos", np.mean(self.reward_breakdown['pos']), self.iters_so_far)                
-            # writer.add_scalar("breakdown/vel", np.mean(self.reward_breakdown['vel']), self.iters_so_far)     
-            # writer.add_scalar("breakdown/tip", np.mean(self.reward_breakdown['tip']), self.iters_so_far)     
-            # writer.add_scalar("breakdown/com", np.mean(self.reward_breakdown['com']), self.iters_so_far)     
-            # writer.add_scalar("breakdown/neg", np.mean(self.reward_breakdown['neg']), self.iters_so_far)     
-            # writer.add_scalar("breakdown/sym", np.mean(self.reward_breakdown['sym']), self.iters_so_far)     
-            # writer.add_scalar("breakdown/act", np.mean(self.reward_breakdown['act']), self.iters_so_far)     
-            # writer.add_scalar("breakdown/success", np.mean(self.reward_breakdown['success']), self.iters_so_far)     
-            # writer.add_scalar("difficulty", self.min_difficulty, self.iters_so_far)     
-            # writer.add_scalar("dist_difficulty", self.dist_difficulty, self.iters_so_far)     
-            # writer.add_scalar("height", self.height_coeff, self.iters_so_far)     
