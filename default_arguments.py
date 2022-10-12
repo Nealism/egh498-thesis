@@ -48,12 +48,9 @@ def get_defaults():
     return args
 
 def get_env(args):
-    # Not all fo these are implemented yet..
+    # Not all of these are implemented yet..
     if args.env == "humanoid_pb":
         from assets.env_humanoid_pb import Env
-    elif args.env == "humanoid_pb_no_feet":
-        from assets.env_humanoid_pb import Env
-        args.no_feet = True
     elif args.env == "biped_pb":
         from assets.env_biped_pb import Env 
     elif args.env == "franka_ball_mj":
@@ -64,10 +61,14 @@ def get_env(args):
     elif args.env == "bi_franka_mj":
         from assets.env_bi_franka_mj import Env
     elif args.env == "anymal_mj":
-        from assets.env_anymal_mj import Env
+        from assets.env_anymal_mj import Env    
+    elif args.env in ["titan_pb", "pumpkin_pb"]:
+        from assets.env_titan_pb import Env
     elif args.env == "titan_gz":
         from assets.env_titan_gz import Env
-        
+    else:
+        print("--env not in list of environments ", args.env); exit()
+
     # args.test only loads simulator once, a bit nicer for debugging, but have to refresh for training else memory leak
     if "pb" in args.env and args.render:
         args.test = True    

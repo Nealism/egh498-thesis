@@ -13,19 +13,17 @@ from os import listdir
 from os.path import isfile, join
 
 def run(args):
-    print()
+
     if args.hpc:
-        # path_home = home + "/hpc-home/ale"
         path_home = home + "/hpc-scratch-pet"
     else:
-        path_home = "/scratch1/$USER"
-        # path_home = home + "/ale"
+        path_home = "/scratch1/" + home.split("/")[-1]
+
+    path_home += "/results/" + args.env + "/" + args.exp + "/"
 
     if args.folder == "":
         # Get latest experiment
-        # folders = [folder.split("/")[-1] for folder in glob.glob(path_home + "/results/" + args.exp + "/*/")]
-        # Glob update broke things
-        folders = [folder.split("/")[-2] for folder in glob.glob(path_home + "/results/" + args.exp + "/*/")]
+        folders = [folder.split("/")[-2] for folder in glob.glob(path_home + "*/")]
         latest_folder = "01_01_1900_01_01_01"
         latest_date_key = time.strptime(latest_folder, "%d_%m_%Y_%H_%M_%S")
         for folder in folders:
@@ -36,7 +34,7 @@ def run(args):
     else:
         latest_folder = args.folder
 
-    PATH = path_home + "/results/" + args.exp + "/" + latest_folder
+    PATH = path_home + latest_folder
 
     Env, args = default_arguments.get_env(args)   
 

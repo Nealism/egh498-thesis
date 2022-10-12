@@ -19,25 +19,13 @@ class EnvBasePB(EnvBase):
     # terrain_size = [256,256]
     terrain_size = [1,256,64]
     loaded_sim = False
+    terrain = np.zeros(terrain_size)
 
     def load_robot(self):
         self.load_simulator()
 
         if not self.args.test or not self.loaded_sim:
-            if self.args.urdf:
-                self.load_urdf_robot()
-            else:
-                self.load_xml_robot()
-            
-            self.motors = [self.jdict[n] for n in self.motor_names]
-            
-            forces = np.ones(len(self.motors))*240
-            self.actions = {key:0.0 for key in self.motor_names}
-
-            p.setJointMotorControlArray(self.Id, self.motors, controlMode=p.VELOCITY_CONTROL, forces=[0.] * len(self.motor_names))
-
-            for key in self.feet_dict:
-                p.changeDynamics(self.Id, self.feet_dict[key],lateralFriction=0.9, spinningFriction=0.9)
+            self.load_specific_robot()
         
         self.loaded_sim = True
 
@@ -79,171 +67,23 @@ class EnvBasePB(EnvBase):
         p.setGravity(0,0,-9.8)
 
         
-
-    def load_urdf_robot(self):
-        print("THIS IS TODO: currently has spherical joints, which requires setJointMotorControlMultiDofArray, essentially passing a list of lists, where sperhical joints require a quaterion. In the examples they use p.STABLE_PD control, don't know how this would work with torque (which is what we want)")
-        exit()
-
+    def load_urdf_robot(self, model_path):
         p.loadMJCF("./assets/xmls/ground.xml")
-        self.model_xml = "./assets/urdfs/humanoid_deep_mimic.urdf"
+        self.Id = p.loadURDF(model_path,
+                            flags=
+                                # p.URDF_USE_SELF_COLLISION |
+                                  p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
+                                  p.URDF_GOOGLEY_UNDEFINED_COLORS )
 
-        # self.Id = p.loadURDF("assets./humanoid_deep_mimic.urdf",flags = p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS)
-        self.Id = p.loadURDF(self.model_xml,
-            flags=p.URDF_USE_SELF_COLLISION |
-                p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
-                p.URDF_GOOGLEY_UNDEFINED_COLORS )
+    def load_xml_robot(self, model_path):
 
-        self.jdict = {}
-        self.feet_dict = {}
-        self.leg_dict = {}
-        self.body_dict = {}
-        self.feet = ["left_foot", "right_foot"]
-        self.feet_contact = {f:True for f in self.feet}
-        self.ordered_joints = []
-        self.ordered_joint_indices = []
-        self.shin_dict = {}
-        # self.shins = ["left_shin", "right_shin", "left_thigh", "right_thigh"]
-        for j in range( p.getNumJoints(self.Id) ):
-            info = p.getJointInfo(self.Id, j)
-            link_name = info[12].decode("ascii")
-            if link_name in self.feet: self.feet_dict[link_name] = j
-            # if link_name in self.shins: self.shin_dict[link_name] = j
-            if link_name=="pelvis": self.body_dict["body_link"] = j
-            self.ordered_joint_indices.append(j)
-            if info[2] != p.JOINT_REVOLUTE: continue
-            jname = info[1].decode("ascii")
-            print(jname)
-            lower, upper = (info[8], info[9])
-            self.ordered_joints.append( (j, lower, upper) )
-            self.jdict[jname] = j
-    
-        self.motor_names += ["right_hip"] # left shoulder
-        self.motor_names += ["right_knee"] # left elbow
-        self.motor_names += ["right_ankle"]
-        self.motor_names += ["left_hip"] # right shoulder
-        self.motor_names += ["left_knee"]  # right elbow
-        self.motor_names += ["left_ankle"]
-        self.motor_names += ["neck"]
-        self.motor_names += ["chest"]
-        self.motor_names += ["abdomen_x"]
-        self.motor_names += ["right_shoulder"]
-        self.motor_names += ["right_elbow"]
-        self.motor_names += ["left_shoulder"]
-        self.motor_names += ["left_elbow"]
+        objects = p.loadMJCF(model_path,
+                            flags=p.URDF_USE_SELF_COLLISION |
+                                  p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
+                                  p.URDF_GOOGLEY_UNDEFINED_COLORS )
 
-        self.motor_power = [30]#"right_hip_y"]
-        self.motor_power += [20]#"right_hip_x"]
-        self.motor_power += [20]#"right_hip_z"]
-        self.motor_power += [20]#"right_knee"]
-        self.motor_power += [10]#"right_ankle_x"]
-        self.motor_power += [10]#"right_ankle_y"]
-        self.motor_power += [20]#"left_hip_z"]
-        self.motor_power += [20]#"left_hip_x"]
-        self.motor_power += [30]#"left_hip_y"]
-        self.motor_power += [20]#"left_knee"]
-        self.motor_power += [10]#"left_ankle_x"]
-        self.motor_power += [10]#"left_ankle_y"]
-        self.motor_power +=  [1]#"abdomen_z"]
-        self.motor_power += [1]#"abdomen_y"]
-        self.motor_power += [1]#"abdomen_x"]
-        self.motor_power += [10]#"right_shoulder1"]
-        self.motor_power += [10]#"right_shoulder2"]
-        self.motor_power += [10]#"right_elbow"]
-        self.motor_power += [10]#"left_shoulder1"]
-        self.motor_power += [10]#"left_shoulder2"]
-        self.motor_power += [10]#"left_elbow"]
-
-    def load_xml_robot(self):
-
-        if self.with_feet:
-            self.model_xml = "./assets/xmls/humanoid.xml"
-        else:
-            self.model_xml = "./assets/xmls/humanoid_symmetric.xml"
-        # if self.self_collision:
-        # Ground and robot
-        # self.objects = p.loadMJCF(os.path.join(pybullet_data.getDataPath(), "mjcf",
-        #                                             self.model_xml),
-        objects = p.loadMJCF(self.model_xml,
-                                        flags=p.URDF_USE_SELF_COLLISION |
-                                            p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
-                                            p.URDF_GOOGLEY_UNDEFINED_COLORS )
-
-        # objects = p.loadMJCF(self.model_xml,
-        #                                 flags=
-        #                                     p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
-        #                                     p.URDF_GOOGLEY_UNDEFINED_COLORS )
         self.worldId = objects[0]
         self.Id = objects[1]
-        self.jdict = {}
-        self.feet_dict = {}
-        self.leg_dict = {}
-        self.body_dict = {}
-        self.feet = ["left_foot", "right_foot"]
-        self.feet_contact = {f:True for f in self.feet}
-        self.ordered_joints = []
-        self.ordered_joint_indices = []
-        self.shin_dict = {}
-        self.arm_dict = {}
-        self.shins = ["left_shin", "right_shin", "left_thigh", "right_thigh"]
-        self.arms = ["left_upper_arm", "left_lower_arm", "right_upper_arm", "right_lower_arm"]
-        for j in range( p.getNumJoints(self.Id) ):
-            info = p.getJointInfo(self.Id, j)
-            link_name = info[12].decode("ascii")
-            # print(link_name)
-            if link_name in self.feet: self.feet_dict[link_name] = j
-            if link_name in self.shins: self.shin_dict[link_name] = j
-            if link_name in self.arms: self.arm_dict[link_name] = j
-            if link_name=="pelvis": self.body_dict["body_link"] = j
-            self.ordered_joint_indices.append(j)
-            if info[2] != p.JOINT_REVOLUTE: continue
-            jname = info[1].decode("ascii")
-            lower, upper = (info[8], info[9])
-            self.ordered_joints.append( (j, lower, upper) )
-            self.jdict[jname] = j
-        
-        # Do not change this order!! Else joint postions will be wrong
-        self.motor_names = ["abdomen_z"]
-        self.motor_names += ["abdomen_y"]
-        self.motor_names += ["abdomen_x"]
-        self.motor_names += ["right_hip_x"] #1 
-        self.motor_names += ["right_hip_z"] #0 
-        self.motor_names += ["right_hip_y"] #2 5
-        self.motor_names += ["right_knee"]  #3 6
-        self.motor_names += ["right_ankle_y"] #5 7
-        self.motor_names += ["right_ankle_x"] #4
-        self.motor_names += ["left_hip_x"] #7
-        self.motor_names += ["left_hip_z"] #6
-        self.motor_names += ["left_hip_y"] #8 11
-        self.motor_names += ["left_knee"] #9 12
-        self.motor_names += ["left_ankle_y"] #11 13
-        self.motor_names += ["left_ankle_x"] #10
-        self.motor_names += ["right_shoulder1"]
-        self.motor_names += ["right_shoulder2"]
-        self.motor_names += ["right_elbow"]
-        self.motor_names += ["left_shoulder1"]
-        self.motor_names += ["left_shoulder2"]
-        self.motor_names += ["left_elbow"]
-        self.motor_power =  [10]#"abdomen_z"]
-        self.motor_power += [10]#"abdomen_y"]
-        self.motor_power += [10]#"abdomen_x"]
-        self.motor_power += [20]#"right_hip_x"]
-        self.motor_power += [20]#"right_hip_z"]
-        self.motor_power += [30]#"right_hip_y"]
-        self.motor_power += [20]#"right_knee"]
-        self.motor_power += [10]#"right_ankle_y"]
-        self.motor_power += [10]#"right_ankle_x"]
-        self.motor_power += [20]#"left_hip_x"]
-        self.motor_power += [20]#"left_hip_z"]
-        self.motor_power += [30]#"left_hip_y"]
-        self.motor_power += [20]#"left_knee"]
-        self.motor_power += [10]#"left_ankle_y"]
-        self.motor_power += [10]#"left_ankle_x"]
-        self.motor_power += [10]#"right_shoulder1"]
-        self.motor_power += [10]#"right_shoulder2"]
-        self.motor_power += [10]#"right_elbow"]
-        self.motor_power += [10]#"left_shoulder1"]
-        self.motor_power += [10]#"left_shoulder2"]
-        self.motor_power += [10]#"left_elbow"]
 
     def set_position(self, pos=[0,0,0], orn=[0,0,0,1], joints=None, velocities=None, joint_vel=None, robot_id=None):
         if robot_id is None:
@@ -302,3 +142,79 @@ class EnvBasePB(EnvBase):
         self.terrainId  = p.createMultiBody(self.worldId, self.terrain_collision_shape, basePosition=[7,0,0], baseOrientation=p.getQuaternionFromEuler([0,0,(1/4)*math.pi*angle]))
         
         p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,1)
+
+
+    def load_urdf_humanoid(self):
+        ''' 
+        Note on loading deep mimic humanoid from urdf:
+        print("THIS IS TODO: currently has spherical joints, which requires setJointMotorControlMultiDofArray, essentially passing a list of lists, where sperhical joints require a quaterion. In the examples they use p.STABLE_PD control, don't know how this would work with torque (which is what we want)")
+        '''
+
+        p.loadMJCF("./assets/xmls/ground.xml")
+        self.model_xml = "./assets/urdfs/humanoid_deep_mimic.urdf"
+
+        # self.Id = p.loadURDF("assets./humanoid_deep_mimic.urdf",flags = p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS)
+        self.Id = p.loadURDF(self.model_xml,
+            flags=p.URDF_USE_SELF_COLLISION |
+                p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
+                p.URDF_GOOGLEY_UNDEFINED_COLORS )
+
+        # self.jdict = {}
+        # self.feet_dict = {}
+        # self.leg_dict = {}
+        # self.body_dict = {}
+        # self.feet = ["left_foot", "right_foot"]
+        # self.feet_contact = {f:True for f in self.feet}
+        # self.ordered_joints = []
+        # self.ordered_joint_indices = []
+        # self.shin_dict = {}
+        # # self.shins = ["left_shin", "right_shin", "left_thigh", "right_thigh"]
+        # for j in range( p.getNumJoints(self.Id) ):
+        #     info = p.getJointInfo(self.Id, j)
+        #     link_name = info[12].decode("ascii")
+        #     if link_name in self.feet: self.feet_dict[link_name] = j
+        #     # if link_name in self.shins: self.shin_dict[link_name] = j
+        #     if link_name=="pelvis": self.body_dict["body_link"] = j
+        #     self.ordered_joint_indices.append(j)
+        #     if info[2] != p.JOINT_REVOLUTE: continue
+        #     jname = info[1].decode("ascii")
+        #     print(jname)
+        #     lower, upper = (info[8], info[9])
+        #     self.ordered_joints.append( (j, lower, upper) )
+        #     self.jdict[jname] = j
+    
+        # self.motor_names += ["right_hip"] # left shoulder
+        # self.motor_names += ["right_knee"] # left elbow
+        # self.motor_names += ["right_ankle"]
+        # self.motor_names += ["left_hip"] # right shoulder
+        # self.motor_names += ["left_knee"]  # right elbow
+        # self.motor_names += ["left_ankle"]
+        # self.motor_names += ["neck"]
+        # self.motor_names += ["chest"]
+        # self.motor_names += ["abdomen_x"]
+        # self.motor_names += ["right_shoulder"]
+        # self.motor_names += ["right_elbow"]
+        # self.motor_names += ["left_shoulder"]
+        # self.motor_names += ["left_elbow"]
+
+        # self.motor_power = [30]#"right_hip_y"]
+        # self.motor_power += [20]#"right_hip_x"]
+        # self.motor_power += [20]#"right_hip_z"]
+        # self.motor_power += [20]#"right_knee"]
+        # self.motor_power += [10]#"right_ankle_x"]
+        # self.motor_power += [10]#"right_ankle_y"]
+        # self.motor_power += [20]#"left_hip_z"]
+        # self.motor_power += [20]#"left_hip_x"]
+        # self.motor_power += [30]#"left_hip_y"]
+        # self.motor_power += [20]#"left_knee"]
+        # self.motor_power += [10]#"left_ankle_x"]
+        # self.motor_power += [10]#"left_ankle_y"]
+        # self.motor_power +=  [1]#"abdomen_z"]
+        # self.motor_power += [1]#"abdomen_y"]
+        # self.motor_power += [1]#"abdomen_x"]
+        # self.motor_power += [10]#"right_shoulder1"]
+        # self.motor_power += [10]#"right_shoulder2"]
+        # self.motor_power += [10]#"right_elbow"]
+        # self.motor_power += [10]#"left_shoulder1"]
+        # self.motor_power += [10]#"left_shoulder2"]
+        # self.motor_power += [10]#"left_elbow"]
