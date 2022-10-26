@@ -14,11 +14,10 @@ class EnvExp(EnvBasePB):
     timeStep = 1/120
     ac_size = 21
     ob_size = 57
-    def __init__(self, args=None, render=False, frameless=True, with_feet=True, master=False):
+    def __init__(self, args=None, render=False, with_feet=True, master=False):
 
         self.args = args
         self.render = render and self.rank == 0
-        self.frameless = frameless
         self.with_feet = with_feet
         self.master = master 
 

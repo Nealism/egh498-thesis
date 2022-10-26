@@ -1,21 +1,15 @@
-'''
-Script used to display robot stuff while training (loads in save robot state)
-'''
-import numpy as np
 import glob
 import time
 from pathlib import Path
 home = str(Path.home())
 import pickle
-import default_arguments
 
-from os import listdir
-from os.path import isfile, join
+import default_arguments
 
 def run(args):
 
     if args.hpc:
-        path_home = home + "/hpc-scratch-pet"
+        path_home = home + "/hpc-scratch"
     else:
         path_home = "/scratch1/" + home.split("/")[-1]
 
@@ -37,22 +31,22 @@ def run(args):
     PATH = path_home + latest_folder
 
     Env, args = default_arguments.get_env(args)   
-
     args.render = True
     args.test = True
-    args.record_data = False
-
+    args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
     while True:
         try:
             print("Loading terrain and sim data", PATH)
+            more = "/sim_data"
             if args.best:
-                data = pickle.load(open(PATH + "/sim_data_best", "rb"))
-            else:
-                data = pickle.load(open(PATH + "/sim_data", "rb"))
+                more += "_best"
+            if args.see_test:
+                more += "_test"
+            data = pickle.load(open(PATH + more, "rb"))
             if "mj" in args.env:
-                print("Data len", len(data))
+                print("Data len", len(data), len(data[-1]))
                 if len(data[-1]) != 5:
                     target = data[-1]
                     data = data[:-1]
@@ -79,7 +73,7 @@ def run(args):
         
         for d in data:
             if "mj" in args.env:
-                env.step(replay_state=d, target=target[:3], target_point=target[3:])
+                env.step(replay_state=d, target=target[:3], target_point=target[3:6], target_point2=target[6:])
             else:
                 pos, orn, joints = d
                 env.set_position(pos, orn, joints)

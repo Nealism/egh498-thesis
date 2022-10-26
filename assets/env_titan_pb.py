@@ -13,7 +13,7 @@ from assets.env_base_pb import EnvBasePB
 
 class Env(EnvBasePB):
 
-    def __init__(self, PATH=None, args=None, writer=None, frameless=True):
+    def __init__(self, PATH=None, args=None, writer=None):
 
         self.rank = comm.Get_rank()
         self.args = args
@@ -21,7 +21,6 @@ class Env(EnvBasePB):
         self.PATH = PATH
         self.writer = writer
         self.master = True 
-        self.frameless = frameless
 
         self.simStep = 1/240
         self.timeStep = 1/120
@@ -57,7 +56,12 @@ class Env(EnvBasePB):
         self.episodes = 0
         self.total_steps = 0
         self.ob_dict = {}
-        self.states_to_save = ["pos", "orn", "joints", "base_vel", "joint_vel", "args", "episodes", "steps", "total_steps"]
+
+        # States that we want to restore, for resuming training after running a test
+        self.states_to_restore = ["pos", "orn", "joints", "base_vel", "joint_vel", "args", "episodes", "steps", "total_steps"]
+
+        # Things we want to log each training step (print and add to tensorboard)
+        self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Diffficulty": self.terrain_difficulty}
 
     def load_specific_robot(self):
 
@@ -154,19 +158,3 @@ class Env(EnvBasePB):
             self.tipped = True
         else:
             self.tipped = False
-            
-    def get_env_state(self):
-        # For some reason getting the entire class dict doesn't work with MPI
-        return deepcopy({state:self.__dict__[state] for state in self.states_to_save})
-
-    def log_stuff(self, logger, writer, iters_so_far):
-        self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Diffficulty": self.terrain_difficulty}
-        for thing in self.log_things:
-            if thing == "Success":
-                things = MPI.COMM_WORLD.allgather(np.mean(self.log_things[thing]))
-            else:
-                things = MPI.COMM_WORLD.allgather(self.log_things[thing])
-            logger.log_tabular(thing, np.mean(things))
-            if self.rank == 0:
-                print(thing, things)
-                writer.add_scalar(thing, np.mean(things), iters_so_far)

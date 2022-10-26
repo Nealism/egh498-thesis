@@ -20,7 +20,7 @@ def mlp(sizes, activation, output_activation=nn.Identity):
         layers += [nn.Linear(sizes[j], sizes[j+1]), act()]
     return nn.Sequential(*layers)
 
-# TODO: build CNN from arguements
+# TODO: build CNN from arguments
 class CNN(nn.Module):
     def __init__(self, im_dim):
         super().__init__()
@@ -238,7 +238,7 @@ class MLPActorCritic(nn.Module):
         logp_a = self.pi._log_prob_from_distribution(pi, a)
         v = self.v(obs)
 
-        # Memory leak happens here somewhere. Copying the arrays seem to help??
+        # Memory leak happens here somewhere. Copying the arrays seems to help??
         a_copy = a.cpu().detach().data.numpy().copy()
         return a_copy, v.item(), logp_a.item()
 

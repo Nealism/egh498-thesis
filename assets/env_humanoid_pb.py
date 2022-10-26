@@ -14,7 +14,7 @@ from assets.env_mocap_pb import EnvExp
 
 class Env(EnvBasePB):
 
-    def __init__(self, PATH=None, args=None, writer=None, frameless=True):
+    def __init__(self, PATH=None, args=None, writer=None):
 
         self.rank = comm.Get_rank()
         self.args = args
@@ -22,7 +22,6 @@ class Env(EnvBasePB):
         self.PATH = PATH
         self.writer = writer
         self.master = True 
-        self.frameless = frameless
 
         self.simStep = 1/240
         self.timeStep = 1/120
@@ -36,7 +35,7 @@ class Env(EnvBasePB):
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
         
-        self.steps = -1
+        self.episodes = -1
         
         self.env_exp = EnvExp(args)
         self.target_speed = 1.0
@@ -53,7 +52,9 @@ class Env(EnvBasePB):
         self.max_disturbance = 250
         self.final_disturbance = 1600
 
-        self.states_to_save = ["joints", "pos", "orn", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
+        self.states_to_restore = ["joints", "pos", "orn", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "episodes", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
+
+        self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Difficulty": self.terrain_difficulty}
 
     def load_specific_robot(self):
         
@@ -152,12 +153,12 @@ class Env(EnvBasePB):
         # Wait until both feet are on the ground before starting walking
         self.paused = True
 
-        if self.steps > -1:
+        if self.episodes > -1:
             self.ep_success = self.get_success()
             self.cur_success.append(self.ep_success)  
 
-        if self.rank == 0 and self.args.record_sim and self.steps > -1:
-            self.record_sim_state(best=self.check_for_success())
+        if self.rank == 0 and self.args.record_sim and self.episodes > -1:
+            self.record_sim_state(best=self.check_for_success(), additional_arguments=self.terrain)
         
         # Three curriculum stages, can swap the order of the first two
         # Stage 1
@@ -195,8 +196,8 @@ class Env(EnvBasePB):
             terrain = cv2.resize(template, dsize=(self.terrain_size[1], self.terrain_size[2])).reshape(self.terrain_size)
             self.load_terrain(terrain)
 
-        self.steps += 1
-        self.ep_steps = 0
+        self.steps = 0
+        self.episodes += 1
 
         self.ob_dict = {'prev_right_foot_left_ground': False,'prev_left_foot_left_ground': False,'left_foot_left_ground': False,'right_foot_left_ground': False}
         
@@ -296,7 +297,7 @@ class Env(EnvBasePB):
         self.get_observation()
         self.save_sim_state()
         reward, done = self.get_reward()
-        self.ep_steps += 1
+        self.steps += 1
 
         self.state = self.joints + self.joint_vel + self.body + self.contacts 
         return self.state, reward, done, None
@@ -484,16 +485,3 @@ class Env(EnvBasePB):
 
     def get_env_state(self):
         return deepcopy({state:self.__dict__[state] for state in self.states_to_save})
-
-
-    def log_stuff(self, logger, writer, iters_so_far):
-        self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Diffficulty": self.terrain_difficulty}
-        for thing in self.log_things:
-            if thing == "Success":
-                things = MPI.COMM_WORLD.allgather(np.mean(self.log_things[thing]))
-            else:
-                things = MPI.COMM_WORLD.allgather(self.log_things[thing])
-            logger.log_tabular(thing, np.mean(things))
-            if self.rank == 0:
-                print(thing, things)
-                writer.add_scalar(thing, np.mean(things), iters_so_far)
