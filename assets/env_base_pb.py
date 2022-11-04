@@ -71,7 +71,7 @@ class EnvBasePB(EnvBase):
         p.loadMJCF("./assets/xmls/ground.xml")
         self.Id = p.loadURDF(model_path,
                             flags=
-                                # p.URDF_USE_SELF_COLLISION | Turn of self collision, kills the titan
+                                # p.URDF_USE_SELF_COLLISION | Turn off self collision, kills the titan
                                   p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
                                   p.URDF_GOOGLEY_UNDEFINED_COLORS )
 

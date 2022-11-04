@@ -28,7 +28,7 @@ class EnvBase():
             if test and best:
                 pickle.dump(np.array(self.sim_data, dtype=object), open(self.PATH + "sim_data_best_test","wb"))
             if best:
-                pickle.dump(np.array(self.sim_data, dtype=object), open(self.PATH + "sim_data_best","wb"))
+                pickle.dump(np.array(self.sim_data, dtype=object), open(self.PATH + "sim_data_best","wb"))            
             pickle.dump(np.array(self.sim_data, dtype=object), open(self.PATH + "sim_data","wb"))
             self.sim_data = []
 

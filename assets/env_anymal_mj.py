@@ -1,0 +1,265 @@
+import numpy as np
+import mujoco
+from gym import spaces
+from collections import deque
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+from scipy.spatial.transform import Rotation
+import mujoco_viewer
+import glfw
+
+from .env_base_mj import EnvBaseMJ
+
+class Env(EnvBaseMJ):
+    # Timestep for mujoco is set in the .xml, and shows up under self.model.opt.timestep
+    # Default is 0.002, changing this might affect the contact model. 
+    simStep = 1/500
+    timeStep = 1/100
+    rank = comm.Get_rank()
+    Kp = 400
+    initial_Kp = Kp
+    def __init__(self, PATH=None, args=None, writer=None):
+
+        self.args = args
+        self.render = args.render and self.rank == 0
+        self.PATH = PATH
+        self.writer = writer
+        self.master = True 
+
+        # Name of the base link in the xml, for setting the robot position on reset
+        self.base_link = "base"
+        self.model_path = "assets/xmls/anybotics_anymal_c/scene.xml"
+        self.robot_name = "anymal_c"
+        self.mesh_dir = "assets/xmls/anybotics_anymal_c/assets"
+        self.action_multiplier = 0.2
+        # self.action_multiplier = 0.0
+        
+        if self.args.tree_type:
+            self.set_up_xmls()
+        
+        self.viewer = None
+        self.load_robot()
+        
+        self.ob_size = 51
+        self.ac_size = 12
+
+        self.motor_names = ['LF_HAA', 'LF_HFE', 'LF_KFE', 'RF_HAA', 'RF_HFE', 'RF_KFE', 'LH_HAA', 'LH_HFE', 'LH_KFE', 'RH_HAA', 'RH_HFE', 'RH_KFE']
+        # Needed if importing as Gym environment
+        self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
+        self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
+
+        # left front, right front, left back, right back
+        self.initial_joints = [-0.2,0.6,-1.0, 0.2,0.6,-1.0, -0.2,-0.6,1.0, 0.2,-0.6,1.0]
+        self.right_swing = [-0.2,0.0,-0.8, 0.2,1.0,-1.0, -0.2,-0.4,1.0, 0.2,-1.0,0.0]
+        self.left_swing = [-0.2,1.0,-1.0, 0.2,0.0,-0.8, -0.2,-1.0,0.0, 0.2,-0.4,1.0]
+
+        self.initial_z = 0.55
+
+        self.episodes = -1
+        self.success = deque([0.0], maxlen=5)
+        self.target_radius = 0.12
+        self.sim_data = []
+        self.best_return = 0
+
+        # Reachibility parameters
+        self.reach_centre = [0.174, 0, 0.501]
+        self.dist_max = 0.55
+        self.dist_min = 0.3
+        self.reach_theta_max = 1.5
+        self.reach_theta_min = -1.5
+        self.reach_pitch_max = 1.5
+        self.reach_pitch_min = 0
+
+        # States that we want to restore, for resuming training after running a test
+        self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
+
+    def load_robot(self):
+        if not self.args.replay and self.args.tree_type:
+            # self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=100, segs_per_branch=4, spread=[[1.5, 4.0],[-0.5, 0.5]], z_height=-0.05)
+            self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=200, segs_per_branch=4, spread=[[0.5, 4.0],[0, 2]], z_height=-0.05)
+            
+        self.model = mujoco.MjModel.from_xml_path(self.model_path)
+        self.data = mujoco.MjData(self.model)
+
+        # Mujoco_viewer doesn't work on the hpc, shouldn't render there anyway
+        if not self.args.training_on_hpc:
+            if isinstance(self.viewer, mujoco_viewer.MujocoViewer):
+                # Replace model and data of an existing viewer
+                self.viewer.model = self.model
+                self.viewer.data = self.data
+            elif self.render:
+                self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)
+            else:
+                # Offscreen might help getting images?
+                self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data, 'offscreen')
+        else:
+            print("Can't view mujoco on the HPC.")
+
+    def get_log_things(self):
+        # Things we want to log each training step (print and add to tensorboard)
+        return {"Kp": self.Kp, "Success": self.success, "Cur": self.args.cur}
+
+    def get_success(self):
+        return self.pos[0] > 10
+
+    def check_for_success(self):
+        return len(self.success) == 5 and (np.array(self.success) == True).all()
+
+    def reset(self, test=False, model_path=None):
+
+        if self.episodes > -1:
+            self.success.append(self.get_success())
+            target = None
+            if self.args.tree_type:
+                self.save_tree(best=self.total_return > self.best_return, test=test)
+            self.record_sim_state(best=self.total_return > self.best_return, test=test, additional_arguments=target)
+            if self.total_return > self.best_return:
+                self.best_return = self.total_return
+        self.total_return = 0
+        self.paused = True
+
+        if self.args.cur and self.Kp > 0 and self.check_for_success():
+            self.Kp = 0.75*self.Kp
+            if self.Kp < 5:
+                self.Kp = 0
+                self.args.cur = False
+            self.success = deque([0.0], maxlen=5)
+        
+        if model_path is not None:
+            self.model_path = model_path 
+        if self.args.tree_type or model_path is not None:
+            self.load_robot()
+
+        mujoco.mj_resetData(self.model, self.data)
+
+        # Rotate the base of the robot to simulate being on the back of a titan
+        # rot_range = 0.2
+        rot_range = 0.0
+        self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), np.pi], degrees=False)
+        self.orn = self.rot.as_quat()
+        self.pos = [0,0,self.initial_z]
+        self.set_position(pos=self.pos, orn=self.orn, joints=self.initial_joints)
+
+        self.steps = 0
+        self.episodes += 1
+
+        # Step the simulation once to get the initial state
+        mujoco.mj_forward(self.model, self.data)
+        self.get_observation()
+
+        # Maybe randomise which legs swing first?
+        self.current_swing = "right"
+        self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
+        self.get_trajectory(self.expert_target)
+
+        self.prev_actions = self.joints
+        state = self.imu + self.joints + self.joint_vel + self.joint_force + self.contacts
+        return state
+
+    def step(self, actions=None, replay_state=None, additional_stuff=None):
+        if self.paused:
+            self.target_vx = 0.0
+            expert = self.initial_joints    
+        else:
+            self.target_vx = 1.0
+            if self.steps % self.traj_size == 0:
+                self.current_swing = "right" if self.current_swing == "left" else "left"
+                self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
+                self.get_trajectory(self.expert_target)
+            expert = self.expert_traj[self.traj_i]
+            # expert = self.expert_target
+            if self.traj_i < self.traj_size - 1:
+                self.traj_i += 1
+
+        if actions is not None:
+            self.actions = list(actions)
+        else:
+            self.actions = [0]*(self.ac_size)
+
+        # This might do something weird with mujoco contacts, and other things in the sim.
+        for _ in range(int(np.rint(self.timeStep/self.simStep))):
+
+            # self.set_position(pos=[0,0,0.5], orn=[0,0,0,1])
+
+            if replay_state is not None:
+                self.set_position(pos=replay_state[0], orn=replay_state[1])
+            else:            
+                if self.args.cur:
+                    if self.args.just_expert:
+                        self.data.ctrl[:self.ac_size] = (self.Kp / self.initial_Kp)*np.array(expert)
+                    else:
+                        self.data.ctrl[:self.ac_size] = self.action_multiplier*np.array(self.actions) + (self.Kp / self.initial_Kp) * np.array(expert)
+                else:
+                    self.data.ctrl[:self.ac_size] = self.action_multiplier*np.array(self.actions)
+                            
+            mujoco.mj_step(self.model, self.data)
+        
+        if self.render:
+            self.viewer.render()
+
+        self.get_observation()
+
+        self.save_sim_state()
+        reward, done = self.get_reward()
+        self.prev_actions = self.actions
+        self.total_return += reward
+        self.steps += 1
+
+        state = self.imu + self.joints + self.joint_vel + self.joint_force + self.contacts
+        return np.array(state), reward, done, None
+    
+    def get_reward(self):
+        done = False
+        if self.pos[2] < 0.3 or abs(self.pitch) > 1.0 or abs(self.roll) > 1.0:
+            done = True
+        reward = 1.5*np.exp(-2.5*max(0, self.target_vx - self.data.joint("free").qvel[0])**2)
+        reward -= 0.1*abs(self.yaw)
+        return reward, done
+
+    def get_observation(self):
+        # Keep an eye on these to make sure they are getting what you think)
+        self.pos = self.data.body(self.base_link).xpos.copy()
+        orn = self.data.body(self.base_link).xquat.copy()
+        self.orn = [orn[1],orn[2],orn[3],orn[0]]
+
+        rot = Rotation(self.orn)
+        self.roll, self.pitch, self.yaw = rot.as_euler('xyz', degrees=False)
+        self.imu = [self.roll, self.pitch] + list(self.data.sensordata) 
+        self.joints = [self.data.joint(name).qpos[0] for name in self.motor_names]
+        self.joint_vel = [self.data.joint(name).qvel[0] for name in self.motor_names]
+        self.joint_force = list(self.data.actuator_force[:self.ac_size])
+
+        # Should be an easier way to get a specific contact?
+        self.feet = ["left_front", "right_front", "left_back", "right_back"]
+        contact_list = self.data.contact
+        self.contacts = [0] * len(self.feet)
+        for dim, contact1, contact2 in zip(contact_list.dim, contact_list.geom1, contact_list.geom2):
+            if dim:
+                geom_name1 = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, contact1)
+                geom_name2 = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, contact2)
+                if geom_name1 in self.feet:
+                    self.contacts[self.feet.index(geom_name1)] = 1
+                elif geom_name2 in self.feet: 
+                    self.contacts[self.feet.index(geom_name2)] = 1
+
+        if self.steps > 20 and np.array(self.contacts).all():
+            # For some reason all feet are in contact on reset even when not touching the ground
+            self.paused = False
+
+    def get_trajectory(self, expert):
+        # Extrapolate trajectory based on max_joint_vel
+        max_joint_difference = 0  
+        for joint, expert_joint in zip(self.joints, expert):
+            if abs(joint - expert_joint) > max_joint_difference:
+                max_joint_difference = abs(joint - expert_joint)
+       
+        # What number of trajectory points do we need to travel the max distance at a set velocity
+        self.traj_size = int(np.rint(max_joint_difference / self.args.max_joint_vel / self.timeStep))
+        self.expert_traj = []
+        for i in range(self.traj_size):
+            points = []            
+            for j in range(len(self.joints)):
+                point = i * ( (expert[j] - self.joints[j]) / self.traj_size ) + self.joints[j]
+                points.append(point)
+            self.expert_traj.append(points)
+        self.traj_i = 0    

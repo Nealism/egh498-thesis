@@ -10,11 +10,8 @@ from utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, n
 from collections import deque
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
-import tensorboardX
 import os
 import psutil
-import pybullet as p
-import pickle
 
 class PPOBufferPerception:
     """

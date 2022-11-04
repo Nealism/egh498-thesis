@@ -15,7 +15,7 @@ def run(args):
     rank = comm.Get_rank()
 
     now = datetime.now()
-    now = comm.bcast(now.strftime("%d_%m_%Y_%H_%M_%S"), root=0)  
+    now = comm.bcast(now.strftime("%Y_%m_%d_%H_%M_%S"), root=0)  
 
     MY_WORKSPACE_NAME = args.ident
     SAVE_PATH = "/scratch1/" + MY_WORKSPACE_NAME + "/results/"

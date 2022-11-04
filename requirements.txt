@@ -4,3 +4,4 @@ pybullet
 mujoco>=2.2.2
 mujoco-python-viewer
 pyquaternion
+gym

@@ -1,8 +1,8 @@
-<mujoco model="panda scene">
+<mujoco model="titan scene">
   
   <size njmax="8000" nconmax="4000"/>
 
-  <include file="panda.xml"/>
+  <include file="dynamic_titan.xml"/>
 
   <include file="tree.xml"/>
 
