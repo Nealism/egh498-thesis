@@ -1,0 +1,253 @@
+<mujoco model="titan">
+    <compiler angle="radian" />
+    <size njmax="500" nconmax="100" />
+    <asset>
+        <mesh name="Titan_Collision" file="Titan_Collision.STL" />
+    </asset>
+    <worldbody>
+        <geom type="mesh" mesh="Titan_Collision" />
+        <geom size="0.07" pos="0.626 0.269 0.216" quat="0.877583 0 -0.479426 0" />
+        <geom size="0.07" pos="0.486 0.269 0.096" quat="0.877583 0 -0.479426 0" />
+        <geom size="0.07" pos="0.432 0.269 0.05" quat="0.968912 0 -0.247404 0" />
+        <geom size="0.07" pos="0.32 0.269 0.05" />
+        <geom size="0.07" pos="0.16 0.269 0.05" />
+        <geom size="0.07" pos="0 0.269 0.05" />
+        <geom size="0.07" pos="-0.16 0.269 0.05" />
+        <geom size="0.07" pos="-0.32 0.269 0.05" />
+        <geom size="0.07" pos="-0.425 0.269 0.05" quat="0.956802 0 0.29074 0" />
+        <geom size="0.07" pos="-0.477 0.269 0.094" quat="0.830941 0 0.556361 0" />
+        <geom size="0.07" pos="-0.557 0.269 0.214" quat="0.830941 0 0.556361 0" />
+        <geom size="0.07" pos="0.626 -0.269 0.216" quat="0.877583 0 -0.479426 0" />
+        <geom size="0.07" pos="0.486 -0.269 0.096" quat="0.877583 0 -0.479426 0" />
+        <geom size="0.07" pos="0.432 -0.269 0.05" quat="0.968912 0 -0.247404 0" />
+        <geom size="0.07" pos="0.32 -0.269 0.05" />
+        <geom size="0.07" pos="0.16 -0.269 0.05" />
+        <geom size="0.07" pos="0 -0.269 0.05" />
+        <geom size="0.07" pos="-0.16 -0.269 0.05" />
+        <geom size="0.07" pos="-0.32 -0.269 0.05" />
+        <geom size="0.07" pos="-0.425 -0.269 0.05" quat="0.956802 0 0.29074 0" />
+        <geom size="0.07" pos="-0.477 -0.269 0.094" quat="0.830941 0 0.556361 0" />
+        <geom size="0.07" pos="-0.557 -0.269 0.214" quat="0.830941 0 0.556361 0" />
+        <geom size="0.005 0.005 0.005" pos="0.425 0 0.29" type="box" />
+        <body name="left_1_suspension_end" pos="0.626 0.269 0.216" quat="0.877583 0 -0.479426 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="left_1_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.05" damping="0.695938" />
+            <geom size="0.07" />
+            <body name="left_1_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="left_1_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="left_2_suspension_end" pos="0.486 0.269 0.096" quat="0.877583 0 -0.479426 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="left_2_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.618098" />
+            <geom size="0.07" />
+            <body name="left_2_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="left_2_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="left_3_suspension_end" pos="0.432 0.269 0.05" quat="0.968912 0 -0.247404 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="left_3_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.593312" />
+            <geom size="0.07" />
+            <body name="left_3_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="left_3_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="left_4_suspension_end" pos="0.32 0.269 0.05">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="left_4_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.5512" />
+            <geom size="0.07" />
+            <body name="left_4_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="left_4_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="left_5_suspension_end" pos="0.16 0.269 0.05">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="left_5_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.5128" />
+            <geom size="0.07" />
+            <body name="left_5_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="left_5_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="left_6_suspension_end" pos="0 0.269 0.05">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="left_6_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.5" />
+            <geom size="0.07" />
+            <body name="left_6_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="left_6_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="left_7_suspension_end" pos="-0.16 0.269 0.05">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="left_7_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.5128" />
+            <geom size="0.07" />
+            <body name="left_7_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="left_7_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="left_8_suspension_end" pos="-0.32 0.269 0.05">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="left_8_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.5512" />
+            <geom size="0.07" />
+            <body name="left_8_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="left_8_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="left_9_suspension_end" pos="-0.425 0.269 0.05" quat="0.956802 0 0.29074 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="left_9_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.590313" />
+            <geom size="0.07" />
+            <body name="left_9_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="left_9_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="left_10_suspension_end" pos="-0.477 0.269 0.094" quat="0.830941 0 0.556361 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="left_10_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.613765" />
+            <geom size="0.07" />
+            <body name="left_10_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="left_10_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="left_11_suspension_end" pos="-0.557 0.269 0.214" quat="0.830941 0 0.556361 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="left_11_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.05" damping="0.655124" />
+            <geom size="0.07" />
+            <body name="left_11_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="left_11_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="right_1_suspension_end" pos="0.626 -0.269 0.216" quat="0.877583 0 -0.479426 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="right_1_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.05" damping="0.695938" />
+            <geom size="0.07" />
+            <body name="right_1_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="right_1_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="right_2_suspension_end" pos="0.486 -0.269 0.096" quat="0.877583 0 -0.479426 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="right_2_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.618098" />
+            <geom size="0.07" />
+            <body name="right_2_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="right_2_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="right_3_suspension_end" pos="0.432 -0.269 0.05" quat="0.968912 0 -0.247404 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="right_3_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.593312" />
+            <geom size="0.07" />
+            <body name="right_3_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="right_3_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="right_4_suspension_end" pos="0.32 -0.269 0.05">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="right_4_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.5512" />
+            <geom size="0.07" />
+            <body name="right_4_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="right_4_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="right_5_suspension_end" pos="0.16 -0.269 0.05">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="right_5_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.5128" />
+            <geom size="0.07" />
+            <body name="right_5_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="right_5_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="right_6_suspension_end" pos="0 -0.269 0.05">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="right_6_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.5" />
+            <geom size="0.07" />
+            <body name="right_6_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="right_6_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="right_7_suspension_end" pos="-0.16 -0.269 0.05">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="right_7_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.5128" />
+            <geom size="0.07" />
+            <body name="right_7_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="right_7_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="right_8_suspension_end" pos="-0.32 -0.269 0.05">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="right_8_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.5512" />
+            <geom size="0.07" />
+            <body name="right_8_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="right_8_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="right_9_suspension_end" pos="-0.425 -0.269 0.05" quat="0.956802 0 0.29074 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="right_9_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.590313" />
+            <geom size="0.07" />
+            <body name="right_9_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="right_9_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="right_10_suspension_end" pos="-0.477 -0.269 0.094" quat="0.830941 0 0.556361 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="right_10_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.1" damping="0.613765" />
+            <geom size="0.07" />
+            <body name="right_10_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="right_10_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+        <body name="right_11_suspension_end" pos="-0.557 -0.269 0.214" quat="0.830941 0 0.556361 0">
+            <inertial pos="0 0 0" mass="1" diaginertia="0.00196 0.00196 0.00196" />
+            <joint name="right_11_suspension_joint" pos="0 0 0" axis="0 0 -1" type="slide" limited="true" range="0 0.05" damping="0.655124" />
+            <geom size="0.07" />
+            <body name="right_11_wheel" pos="0 0 0">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="2" diaginertia="0.0196 0.0164667 0.0164667" />
+                <joint name="right_11_wheel_joint" pos="0 0 0" axis="0 1 0" damping="1" />
+                <geom size="0.14 0.1" quat="0.707107 0.707107 0 0" type="cylinder" />
+            </body>
+        </body>
+    </worldbody>
+</mujoco>

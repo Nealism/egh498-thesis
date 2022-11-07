@@ -10,11 +10,8 @@ from utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, n
 from collections import deque
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
-import tensorboardX
 import os
 import psutil
-import pybullet as p
-import pickle
 
 class PPOBufferPerception:
     """
@@ -170,7 +167,7 @@ class PPOBuffer:
 
 
 
-def ppo(env_fn, ac_kwargs=dict(), seed=0, 
+def ppo(env, ac_kwargs=dict(), seed=0, 
         steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
         vf_lr=1e-3, train_pi_iters=100, train_v_iters=100, lam=0.97, max_ep_len=2048, local_epoch_len=2048,
         target_kl=0.01, logger_kwargs=dict(), save_freq=10, PATH=None, writer=None, perception=False):
@@ -292,8 +289,6 @@ def ppo(env_fn, ac_kwargs=dict(), seed=0,
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-    # Instantiate environment
-    env = env_fn()
     obs_dim = env.observation_space.shape
     act_dim = env.action_space.shape
 
@@ -377,10 +372,10 @@ def ppo(env_fn, ac_kwargs=dict(), seed=0,
         v_l_old = compute_loss_v(data).item()
 
         for g in pi_optimizer.param_groups:
-            g['lr'] = max((1 - epoch / epochs) * pi_lr, 0.00001)
+            g['lr'] = max((1 - epoch / epochs) * pi_lr, 0.000001)
 
         for g in vf_optimizer.param_groups:
-            g['lr'] = max((1 - epoch / epochs) * vf_lr, 0.00001)
+            g['lr'] = max((1 - epoch / epochs) * vf_lr, 0.000001)
 
         # Train policy with multiple steps of gradient descent
         for i in range(train_pi_iters):
@@ -445,7 +440,7 @@ def ppo(env_fn, ac_kwargs=dict(), seed=0,
             # Update obs (critical!)
             o = next_o
 
-            timeout = ep_len == max_ep_len
+            timeout = ep_len == env.args.max_ep_len
             terminal = d or timeout
             epoch_ended = t==local_steps_per_epoch-1
 
@@ -467,7 +462,6 @@ def ppo(env_fn, ac_kwargs=dict(), seed=0,
                 o, ep_ret, ep_len = env.reset(), 0, 0
                 if perception:
                     im = env.terrain
-        
         if (epoch % save_freq == 0) or (epoch == epochs-1):
             if proc_id() == 0:
                 print("Saving model")
@@ -550,6 +544,7 @@ def run_test(env, model):
             break
     success = env.get_success()
     successes = MPI.COMM_WORLD.allgather(success)
+    env.reset(test=True)
     return successes
 
 def flatten_lists(listoflists):

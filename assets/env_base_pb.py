@@ -31,7 +31,7 @@ class EnvBasePB(EnvBase):
 
     def load_simulator(self):
         if not self.loaded_sim:
-            if self.frameless:
+            if self.args.frameless:
                 if self.render and self.master:
                     self._p = bullet_client.BulletClient(connection_mode=p.GUI)
                 else:
@@ -47,7 +47,7 @@ class EnvBasePB(EnvBase):
 
         p.setPhysicsEngineParameter(deterministicOverlappingPairs=1)
         # #optionally enable EGL for faster headless rendering
-        if self.frameless:
+        if self.args.frameless:
             try:
                 if os.environ["PYBULLET_EGL"]:
                     con_mode = self._p.getConnectionInfo()['connectionMethod']
@@ -71,12 +71,11 @@ class EnvBasePB(EnvBase):
         p.loadMJCF("./assets/xmls/ground.xml")
         self.Id = p.loadURDF(model_path,
                             flags=
-                                # p.URDF_USE_SELF_COLLISION |
+                                # p.URDF_USE_SELF_COLLISION | Turn off self collision, kills the titan
                                   p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
                                   p.URDF_GOOGLEY_UNDEFINED_COLORS )
 
     def load_xml_robot(self, model_path):
-
         objects = p.loadMJCF(model_path,
                             flags=p.URDF_USE_SELF_COLLISION |
                                   p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
@@ -100,15 +99,6 @@ class EnvBasePB(EnvBase):
         if velocities is not None:
             p.resetBaseVelocity(robot_id, velocities[0], velocities[1]) 
     
-    def get_env_state(self):
-        # For some reason getting the entire class dict doesn't work with MPI
-        return deepcopy({state:self.__dict__[state] for state in self.states if state in self.__dict__})
-
-    def restore_env_state(self, params):
-        for key in params:
-            self.__dict__[key] = params[key]
-        self.set_position(self.pos, self.orn, self.joints, self.joint_vel) 
-
     def assign_terrain(self, ter):
         self.terrain = ter
 
