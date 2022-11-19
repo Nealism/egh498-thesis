@@ -76,8 +76,9 @@ class EnvBaseMJ(EnvBase):
     def set_up_xmls(self):
         # Copies robot_name.xml to experiment directory and updates mesh path. Creates process specific xml's for thread safe loading of trees
         self.tree_dir = os.path.join(self.PATH, "trees")
-        print(self.tree_dir, "broken path")
         if self.rank == 0:
+            print("Tree dir:")
+            print(self.tree_dir)
             if not os.path.exists(self.tree_dir):
                 os.mkdir(self.tree_dir)
             if self.args.control_type == "torque":
@@ -98,6 +99,11 @@ class EnvBaseMJ(EnvBase):
         # Wait for rank == 0 to set up folders
         comm.Barrier()
 
+        #Copy blank tree to new dir
+        orig_path ="/".join(self.model_path.split("/")[:-1]) + "/tree.xml"
+        copy_path = "/".join(self.tree_dir.split("/")[:-1]) + "/trees/tree_" + str(self.rank) + ".xml"
+        shutil.copyfile(orig_path, copy_path)
+
         #Copy the model file to the new directory and edit the include to include the new tree 
         model_path = self.tree_dir + "/scene_" + str(self.rank) + ".xml"
         shutil.copyfile(self.model_path, model_path)
@@ -112,11 +118,11 @@ class EnvBaseMJ(EnvBase):
         # Update the model path
         self.model_path = model_path
 
-    def generate_tree(self, radius=0.02, height=0.015, damping=5, stiffness=50, pos=[0,0,0], rot=[1,0,0,0], num=10, segs_per_branch=4, spread=[[0.4,0.8],[-0.4,0.4]], z_height=0.0):
+    def generate_tree(self, radius=0.02, height=0.015, damping=50, stiffness=500, pos=[0,0,0], rot=[1,0,0,0], num=10, segs_per_branch=4, spread=[[0.4,0.8],[-0.4,0.4]], z_height=0.0):
         #Tree generation is handled in xml_gen.
         #This function writes that to the mujoco xml file and handles multiple threads.
         if self.args.tree_type == "tree":
-            tree = gen_tree.tree(spread=spread)
+            tree = gen_tree.tree(joint_damping=damping, joint_stiffness=stiffness, spread=spread)
             xml, self.tree = tree.generate_tree()
         elif self.args.tree_type == "grass":
             xml, self.tree = gen_grass.generate_tree(base_radius=radius, base_half_height=height, base_damping=damping, base_stiffness=stiffness, pos=pos, rot=rot, num=num, segs_per_branch=segs_per_branch, spread=spread, z_height=z_height)

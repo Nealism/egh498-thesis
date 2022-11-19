@@ -1,8 +1,11 @@
 import numpy as np
 from lxml import etree
 
-RIGID_TRUNK = True
+# RIGID_TRUNK = True
+RIGID_TRUNK = False
 TRUNK_ROTATION = np.array([1, 0, 0, 0])
+# Unsure what the upper limit for body number is
+MAX_BODIES = 190
 
 def rotate_vector_by_quat(vector, quat):
     return vector + 2 * np.cross(quat[1:], np.cross(quat[1:], vector) + quat[0] * vector)
@@ -172,6 +175,7 @@ class tree():
         frontier_segments = [root_seg]
         all_segs = []
         branch_ends = []
+        body_count = 0
         branch_lengths = {0 : np.random.randint(self.min_branch_segments, self.max_branch_segments)}
         while frontier_segments:
             seg = frontier_segments.pop()
@@ -180,6 +184,10 @@ class tree():
             
             # Add the new segment to the tree
             seg.xml.append(new_seg.xml)
+            body_count += 1
+            if MAX_BODIES <= body_count:
+                print("Reached max tree size", MAX_BODIES, " ", body_count)
+                break
 
             # Check for a new branch
             if((np.random.uniform(0, 1) < new_seg.chance_of_new_branch and 
@@ -201,6 +209,7 @@ class tree():
                                     new_seg.chance_of_new_branch * self.new_branch_chance_per_branch_decay, 
                                     seg.world_coords, root=True)
                 seg.xml.append(new_branch_seg.xml)
+                body_count += 1
                 frontier_segments.append(new_branch_seg)
 
             # Check if the branch has ended
@@ -210,6 +219,7 @@ class tree():
                 # Add the new segment to the frontier
                 frontier_segments.append(new_seg)
 
+        print("Tree size: ", body_count)
         # Generate the xml for the tree
         xml = etree.Element("mujocoinclude")
         body = etree.Element("worldbody")

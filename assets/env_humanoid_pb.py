@@ -147,7 +147,7 @@ class Env(EnvBasePB):
     def get_success(self):
         return self.body_xyz[0] > 15
 
-    def reset(self, terrain=None):
+    def reset(self, terrain=None, test=False, restore_state=None):
         self.load_robot()   
 
         # Wait until both feet are on the ground before starting walking
@@ -158,7 +158,10 @@ class Env(EnvBasePB):
             self.cur_success.append(self.ep_success)  
 
         if self.rank == 0 and self.args.record_sim and self.episodes > -1:
-            self.record_sim_state(best=self.check_for_success(), additional_arguments=self.terrain)
+            self.record_sim_state(best=self.total_return > self.best_return, additional_arguments=self.terrain, test=test)
+            if self.total_return > self.best_return:
+                self.best_return = self.total_return
+        self.total_return = 0
         
         # Three curriculum stages, can swap the order of the first two
         # Stage 1
@@ -217,17 +220,20 @@ class Env(EnvBasePB):
         self.prev_step_count = self.step_count = 0
         self.z_offset = 0
 
-        rand_scale = self.max_disturbance / self.final_disturbance
-        pos = [0,0,1.5 + rand_scale * np.random.uniform(-0.2, 0.2)]
-        orn = p.getQuaternionFromEuler([rand_scale * 0.25 * np.random.random(), rand_scale * 0.25 * np.random.random(), 0.0])
-        # orn = [0,0,0,1]
-        base_vel = [0,0,0]
-        # joints = [0]*len(self.motors)
-        joints = []
-        for j in self.ordered_joints:
-            joints.append(np.clip(np.random.random() * rand_scale * 0.25 , j[1], j[2]))
-        joint_vel = [0]*len(self.motors)
-        self.set_position(pos, orn, joints, base_vel, joint_vel)
+        if restore_state is not None:
+            self.set_position(pos=restore_state[0], orn=restore_state[1], joints=restore_state[2])
+        else:
+            rand_scale = self.max_disturbance / self.final_disturbance
+            pos = [0,0,1.5 + rand_scale * np.random.uniform(-0.2, 0.2)]
+            orn = p.getQuaternionFromEuler([rand_scale * 0.25 * np.random.random(), rand_scale * 0.25 * np.random.random(), 0.0])
+            # orn = [0,0,0,1]
+            base_vel = [0,0,0]
+            # joints = [0]*len(self.motors)
+            joints = []
+            for j in self.ordered_joints:
+                joints.append(np.clip(np.random.random() * rand_scale * 0.25 , j[1], j[2]))
+            joint_vel = [0]*len(self.motors)
+            self.set_position(pos, orn, joints, base_vel, joint_vel)
         self.get_observation()
 
         self.cur_time = 0
@@ -297,6 +303,7 @@ class Env(EnvBasePB):
         self.get_observation()
         self.save_sim_state()
         reward, done = self.get_reward()
+        self.total_return += reward
         self.steps += 1
 
         self.state = self.joints + self.joint_vel + self.body + self.contacts 
@@ -482,6 +489,3 @@ class Env(EnvBasePB):
 
         forces = 20.0*(max_dist/self.final_disturbance)*np.random.random(self.ac_size)
         p.setJointMotorControlArray(self.Id, self.motors, controlMode=p.TORQUE_CONTROL, forces=forces)
-
-    def get_env_state(self):
-        return deepcopy({state:self.__dict__[state] for state in self.states_to_save})

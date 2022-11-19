@@ -14,7 +14,9 @@ import copy
 np.set_printoptions(precision=3, suppress=True)
 from utils.utils import display_images
 
-class Env():
+from assets.env_base_pb import EnvBasePB
+
+class Env(EnvBasePB):
     rank = comm.Get_rank()
     simStep = 1/120
     timeStep = 1/120
@@ -176,8 +178,8 @@ class Env():
 
     def load(self):
         if self.args.MASTER:
-            p.loadMJCF(currentdir + "/ground.xml")
-            objs = p.loadURDF(currentdir + "/biped.urdf",flags = p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS)
+            p.loadMJCF(currentdir + "/xmls/ground.xml")
+            objs = p.loadURDF(currentdir + "/urdfs/biped.urdf",flags = p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS)
             self.Id = objs
         else:
             self.Id = 1
@@ -275,7 +277,7 @@ class Env():
                     success = True
         return success
 
-    def reset(self, params=None, base_before=False, box_info=None, cur_params=None, set_position=None):
+    def reset(self, params=None, base_before=False, box_info=None, cur_params=None, set_position=None, test=False, restore_state=None):
         if self.args.multi_robots and self.robot_num > 0:
             for r in range(1, self.robot_num+1):
                 p.removeBody(self.robots[r]['Id'])
@@ -941,7 +943,8 @@ class Env():
 
         self.body_xyz, (self.qx, self.qy, self.qz, self.qw) = p.getBasePositionAndOrientation(self.Id)
         self.roll, self.pitch, self.yaw = p.getEulerFromQuaternion([self.qx, self.qy, self.qz, self.qw])
-
+        self.pos = list(self.body_xyz)
+        self.orn = [self.qx, self.qy, self.qz, self.qw]
         self.body_vxyz, self.base_rot_vel = p.getBaseVelocity(self.Id)
         
         self.roll_vel = self.base_rot_vel[0]

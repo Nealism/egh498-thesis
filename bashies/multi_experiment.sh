@@ -4,25 +4,32 @@
 # Experiment type
 # ==================================================================================
 declare -a Experiments=(
-                        "exp1/pos_py311"
-                        "exp1/tor_py311"
-                        "exp1/tor_grass_py311"
-                        "exp1/tor_tree_py311"
-                        "exp1/titan_grass_py311"
-                        "exp1/any_cur_py311"
-                        "exp1/any_py311"
+                        "exp9/tor_cur_jit_5"
+                        "exp9/tor_cur_jit_10"
+                        "exp9/tor_cur_jit_20"
+                        "exp9/tor_cur_jit_50"
+                        "exp9/tor_cur_grass"
+                        "exp9/tor_cur_tree"
+                        
+                        # "exp1/titan_grass"
+                        # "exp3/anymal_cur"
+                        # "exp3/anymal"
                         )
 declare -a Arguments=(
-                      # --training_on_hpc argument is required for mujoco environments 
-                      "--cpu 64 --ident $USER --env franka_reach_dm_mj --cur --control_type position --training_on_hpc"
-                      "--cpu 64 --ident $USER --env franka_reach_dm_mj --cur --control_type torque --training_on_hpc"
-                      "--cpu 64 --ident $USER --env franka_reach_dm_mj --cur --tree_type grass --control_type torque --training_on_hpc"
-                      "--cpu 64 --ident $USER --env franka_reach_dm_mj --cur --tree_type tree --control_type torque --training_on_hpc"
-                      "--cpu 64 --ident $USER --env titan_mj --training_on_hpc --tree_type grass"
-                      "--cpu 64 --ident $USER --env anymal_mj --cur --training_on_hpc"
-                      "--cpu 64 --ident $USER --env anymal_mj --training_on_hpc"
-                      )
+                      "--cpu 64 --ident $USER --env franka_reach_dm_mj --goal end_effector --cur --control_type torque --training_on_hpc --jitter_scalar 5"
+                      "--cpu 64 --ident $USER --env franka_reach_dm_mj --goal end_effector --cur --control_type torque --training_on_hpc --jitter_scalar 10"
+                      "--cpu 64 --ident $USER --env franka_reach_dm_mj --goal end_effector --cur --control_type torque --training_on_hpc --jitter_scalar 20"
+                      "--cpu 64 --ident $USER --env franka_reach_dm_mj --goal end_effector --cur --control_type torque --training_on_hpc --jitter_scalar 50"
+                      "--cpu 64 --ident $USER --env franka_reach_dm_mj --goal end_effector --cur --control_type torque --training_on_hpc --jitter_scalar 10 --tree_type grass"
+                      "--cpu 64 --ident $USER --env franka_reach_dm_mj --goal end_effector --cur --control_type torque --training_on_hpc --jitter_scalar 10 --tree_type tree"
 
+                      # "--cpu 64 --ident $USER --env titan_mj --training_on_hpc --tree_type grass"
+                      # "--cpu 64 --ident $USER --env anymal_mj --cur --training_on_hpc"
+                      # "--cpu 64 --ident $USER --env anymal_mj --training_on_hpc"
+                      )
+export SBATCH_ACCOUNT=OD-227199
 for (( i=0; i<${#Arguments[@]}; i++ )); do 
-  sbatch ./base_csiro_pet3_11.sh "run.py" ${Experiments[$i]} "${Arguments[$i]}" "12:00:00"
+  sbatch ./base_csiro_pet.sh "run.py" ${Experiments[$i]} "${Arguments[$i]}" "12:00:00"
+  # sbatch -A OD-227199 ./base_csiro_pet.sh "run.py" ${Experiments[$i]} "${Arguments[$i]}" "12:00:00"
+  # sbatch -A OD-219033 ./base_csiro_pet.sh "run.py" ${Experiments[$i]} "${Arguments[$i]}" "12:00:00"
 done

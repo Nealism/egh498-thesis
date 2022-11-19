@@ -61,11 +61,13 @@ class Env(EnvBaseMJ):
         self.states_to_restore = ["pos", "orn", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
     def load_robot(self):
+      
         if not self.args.replay and self.args.tree_type:
-            # self.generate_tree(base_radius=0.02, base_half_height=0.5, base_damping=20, base_stiffness=5, rot=[0,0,1,0])
-            # self.generate_tree(base_radius=0.02, base_half_height=0.5, base_damping=1, base_stiffness=5, rot=[0,0,1,0])
-            self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=400, segs_per_branch=4, spread=[[1.5, 6.0],[-0.5, 0.5]], z_height=-0.05)
-
+            if self.args.tree_type == "grass":
+                self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=300, segs_per_branch=4, spread=[[0.5, 4.0],[-2, 1]], z_height=-0.05)
+            elif self.args.tree_type == "tree":
+                self.generate_tree(spread=[[0.5, 4.0],[-0.5, 0.5]])
+      
         self.model = mujoco.MjModel.from_xml_path(self.model_path)
         self.data = mujoco.MjData(self.model)
 
@@ -93,7 +95,7 @@ class Env(EnvBaseMJ):
     def check_for_success(self):
         return len(self.success) == 5 and (np.array(self.success) == True).all()
 
-    def reset(self, test=False, model_path=None):
+    def reset(self, test=False, model_path=None, restore_state=None):
 
         if self.episodes > -1:
             self.success.append(self.get_success())
@@ -120,11 +122,14 @@ class Env(EnvBaseMJ):
         mujoco.mj_resetData(self.model, self.data)
 
         # Rotate the base of the robot 
-        rot_range = 0.0
-        self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), 0.0], degrees=False)
-        orn = self.rot.as_quat()
-        pos = [0,0, 0.1]
-        self.set_position(pos=pos, orn=orn)
+        if restore_state is not None:
+            self.set_position(pos=restore_state[0], orn=restore_state[1], joints=restore_state[2])
+        else:
+            rot_range = 0.0
+            self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), 0.0], degrees=False)
+            orn = self.rot.as_quat()
+            pos = [0,0, 0.1]
+            self.set_position(pos=pos, orn=orn)
 
         self.steps = 0
         self.episodes += 1
@@ -137,7 +142,7 @@ class Env(EnvBaseMJ):
         return state
 
     def step(self, actions=None, replay_state=None, additional_stuff=None):
-        # actions = [20,20]
+        actions = [1,1]
         if actions is not None:
             self.actions = list(actions)
         else:

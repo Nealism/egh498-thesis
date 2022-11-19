@@ -9,7 +9,7 @@
       <mass value="0.01"/>
       <inertia ixx="0.0" ixy=" 0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
     </inertial>
-  </link>
+  </link> 
   <!-- define chassis link -->
   <link name="titan_chassis">
     <inertial>

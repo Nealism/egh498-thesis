@@ -39,6 +39,7 @@ class Env(EnvBasePB):
         self.target_speed = 1.0
         self.target_yaw = 0.0
         self.cur_success = deque([0.0], maxlen=5)
+        self.ep_success = deque([0.0], maxlen=5)
 
         if self.args.add_terrain:
             self.terrain_difficulty = self.args.initial_terrain_difficulty
@@ -87,7 +88,7 @@ class Env(EnvBasePB):
     def get_success(self):
         return self.body_xyz[0] > 15
 
-    def reset(self, terrain=None):
+    def reset(self, terrain=None, test=False, restore_state=None):
         self.load_robot()   
         self.paused = False
         self.ob_dict = {}
@@ -97,7 +98,7 @@ class Env(EnvBasePB):
             self.cur_success.append(self.ep_success)  
 
         if self.rank == 0 and self.args.record_sim and self.episodes > -1:
-            self.record_sim_state(best=self.check_for_success())
+            self.record_sim_state(best=self.check_for_success(), test=test)
 
         self.initial_joints = [0.0] * (self.ac_size + 1)
         self.initial_joints[3] = -np.pi/2
@@ -111,17 +112,20 @@ class Env(EnvBasePB):
         self.prev_step_count = self.step_count = 0
         self.z_offset = 0
 
-        rand_scale = self.max_disturbance / self.final_disturbance
-        pos = [0,0,0]
-        orn = p.getQuaternionFromEuler([rand_scale * 0.25 * np.random.random(), rand_scale * 0.25 * np.random.random(), 0.0])
-        # orn = [0,0,0,1]
-        base_vel = [0,0,0]
-        # joints = [0]*len(self.motors)
-        joints = []
-        for j in self.ordered_joints:
-            joints.append(np.clip(np.random.random() * rand_scale * 0.25 , j[1], j[2]))
-        joint_vel = [0]*len(self.motors)
-        self.set_position(pos, orn, joints, base_vel, joint_vel)
+        if restore_state is not None:
+            self.set_position(pos=restore_state[0], orn=restore_state[1], joints=restore_state[2])
+        else:
+            rand_scale = self.max_disturbance / self.final_disturbance
+            pos = [0,0,0]
+            orn = p.getQuaternionFromEuler([rand_scale * 0.25 * np.random.random(), rand_scale * 0.25 * np.random.random(), 0.0])
+            # orn = [0,0,0,1]
+            base_vel = [0,0,0]
+            # joints = [0]*len(self.motors)
+            joints = []
+            for j in self.ordered_joints:
+                joints.append(np.clip(np.random.random() * rand_scale * 0.25 , j[1], j[2]))
+            joint_vel = [0]*len(self.motors)
+            self.set_position(pos, orn, joints, base_vel, joint_vel)
         self.get_observation()
 
         self.state = self.joints + self.joint_vel + self.body + self.contacts 

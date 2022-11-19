@@ -93,11 +93,11 @@ class Env(EnvBasePB):
     def get_success(self):
         return self.body_xyz[0] > 15
 
-    def reset(self, terrain=None):
+    def reset(self, terrain=None, test=False, restore_state=None):
         self.load_robot()
         
         if self.rank == 0 and self.args.record_sim and self.episodes > 0:
-            self.record_sim_state(best=self.check_for_success())
+            self.record_sim_state(best=self.check_for_success(), test=test)
         
         self.steps = 0
         initial_x, initial_y = 2, np.random.uniform(-0.5, 0.5)   
@@ -105,8 +105,11 @@ class Env(EnvBasePB):
         self.initial_orn = p.getQuaternionFromEuler([0,0,self.initial_yaw])
         self.z_offset = 0
 
-        pos, orn, self.joints, self.base_vel, self.joint_vel = [initial_x, initial_y, self.z_offset+0.31],self.initial_orn, [0]*self.ac_size, [[0,0,0],[0,0,0]], [0.]*self.ac_size
-        self.set_position(pos, orn)
+        if restore_state is not None:
+            self.set_position(pos=restore_state[0], orn=restore_state[1])
+        else:
+            pos, orn, self.joints, self.base_vel, self.joint_vel = [initial_x, initial_y, self.z_offset+0.31],self.initial_orn, [0]*self.ac_size, [[0,0,0],[0,0,0]], [0.]*self.ac_size
+            self.set_position(pos, orn)
         self.get_observation()
         self.episodes += 1
         return np.array(self.orn + self.contacts + [self.tipped])

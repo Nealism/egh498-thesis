@@ -1,7 +1,6 @@
 #!/bin/bash
 sbatch <<EOT
 #!/bin/bash
-#SBATCH --OD-227199
 #SBATCH --job-name=$2
 #SBATCH --time=$4
 #SBATCH --mem=512g
