@@ -282,7 +282,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
     # Set up logger and save configuration
     logger = EpochLogger(**logger_kwargs)
-    logger.save_config(locals())
+    # TODO: Can't save locals() if using robotics toolbox (needed for joint goal), need to fix this, don't need to save all "locals()"
+    # logger.save_config(locals())
 
     # Random seed
     seed += 10000 * proc_id()
@@ -419,7 +420,6 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
         for t in range(local_steps_per_epoch):
-            
             if perception:
                 a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
             else:
@@ -469,10 +469,12 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             # Wait for all processes before doing an update
             comm.Barrier()
             save_state = env.get_env_state()
+            restore_state = [env.pos, env.orn, env.joints]
             test_success = run_test(env, PATH + "model.pt")
             if proc_id() == 0:
                 print("Test success:", test_success)
                 writer.add_scalar("SuccessTest", np.mean(test_success), epoch)
+            env.reset(test=True, restore_state=restore_state)
             env.restore_env_state(save_state)
 
         # Perform PPO update!
@@ -535,6 +537,7 @@ def run_test(env, model):
     ac.eval()
     env.args.cur = False
     env.args.disturbances = False
+    env.args.record_sim = False
     ob = env.reset()
     done = False
     while True:
@@ -544,7 +547,6 @@ def run_test(env, model):
             break
     success = env.get_success()
     successes = MPI.COMM_WORLD.allgather(success)
-    env.reset(test=True)
     return successes
 
 def flatten_lists(listoflists):

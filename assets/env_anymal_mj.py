@@ -6,6 +6,7 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 from scipy.spatial.transform import Rotation
 import mujoco_viewer
+from pyquaternion import Quaternion
 import glfw
 
 from .env_base_mj import EnvBaseMJ
@@ -53,7 +54,7 @@ class Env(EnvBaseMJ):
         self.right_swing = [-0.2,0.0,-0.8, 0.2,1.0,-1.0, -0.2,-0.4,1.0, 0.2,-1.0,0.0]
         self.left_swing = [-0.2,1.0,-1.0, 0.2,0.0,-0.8, -0.2,-1.0,0.0, 0.2,-0.4,1.0]
 
-        self.initial_z = 0.55
+        self.initial_z = 0.7
 
         self.episodes = -1
         self.success = deque([0.0], maxlen=5)
@@ -69,15 +70,22 @@ class Env(EnvBaseMJ):
         self.reach_theta_min = -1.5
         self.reach_pitch_max = 1.5
         self.reach_pitch_min = 0
+        self.steps = 0
+
+        self.reward_names = ["Reward/goal", "Reward/joint", "Reward/orn", "Reward/contacts"]
+        self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
+        self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 
         # States that we want to restore, for resuming training after running a test
-        self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
+        # self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
-            # self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=100, segs_per_branch=4, spread=[[1.5, 4.0],[-0.5, 0.5]], z_height=-0.05)
-            self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=200, segs_per_branch=4, spread=[[0.5, 4.0],[0, 2]], z_height=-0.05)
-            
+            if self.args.tree_type == "grass":
+                self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=300, segs_per_branch=4, spread=[[0.5, 4.0],[-2, 1]], z_height=-0.05)
+            elif self.args.tree_type == "tree":
+                self.generate_tree(spread=[[0.5, 4.0],[-0.5, 0.5]])
+
         self.model = mujoco.MjModel.from_xml_path(self.model_path)
         self.data = mujoco.MjData(self.model)
 
@@ -97,7 +105,9 @@ class Env(EnvBaseMJ):
 
     def get_log_things(self):
         # Things we want to log each training step (print and add to tensorboard)
-        return {"Kp": self.Kp, "Success": self.success, "Cur": self.args.cur}
+        return_dict = {"Kp": self.Kp, "Success": self.success, "Cur": self.args.cur}
+        return_dict.update(self.reward_dict)
+        return return_dict
 
     def get_success(self):
         return self.pos[0] > 10
@@ -105,7 +115,12 @@ class Env(EnvBaseMJ):
     def check_for_success(self):
         return len(self.success) == 5 and (np.array(self.success) == True).all()
 
-    def reset(self, test=False, model_path=None):
+    def reset(self, test=False, model_path=None, restore_state=None):
+
+        if self.steps > 0:
+            for key in self.reward_dict:
+                self.reward_dict[key].append(self.ep_reward_dict[key]/self.steps)
+        self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 
         if self.episodes > -1:
             self.success.append(self.get_success())
@@ -132,13 +147,16 @@ class Env(EnvBaseMJ):
 
         mujoco.mj_resetData(self.model, self.data)
 
-        # Rotate the base of the robot to simulate being on the back of a titan
-        # rot_range = 0.2
-        rot_range = 0.0
-        self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), np.pi], degrees=False)
-        self.orn = self.rot.as_quat()
-        self.pos = [0,0,self.initial_z]
-        self.set_position(pos=self.pos, orn=self.orn, joints=self.initial_joints)
+        if restore_state is not None:
+            self.set_position(pos=restore_state[0], orn=restore_state[1], joints=restore_state[2])
+        else:
+            # Rotate the base of the robot to simulate being on the back of a titan
+            rot_range = 0.2
+            # rot_range = 0.0
+            self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), 0], degrees=False)
+            self.orn = self.rot.as_quat()
+            self.pos = [0,0,self.initial_z]
+            self.set_position(pos=self.pos, orn=self.orn, joints=self.initial_joints)
 
         self.steps = 0
         self.episodes += 1
@@ -153,7 +171,7 @@ class Env(EnvBaseMJ):
         self.get_trajectory(self.expert_target)
 
         self.prev_actions = self.joints
-        state = self.imu + self.joints + self.joint_vel + self.joint_force + self.contacts
+        state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return state
 
     def step(self, actions=None, replay_state=None, additional_stuff=None):
@@ -205,15 +223,30 @@ class Env(EnvBaseMJ):
         self.total_return += reward
         self.steps += 1
 
-        state = self.imu + self.joints + self.joint_vel + self.joint_force + self.contacts
+        state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return np.array(state), reward, done, None
     
     def get_reward(self):
         done = False
-        if self.pos[2] < 0.3 or abs(self.pitch) > 1.0 or abs(self.roll) > 1.0:
+        if self.pos[2] < 0.3 or abs(self.pitch) > 0.7 or abs(self.roll) > 0.7:
             done = True
-        reward = 1.5*np.exp(-2.5*max(0, self.target_vx - self.data.joint("free").qvel[0])**2)
-        reward -= 0.1*abs(self.yaw)
+        goal = np.exp(-2.5*max(0, self.target_vx - self.data.joint("free").qvel[0])**2)
+        joints = np.exp(-0.5*np.sum((np.array(self.joints) - np.array(self.initial_joints))**2))
+        orn = np.exp(-10.0 * Quaternion.absolute_distance(Quaternion(self.orn), Quaternion([0,0,0,1])))
+        
+        # Contacts should match pair-wise. both front's should be off the ground, both backs shouldn't
+        contacts = 0.25*(self.contacts["left_front"] - self.contacts["right_back"])**2 
+        contacts += 0.25*(self.contacts["right_front"] - self.contacts["left_back"])**2 
+        contacts += 0.25*((1 - self.contacts["left_front"]) - self.contacts["right_front"])**2 
+        contacts += 0.25*((1 - self.contacts["left_back"]) - self.contacts["right_back"])**2 
+                
+
+        # orn = 0.1*np.exp(-5*np.sum((np.array(self.orn) - np.array([0,0,0,1]))**2))
+        reward = 1.5*goal + 0.5*joints + 0.25*orn - 0.25*contacts
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/joint"] += joints
+        self.ep_reward_dict["Reward/orn"] += orn
+        self.ep_reward_dict["Reward/contacts"] += contacts
         return reward, done
 
     def get_observation(self):
@@ -232,15 +265,18 @@ class Env(EnvBaseMJ):
         # Should be an easier way to get a specific contact?
         self.feet = ["left_front", "right_front", "left_back", "right_back"]
         contact_list = self.data.contact
-        self.contacts = [0] * len(self.feet)
+        # self.contacts = [0] * len(self.feet)
+        self.contacts = {foot:0 for foot in self.feet}
         for dim, contact1, contact2 in zip(contact_list.dim, contact_list.geom1, contact_list.geom2):
             if dim:
                 geom_name1 = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, contact1)
                 geom_name2 = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, contact2)
                 if geom_name1 in self.feet:
-                    self.contacts[self.feet.index(geom_name1)] = 1
+                    # self.contacts[self.feet.index(geom_name1)] = 1
+                    self.contacts[geom_name1] = 1
                 elif geom_name2 in self.feet: 
-                    self.contacts[self.feet.index(geom_name2)] = 1
+                    # self.contacts[self.feet.index(geom_name2)] = 1
+                    self.contacts[geom_name2] = 1
 
         if self.steps > 20 and np.array(self.contacts).all():
             # For some reason all feet are in contact on reset even when not touching the ground

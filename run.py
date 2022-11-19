@@ -3,9 +3,7 @@ import tensorboardX
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 
-from models.ppo import ppo
 from utils.mpi_tools import mpi_fork
-from utils.run_utils import setup_logger_kwargs
 import default_arguments
 
 def run(args): 
@@ -25,15 +23,21 @@ def run(args):
         writer = tensorboardX.SummaryWriter(log_dir=PATH)
     else:
         writer = None
+
+    env = Env(PATH=PATH, args=args, writer=writer)
     
+    # Need to import Torch after Isaac (for isaac "is" envs) 
+    from utils.run_utils import setup_logger_kwargs
+    from models.ppo import ppo
+
     logger_kwargs = setup_logger_kwargs(args.exp, args.seed)
     logger_kwargs["output_dir"] = PATH
 
-    env = Env(PATH=PATH, args=args, writer=writer)
-
-    ppo(env, ac_kwargs=dict(hidden_sizes=[64]*2), seed=args.seed, epochs=args.epochs, PATH=PATH, writer=writer, local_epoch_len=args.local_epoch_len, logger_kwargs=logger_kwargs, perception=args.perception)
+    ppo(env, ac_kwargs=dict(hidden_sizes=[args.num_nodes]*args.num_layers), seed=args.seed, epochs=args.epochs, PATH=PATH, writer=writer, local_epoch_len=args.local_epoch_len, logger_kwargs=logger_kwargs, perception=args.perception)
 
 if __name__=="__main__":
     args = default_arguments.get_defaults() 
-    mpi_fork(args.cpu)
+    # TODO handle vectorised environments
+    if not args.vec:
+        mpi_fork(args.cpu)
     run(args)

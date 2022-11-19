@@ -51,9 +51,9 @@ def run(args):
             if "mj" in args.env:
                 print("Data len", len(data), len(data[-1]))
                 # if len(data[-1]) != 5:
-                if len(data[-1]) != 3:
-                    additional_stuff = data[-1]
-                    data = data[:-1]
+                # if len(data[-1]) != 3:
+                    # additional_stuff = data[-1]
+                    # data = data[:-1]
             else:
                 print("Data shape", data.shape)
                 if len(data[-1]) != 3:
@@ -81,7 +81,7 @@ def run(args):
             
             for d in data:
                 if "mj" in args.env:
-                    env.step(replay_state=d, additional_stuff=additional_stuff)
+                    env.step(replay_state=d)
                 else:
                     pos, orn, joints = d
                     env.set_position(pos, orn, joints)

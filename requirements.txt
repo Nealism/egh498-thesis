@@ -1,7 +1,11 @@
 torch
 torchvision
+tensorboardX
+mpi4py
+tqdm
 pybullet
-mujoco>=2.2.2
+mujoco
 mujoco-python-viewer
 pyquaternion
 gym
+roboticstoolbox-python

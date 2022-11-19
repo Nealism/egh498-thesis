@@ -7,8 +7,11 @@ comm = MPI.COMM_WORLD
 class EnvBase():
 
     def get_env_state(self):
-        # For some reason getting the entire class dict doesn't work with MPI, need specify what states to save/restore
-        return deepcopy({state:self.__dict__[state] for state in self.states_to_restore if state in self.__dict__})
+        save_dict = {}
+        for state in self.__dict__:
+            if state not in ["model", "data", "viewer", "writer"]:
+                save_dict[state] = self.__dict__[state]
+        return deepcopy(save_dict)
 
     def restore_env_state(self, params):
         if params:
@@ -32,9 +35,12 @@ class EnvBase():
             pickle.dump(np.array(self.sim_data, dtype=object), open(self.PATH + "sim_data","wb"))
             self.sim_data = []
 
-    def save_sim_state(self):
-        if self.rank == 0:
-            self.sim_data.append([self.pos, self.orn, self.joints])  
+    def save_sim_state(self, save_things=None):
+        if self.args.record_sim and self.rank == 0:
+            if save_things is not None:
+                self.sim_data.append([self.pos, self.orn, self.joints, save_things])  
+            else:
+                self.sim_data.append([self.pos, self.orn, self.joints])  
 
     def log_stuff(self, logger, writer, iters_so_far):
         log_things = self.get_log_things()

@@ -3,7 +3,6 @@ from pybullet_utils import bullet_client
 import numpy as np
 import os
 import math
-from copy import deepcopy
 
 from .env_base import EnvBase
 

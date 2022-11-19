@@ -32,8 +32,8 @@ class EnvExp(EnvBasePB):
     def load_mocap(self):
         subject = '02'
         file_name = '_01'
-        self.samples = np.load('samples/' + subject + file_name + '_samples.npy')
-        print('loaded samples from samples' + subject + file_name + '_samples.npy with shape: ', self.samples.shape)
+        self.samples = np.load('resources/' + subject + file_name + '_samples.npy')
+        print('loaded samples from resources' + subject + file_name + '_samples.npy with shape: ', self.samples.shape)
         self.sample_size = self.samples.shape[0]
 
     def reset(self, right_swing=True):
@@ -100,5 +100,3 @@ class EnvExp(EnvBasePB):
         if self.args.render:
             # print(self.sample_pointer)
             time.sleep(self.args.sleep)
-
-
