@@ -69,8 +69,14 @@ Proximal Policy Optimisation - default
     - source ./venv/bin/activate
     - Install other requirements (while virtual environment is active): </br>
     `pip3 install -r requirements.txt`
+<<<<<<< HEAD
     - NOTE: problems with installing mpi4py may be fixed by running: </br>
     `sudo apt install libopenmpi-dev`
+=======
+    - NOTE: errors associated with installing mpi4py may be fixed by running: </br>
+    `sudo apt install libopenmpi-dev`
+
+>>>>>>> README_change
 
 - every time: </br>
 `source ./venv/bin/activate`
