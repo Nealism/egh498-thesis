@@ -9,3 +9,7 @@ mujoco-python-viewer
 pyquaternion
 gym
 roboticstoolbox-python
+pyyaml
+lxml
+joblib
+psutil
