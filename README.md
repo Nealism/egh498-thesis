@@ -71,7 +71,7 @@ Proximal Policy Optimisation - default
     `pip3 install -r requirements.txt`
     - NOTE: problems with installing mpi4py may be fixed by running: </br>
     `sudo apt install libopenmpi-dev`
-    -Permissions must also be changed for the /scratch1 subdirectories by running: </br>
+    - Permissions must also be changed for the /scratch1 subdirectories by running: </br>
     `sudo chmod 777 -R /scratch1`
 
 - every time: </br>
