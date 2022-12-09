@@ -69,6 +69,9 @@ Proximal Policy Optimisation - default
     - source ./venv/bin/activate
     - Install other requirements (while virtual environment is active): </br>
     `pip3 install -r requirements.txt`
+    - NOTE: problems with installing mpi4py may be fixed by running: </br>
+    `sudo apt install libopenmpi-dev`
+    
 
 - every time: </br>
 `source ./venv/bin/activate`
@@ -106,7 +109,9 @@ Proximal Policy Optimisation - default
     `sudo sshfs -o allow_other $USER@petrichor.hpc.csiro.au:/scratch1/$USER /hpc-scratch/$USER`
 - Create save directory to mirror what happens on the HPC, this is where results are saved locally:
     - first time: `sudo mkdir -p /scratch1/$USER/results` <br/>
-- Copy code to HPC: <br/>
+    - Permissions must also be changed for the /scratch1 subdirectories by running: </br>
+    `sudo chmod 777 -R /scratch1`
+- Copy code to HPC: <br/>                                       
 `rsync -avP --exclude-from=rsync_exclude.txt source destination`
 - e.g.<br/>
 `rsync -avP --exclude-from=rsync_exclude.txt $HOME/behaviour_rl $USER@petrichor.hpc.csiro.au:$HOME`
