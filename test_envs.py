@@ -10,7 +10,7 @@ all_envs = [
             "biped_pb",
             "franka_ball_mj",
             "franka_reach_mj",
-            "franka_mj",
+            "franka_reach_dm_mj",
             "franka_reach_pb",
             "anymal_mj",
             # "anymal_is",

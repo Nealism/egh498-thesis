@@ -27,12 +27,19 @@ class Env(EnvBaseMJ):
         self.writer = writer
         self.master = True 
 
+        super().__init__(PATH)
+
         # Name of the base link in the xml, for setting the robot position on reset
         self.base_link = "base"
-        self.model_path = "assets/xmls/anybotics_anymal_c/scene.xml"
+        if self.args.control_type == "torque":
+            self.model_path = "assets/xmls/anybotics_anymal_c/scene_torque.xml"
+            self.action_multiplier = 20
+        elif self.args.control_type == "position":
+            self.model_path = "assets/xmls/anybotics_anymal_c/scene.xml"
+            self.action_multiplier = 0.2
+
         self.robot_name = "anymal_c"
         self.mesh_dir = "assets/xmls/anybotics_anymal_c/assets"
-        self.action_multiplier = 0.2
         # self.action_multiplier = 0.0
         
         if self.args.tree_type:
@@ -82,9 +89,9 @@ class Env(EnvBaseMJ):
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
-                self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=300, segs_per_branch=4, spread=[[0.5, 4.0],[-2, 1]], z_height=-0.05)
+                self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=200, segs_per_branch=4, spread=[[1.0, 7.0],[-1, 1]], z_height=-0.05)
             elif self.args.tree_type == "tree":
-                self.generate_tree(spread=[[0.5, 4.0],[-0.5, 0.5]])
+                self.generate_tree(spread=[[1.0, 2.0],[-0.2, 0.2]])
 
         self.model = mujoco.MjModel.from_xml_path(self.model_path)
         self.data = mujoco.MjData(self.model)

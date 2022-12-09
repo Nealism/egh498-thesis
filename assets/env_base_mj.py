@@ -143,6 +143,14 @@ class EnvBaseMJ(EnvBase):
                 if geom_name1 != "floor" and geom_name2 != "floor":
                     print("Contacts: ", self.data.ncon, [geom_name1, geom_name2])
 
+    def set_targets(self, targets):
+        if isinstance(targets, list):
+            for target in targets:
+                if len(target) == 3:
+                    self.add_shape(pos=target[0], size=target[1], rgba=target[2])
+                else:
+                    self.add_axis(pos=target[0], orn=target[1])
+    
     def add_axis(self, pos, orn):
         if isinstance(orn, Rotation):
             rot = orn
