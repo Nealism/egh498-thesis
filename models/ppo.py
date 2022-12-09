@@ -547,6 +547,7 @@ def run_test(env, model):
             break
     success = env.get_success()
     successes = MPI.COMM_WORLD.allgather(success)
+    env.args.record_sim = True
     return successes
 
 def flatten_lists(listoflists):
