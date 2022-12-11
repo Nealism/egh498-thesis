@@ -12,7 +12,6 @@ def get_defaults():
     # ========================================================================
     parser.add_argument('--render', default=False, action="store_true")
     parser.add_argument('--env', default="franka_reach_mj")
-    parser.add_argument('--ident', default="tid010")
     parser.add_argument('--urdf', default=False, action="store_true")
     parser.add_argument('--cur', default=False, action="store_true")
     parser.add_argument('--hpc', default=False, action="store_true")
@@ -23,6 +22,7 @@ def get_defaults():
     parser.add_argument('--record_sim', default=True, action="store_false")
     parser.add_argument('--frameless', default=True, action="store_false")
     parser.add_argument('--best', default=False, action="store_true")
+    parser.add_argument('--tree_first', default=False, action="store_true")
     parser.add_argument('--use_ball', default=False, action="store_true")
     parser.add_argument('--see_test', default=False, action="store_true")
     parser.add_argument('--replay', default=False, action="store_true")
@@ -117,16 +117,22 @@ def get_env(args):
         args.use_ball = True
     elif args.env == "franka_reach_mj":
         from assets.env_franka_mj import Env
-    elif args.env == "franka_mj":
+    elif args.env == "franka_reach_dm_mj":
         from assets.env_franka_dm_mj import Env
+        # args.max_ep_len = 256
     elif args.env == "franka_reach_pb":
         from assets.env_franka_pb import Env
     elif args.env == "anymal_mj":
         from assets.env_anymal_mj import Env    
+<<<<<<< HEAD
         args.control_type = "position"
     elif args.env == "anymal_mj_isaac":
         from assets.env_anymal_mj_isaac import Env
         args.control_type = "position"
+=======
+        if args.tree_type == "tree":
+            args.max_ep_len = 256
+>>>>>>> 0ff2d820b53e59e9610a681e552faee84fdb55f5
     elif args.env == "anymal_is":
         from assets.env_anymal_is import Env    
     elif args.env == "anymal_is":
@@ -138,7 +144,10 @@ def get_env(args):
     elif args.env == "titan_mj":
         from assets.env_titan_mj import Env
         args.control_type = "velocity"
-        args.max_ep_len = 256
+        if args.tree_type == "grass":
+            args.max_ep_len = 512
+        elif args.tree_type == "tree":
+            args.max_ep_len = 256
     elif args.env == "titan_is":
         from assets.env_titan_is import Env
         args.control_type = "velocity"

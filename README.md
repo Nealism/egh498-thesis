@@ -135,7 +135,7 @@ Proximal Policy Optimisation - default
         - module load openmpi/4.1.2-ofed51-simple python/3.9.4 glew/2.2.0 mesa/21.1.0 patchelf/0.14.3
     - python3.11
         - module load openmpi/4.1.2-ofed51-simple python/3.11.0
-    - python3 run.py --ident $USER
+    - python3 run.py
 
 - Useful commands:<br/>
     - `squeue -u $USER`<br/>

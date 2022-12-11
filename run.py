@@ -2,6 +2,8 @@ from datetime import datetime
 import tensorboardX
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
+from pathlib import Path
+home = str(Path.home())
 
 from utils.mpi_tools import mpi_fork
 import default_arguments
@@ -15,8 +17,7 @@ def run(args):
     now = datetime.now()
     now = comm.bcast(now.strftime("%Y_%m_%d_%H_%M_%S"), root=0)  
 
-    MY_WORKSPACE_NAME = args.ident
-    SAVE_PATH = "/scratch1/" + MY_WORKSPACE_NAME + "/results/"
+    SAVE_PATH = "/scratch1/" + home.split("/")[-1] + "/results/"
     PATH = SAVE_PATH + args.env + "/" + args.exp + "/" + now + "/"
 
     if rank == 0:
