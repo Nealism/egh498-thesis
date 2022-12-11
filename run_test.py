@@ -1,8 +1,10 @@
 import torch
+import os
 import numpy as np
 import glob
 import time
 from pathlib import Path
+
 home = str(Path.home())
 
 import default_arguments
@@ -18,7 +20,7 @@ def run(args):
     path_home += "/results/" + args.env + "/" + args.exp + "/"
 
     if args.folder == "":
-        # Get latest experiment
+        # Get latest experiment (eg: latest model inside test folder)
         folders = [folder.split("/")[-2] for folder in glob.glob(path_home + "*/")]
         latest_folder = "1900_01_01_01_01_01"
         latest_date_key = time.strptime(latest_folder, "%Y_%m_%d_%H_%M_%S")
@@ -37,7 +39,15 @@ def run(args):
     args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
-    pol = torch.load(PATH + "/model.pt")
+    if "model.pt" not in os.listdir(PATH):
+         print("----------")
+         print("model.pt doesn't exist")
+         print("----------")
+         return -1
+    # pol = torch.load(PATH + "/model.pt")
+
+    #manually loading brendan's already trained walking gait
+    pol = torch.load("/scratch1/rac018/results/anymal_mj/proper_trained/brendan_walking_gait" + "/model.pt")
 
     if args.do_plot:
         names_to_plot = ["joint_pos" + str(i) for i in range(env.ac_size)]

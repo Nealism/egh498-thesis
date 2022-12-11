@@ -1,0 +1,11 @@
+-wrt default_dof_pos, can either:
+    -use theirs OR;
+    -use the initial one already defined by brendan
+
+-so the llp takes both commands (output of main net) and last_actions (last
+ ouput of llp) 
+
+
+
+
+

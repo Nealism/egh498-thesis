@@ -96,6 +96,11 @@ def get_defaults():
     parser.add_argument('--add_terrain', default=False, action="store_true")
     parser.add_argument('--initial_terrain_difficulty', type=float, default=0.01)
     parser.add_argument('--final_terrain_difficulty', type=float, default=0.5)
+    
+    # ========================================================================
+    # Isaac Gym Policy
+    # ========================================================================
+    parser.add_argument('--isaac_policy', default=False, action="store_true")
 
     # knowns, unknowns = parser.parse_known_args()
     args = parser.parse_args()
@@ -118,6 +123,9 @@ def get_env(args):
         from assets.env_franka_pb import Env
     elif args.env == "anymal_mj":
         from assets.env_anymal_mj import Env    
+        args.control_type = "position"
+    elif args.env == "anymal_mj_isaac":
+        from assets.env_anymal_mj_isaac import Env
         args.control_type = "position"
     elif args.env == "anymal_is":
         from assets.env_anymal_is import Env    
