@@ -39,11 +39,11 @@ def run(args):
     args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
-    if "model.pt" not in os.listdir(PATH):
-         print("----------")
-         print("model.pt doesn't exist")
-         print("----------")
-         return -1
+    # if "model.pt" not in os.listdir(PATH):
+    #      print("----------")
+    #      print("model.pt doesn't exist")
+    #      print("----------")
+    #      return -1
     # pol = torch.load(PATH + "/model.pt")
 
     #manually loading brendan's already trained walking gait

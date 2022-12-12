@@ -42,11 +42,10 @@ def run(args):
     args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
+    #hardcoded model paths
+    rough_no_height_1500_path =f"{PATH}/model_1500.pt"
+    flat_1001_path = f"{PATH}/model_1001.pt"
 
-
-    #TRY TESTING ISAAC POLICY DIRECTLY
-    rough_no_height_1500_path ="/scratch1/rac018/results/anymal_mj_isaac/direct_isaac/Nov30_09-01-16_rough_no_height_1500/model_1500.pt"
-    flat_1001_path = "/scratch1/rac018/results/anymal_mj_isaac/direct_isaac/Nov30_11-20-41_flat_1001/model_1001.pt"
     loaded_dict = torch.load(flat_1001_path, map_location=torch.device("cpu"))
     loaded_dict_copy = copy.deepcopy(loaded_dict)
     
@@ -73,7 +72,9 @@ def run(args):
     ac.load_state_dict(loaded_dict_copy['model_state_dict'])
     ac.eval()
 
-    pol = torch.load(PATH + "/model_1500.pt") # hardcoded path (need to fix)
+    # pol = torch.load(rough_no_height_1500_path)
+    pol = torch.load(flat_1001_path)
+
     if args.do_plot:
 
         names_to_plot = ["joint_pos" + str(i) for i in range(env.ac_size)]
@@ -88,9 +89,7 @@ def run(args):
         # action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
         distribution = ac.pi(torch.tensor(np.array(obs).astype(np.float32)))[0]
         action = distribution.sample()
-        last_step_time = time.time()
         obs, _, done, _ = env.step(action)
-        #print(f"step time = {time.time() - last_step_time}")
 
         if args.do_plot:
             plotter.save_data({name:env.ob_dict[name] for name in names_to_plot})
