@@ -29,13 +29,17 @@ class Env(Env):
     initial_Kp = Kp
 
     def __init__(self, PATH=None, args=None, writer=None):
+        """
+        Defines a few other things required when loading/using an isaac policy as the llp
+        """
 
         super().__init__(PATH=PATH, args=args, writer=writer)
 
-        self.is_ob_size = 48 # for low-level isaac policy
-        self.isaac_motor_names = self.correct_joint_order(self.motor_names, BEH_TO_ISA)
+        self.is_ob_size = 48  # isaac obs. vector size
+        self.isaac_motor_names = self.correct_joint_order(self.motor_names, BEH_TO_ISA) # gives isaac ordering of joints
         self.isa_observation_space = spaces.Box(-10000*np.ones(self.is_ob_size), 10000*np.ones(self.is_ob_size), dtype=np.float32)
 
+        # default initial joint positions used in isaac llp 
         self.isaac_default_joints = { 
             "LF_HAA": 0.0,
             "LH_HAA": 0.0,
