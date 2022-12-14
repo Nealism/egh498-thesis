@@ -10,6 +10,7 @@ from pyquaternion import Quaternion
 import glfw
 
 from .env_base_mj import EnvBaseMJ
+from .terrain_gen import TerrainGen
 
 class Env(EnvBaseMJ):
     # Timestep for mujoco is set in the .xml, and shows up under self.model.opt.timestep
@@ -29,23 +30,28 @@ class Env(EnvBaseMJ):
 
         super().__init__(PATH)
 
+        self.general_xml_path = "assets/xmls/anybotics_anymal_c/"
+
         # Name of the base link in the xml, for setting the robot position on reset
         self.base_link = "base"
         if self.args.control_type == "torque":
-            self.model_path = "assets/xmls/anybotics_anymal_c/scene_torque.xml"
+            self.model_path = self.general_xml_path + "scene_torque.xml"
             self.action_multiplier = 20
         elif self.args.control_type == "position":
-            self.model_path = "assets/xmls/anybotics_anymal_c/scene.xml"
+            self.model_path = self.general_xml_path + "scene.xml"
             self.action_multiplier = 0.2
 
         self.robot_name = "anymal_c"
-        self.mesh_dir = "assets/xmls/anybotics_anymal_c/assets"
+        self.mesh_dir = self.general_xml_path + "assets/"
         # self.action_multiplier = 0.0
         
         if self.args.tree_type:
             self.set_up_xmls()
         
         self.viewer = None
+
+        self.terrain_gen = TerrainGen()
+        self.load_terrain_images()
         self.load_robot()
         
         self.ob_size = 51
@@ -86,6 +92,16 @@ class Env(EnvBaseMJ):
         # States that we want to restore, for resuming training after running a test
         # self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
+    def load_terrain_images(self):
+        # generate and load ground truth image
+        gt = self.terrain_gen.gen_rand_ground_truth(0, 255, (80, 80))
+        self.terrain_gen.load_im_from_arr(gt, self.mesh_dir, "test.png", "PNG")
+
+        # generate and load other curves
+        fn = self.terrain_gen.hump_func
+        curve = self.terrain_gen.gen_curve(0, 10, 0, 10, 200, fn)
+        self.terrain_gen.load_im_from_arr(curve, self.mesh_dir, "smooth.png", "PNG")
+
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
@@ -109,7 +125,7 @@ class Env(EnvBaseMJ):
                 self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data, 'offscreen')
         else:
             print("Can't view mujoco on the HPC.")
-
+        
     def get_log_things(self):
         # Things we want to log each training step (print and add to tensorboard)
         return_dict = {"Kp": self.Kp, "Success": self.success, "Cur": self.args.cur}

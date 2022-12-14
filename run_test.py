@@ -39,15 +39,7 @@ def run(args):
     args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
-    # if "model.pt" not in os.listdir(PATH):
-    #      print("----------")
-    #      print("model.pt doesn't exist")
-    #      print("----------")
-    #      return -1
-    # pol = torch.load(PATH + "/model.pt")
-
-    #manually loading brendan's already trained walking gait
-    pol = torch.load("/scratch1/rac018/results/anymal_mj/proper_trained/brendan_walking_gait" + "/model.pt")
+    pol = torch.load(PATH + "/model.pt")
 
     if args.do_plot:
         names_to_plot = ["joint_pos" + str(i) for i in range(env.ac_size)]

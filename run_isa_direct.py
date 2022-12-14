@@ -72,9 +72,6 @@ def run(args):
     ac.load_state_dict(loaded_dict_copy['model_state_dict'])
     ac.eval()
 
-    # pol = torch.load(rough_no_height_1500_path)
-    pol = torch.load(flat_1001_path)
-
     if args.do_plot:
 
         names_to_plot = ["joint_pos" + str(i) for i in range(env.ac_size)]
