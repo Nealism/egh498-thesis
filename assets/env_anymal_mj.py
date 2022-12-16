@@ -10,7 +10,7 @@ from pyquaternion import Quaternion
 import glfw
 
 from .env_base_mj import EnvBaseMJ
-from .terrain_gen import TerrainGen
+from utils.terrain_gen import TerrainGen
 
 class Env(EnvBaseMJ):
     # Timestep for mujoco is set in the .xml, and shows up under self.model.opt.timestep
@@ -94,13 +94,17 @@ class Env(EnvBaseMJ):
 
     def load_terrain_images(self):
         # generate and load ground truth image
-        gt = self.terrain_gen.gen_rand_ground_truth(0, 255, (80, 80))
-        self.terrain_gen.load_im_from_arr(gt, self.mesh_dir, "test.png", "PNG")
+        dim = (100, 100)
+        gt = self.terrain_gen.gen_rand_ground_truth(0, 255, dim)
+        # gt = np.ones(dim)
+        # gt[60:80, 75] = 2
+        self.terrain_gen.load_im_from_arr_2(gt, self.mesh_dir, "test.png", "PNG")
 
         # generate and load other curves
         fn = self.terrain_gen.hump_func
-        curve = self.terrain_gen.gen_curve(0, 10, 0, 10, 200, fn)
-        self.terrain_gen.load_im_from_arr(curve, self.mesh_dir, "smooth.png", "PNG")
+        # fn = self.terrain_gen.gaussian
+        curve = self.terrain_gen.gen_curve(0, 5, 0, 5, 500, fn)
+        self.terrain_gen.load_im_from_arr_2(curve, self.mesh_dir, "smooth.png", "PNG")
 
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
@@ -198,6 +202,7 @@ class Env(EnvBaseMJ):
         return state
 
     def step(self, actions=None, replay_state=None, additional_stuff=None):
+        print(self.pos)
         if self.paused:
             self.target_vx = 0.0
             expert = self.initial_joints    
@@ -251,10 +256,15 @@ class Env(EnvBaseMJ):
     
     def get_reward(self):
         done = False
+        # done if: below 0.3m, 'pitching' more than 0.7 rads, 'rolling' more than 0.7 rads
         if self.pos[2] < 0.3 or abs(self.pitch) > 0.7 or abs(self.roll) > 0.7:
             done = True
+
+        # error in forward velocity (this is main component of reward function)
         goal = np.exp(-2.5*max(0, self.target_vx - self.data.joint("free").qvel[0])**2)
+        # sum of squared errors in joint positions w.r.t to initial positions 
         joints = np.exp(-0.5*np.sum((np.array(self.joints) - np.array(self.initial_joints))**2))
+        # error in rotation w.r.t. to upright quaternion
         orn = np.exp(-10.0 * Quaternion.absolute_distance(Quaternion(self.orn), Quaternion([0,0,0,1])))
         
         # Contacts should match pair-wise. both front's should be off the ground, both backs shouldn't
@@ -263,8 +273,9 @@ class Env(EnvBaseMJ):
         contacts += 0.25*((1 - self.contacts["left_front"]) - self.contacts["right_front"])**2 
         contacts += 0.25*((1 - self.contacts["left_back"]) - self.contacts["right_back"])**2 
                 
-
         # orn = 0.1*np.exp(-5*np.sum((np.array(self.orn) - np.array([0,0,0,1]))**2))
+
+        # NOTE: all components of rew. func. are negative (just doesn't look like it here, SEE ABOVE)
         reward = 1.5*goal + 0.5*joints + 0.25*orn - 0.25*contacts
         self.ep_reward_dict["Reward/goal"] += goal
         self.ep_reward_dict["Reward/joint"] += joints
