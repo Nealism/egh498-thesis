@@ -10,7 +10,7 @@ from pyquaternion import Quaternion
 import glfw
 
 from .env_base_mj import EnvBaseMJ
-from utils.terrain_gen import TerrainGen
+from utils.terrain import Terrain, TerrainGen
 
 class Env(EnvBaseMJ):
     # Timestep for mujoco is set in the .xml, and shows up under self.model.opt.timestep
@@ -49,8 +49,8 @@ class Env(EnvBaseMJ):
             self.set_up_xmls()
         
         self.viewer = None
-
-        self.terrain_gen = TerrainGen()
+        self.terrain_generator = TerrainGen()
+        self.ground_truth = Terrain()
         self.load_terrain_images()
         self.load_robot()
         
@@ -95,16 +95,15 @@ class Env(EnvBaseMJ):
     def load_terrain_images(self):
         # generate and load ground truth image
         dim = (100, 100)
-        gt = self.terrain_gen.gen_rand_ground_truth(0, 255, dim)
+        gt = self.ground_truth.gen_rand_ground_truth(0, 255, dim)
         # gt = np.ones(dim)
         # gt[60:80, 75] = 2
-        self.terrain_gen.load_im_from_arr_2(gt, self.mesh_dir, "test.png", "PNG")
+        self.ground_truth.load_im_from_arr(gt, self.mesh_dir, "test.png", "PNG")
 
         # generate and load other curves
         fn = self.terrain_gen.hump_func
-        # fn = self.terrain_gen.gaussian
         curve = self.terrain_gen.gen_curve(0, 5, 0, 5, 500, fn)
-        self.terrain_gen.load_im_from_arr_2(curve, self.mesh_dir, "smooth.png", "PNG")
+        self.terrain_gen.load_im_from_arr(curve, self.mesh_dir, "smooth.png", "PNG")
 
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:

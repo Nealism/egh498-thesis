@@ -19,4 +19,17 @@ TODO:
             -monitor to see its correct
                 -can just start the camera birds eye
 
+Ideas about terrain generation:
+    -make one file (terrain.py) hold two classes:
+        Terrain: (takes a numpy array as an argument)
+            self.arr (image in form of numpy array)
+            self.image (PNG form of image)
 
+            load_im_from_arr() - called in init, just generates self.image
+            compute_sub_section() - computes it and returns the image
+            display_map() - displays image with bounding box
+            top_left_bot_right()
+
+        TerrainGen:
+            just a class to generate numpy arrays that give certain terrains
+            

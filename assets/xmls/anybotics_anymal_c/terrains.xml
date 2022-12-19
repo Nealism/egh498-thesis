@@ -6,7 +6,7 @@
         <!-- <hfield name="smooth_curve" file="smooth.png" size ="5 5 1 0.001"/> -->
     </asset>
     <worldbody>
-        <geom name="gt" type="hfield" pos="0 0 0" hfield="ground_truth"/>
+        <!-- <geom name="gt" type="hfield" pos="0 0 0" hfield="ground_truth"/> -->
         <!-- <geom name="sc" type="hfield" pos="10 10 0" hfield="smooth_curve"/> -->
     </worldbody>
 </mujoco>
