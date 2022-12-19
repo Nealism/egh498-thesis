@@ -12,6 +12,10 @@ import glfw
 from .env_base_mj import EnvBaseMJ
 from utils.terrain import Terrain, TerrainGen
 
+## CONSTANTS ##
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
 class Env(EnvBaseMJ):
     # Timestep for mujoco is set in the .xml, and shows up under self.model.opt.timestep
     # Default is 0.002, changing this might affect the contact model. 
@@ -88,18 +92,20 @@ class Env(EnvBaseMJ):
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 
+        self.map_count = 0
+
         # States that we want to restore, for resuming training after running a test
         # self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
     def load_terrain_images(self):
         # generate and load ground truth image
-        dim = (100, 100)
+        dim = (500, 500)
         gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, dim)
         self.ground_truth = Terrain(gt_arr, self.mesh_dir, "test.png")
 
         # generate and load other curves
         fn = self.terrain_generator.hump_func
-        curve = self.terrain_generator.gen_curve(0, 5, 0, 5, 500, fn)
+        curve = self.terrain_generator.gen_curve(-5, 5, 5, 5, 500, fn)
         self.curve1 = Terrain(curve, self.mesh_dir, "smooth.png")
 
     def load_robot(self):
@@ -198,7 +204,10 @@ class Env(EnvBaseMJ):
         return state
 
     def step(self, actions=None, replay_state=None, additional_stuff=None):
-        print(self.pos)
+        # display map of robot on ground truth
+        img_pos = self.ground_truth.robot_to_image_pos(self.pos, 10, 10) 
+        self.ground_truth.display_box(img_pos, 80, 80, colour=WHITE, thickness=2) 
+
         if self.paused:
             self.target_vx = 0.0
             expert = self.initial_joints    

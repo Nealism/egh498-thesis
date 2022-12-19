@@ -14,6 +14,7 @@ class Terrain():
         self.terr_arr = terr_arr         
         # terrain image (PNG)
         self.terr_img = self.load_terr_img() 
+        self.image_dim = self.terr_arr.shape
 
     def load_terr_img(self):
         """ 
@@ -59,8 +60,10 @@ class Terrain():
             n,m - dimensions of bounding box
         """
         tl, br = self.top_left_bot_right(pos[0], pos[1], n, m)
-        cv2.rectangle(self.terr_img, tl, br, colour, thickness)
-        cv2.imshow("map", self.terr_img)
+        # draw rectangle on copy to preserve the original
+        img_copy = self.terr_img.copy()
+        cv2.rectangle(img_copy, tl, br, colour, thickness)
+        cv2.imshow("map", img_copy)
         cv2.waitKey(1)
 
     def top_left_bot_right(self, i, j, n, m):
@@ -70,10 +73,25 @@ class Terrain():
         """
         min_row = i - n // 2
         min_col = j - m // 2
-        max_row = i + n // 2 + 1 if n % 2 == 1 else i + n // 2
+        max_row = i + n // 2 + 1 if n % 2 == 1 else i + m // 2
         max_col = j + m // 2 + 1 if m % 2 == 1 else j + m // 2
         return (min_row, min_col), (max_row - 1, max_col - 1)
+    
+    def robot_to_image_pos(self, pos, x_rad, y_rad):
+        """
+        Converts a position in mujoco to an (i, j) index in the terrain image
 
+        NOTE: Assumes hfield is centred at pos == (0, 0) in mujoco
+
+        Params:
+            pos - mujoco position
+            x_rad, y_rad - radii of mujoco hfield in x and y directions
+        """
+        # +x == +i (right in mujoco and right in image respectively)
+        i = int((pos[0] + x_rad) * ((self.image_dim[0] // 2) // x_rad))
+        # +y == -j (up-screen in mujoco and down-screen in image respectively)
+        j = int((-1 * pos[1] + y_rad) * ((self.image_dim[1] // 2) // x_rad))
+        return (i, j)
 """
 A class to generate terrain arrays for Terrain instances (see above)
 """

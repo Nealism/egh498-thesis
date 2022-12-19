@@ -19,3 +19,5 @@ TODO:
             -monitor to see its correct
                 -can just start the camera birds eye
     -confluence week5 (so far) / review of week 4
+    -get gt and curves saved with proper names in a proper folder
+    -get curves to save in terrains.xml with python (atm just hard coded)
