@@ -50,7 +50,6 @@ class Env(EnvBaseMJ):
         
         self.viewer = None
         self.terrain_generator = TerrainGen()
-        self.ground_truth = Terrain()
         self.load_terrain_images()
         self.load_robot()
         
@@ -95,15 +94,13 @@ class Env(EnvBaseMJ):
     def load_terrain_images(self):
         # generate and load ground truth image
         dim = (100, 100)
-        gt = self.ground_truth.gen_rand_ground_truth(0, 255, dim)
-        # gt = np.ones(dim)
-        # gt[60:80, 75] = 2
-        self.ground_truth.load_im_from_arr(gt, self.mesh_dir, "test.png", "PNG")
+        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, dim)
+        self.ground_truth = Terrain(gt_arr, self.mesh_dir, "test.png")
 
         # generate and load other curves
-        fn = self.terrain_gen.hump_func
-        curve = self.terrain_gen.gen_curve(0, 5, 0, 5, 500, fn)
-        self.terrain_gen.load_im_from_arr(curve, self.mesh_dir, "smooth.png", "PNG")
+        fn = self.terrain_generator.hump_func
+        curve = self.terrain_generator.gen_curve(0, 5, 0, 5, 500, fn)
+        self.curve1 = Terrain(curve, self.mesh_dir, "smooth.png")
 
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
