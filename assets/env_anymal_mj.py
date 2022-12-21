@@ -48,7 +48,7 @@ class Env(EnvBaseMJ):
         self.viewer = None
         self.load_robot()
         
-        self.ob_size = 51
+        self.ob_size = 54
         self.ac_size = 12
 
         self.motor_names = ['LF_HAA', 'LF_HFE', 'LF_KFE', 'RF_HAA', 'RF_HFE', 'RF_KFE', 'LH_HAA', 'LH_HFE', 'LH_KFE', 'RH_HAA', 'RH_HFE', 'RH_KFE']
@@ -177,8 +177,11 @@ class Env(EnvBaseMJ):
         self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
         self.get_trajectory(self.expert_target)
 
+        self.command_ranges = np.array([1,1,1.5])
+        self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
+
         self.prev_actions = self.joints
-        state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return state
 
     def step(self, actions=None, replay_state=None, additional_stuff=None):
@@ -230,26 +233,32 @@ class Env(EnvBaseMJ):
         self.total_return += reward
         self.steps += 1
 
-        state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        # Sample every 4 seconds
+        if self.steps % int(4 / self.timeStep)==0:
+            self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
+
+        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return np.array(state), reward, done, None
     
     def get_reward(self):
         done = False
-        if self.pos[2] < 0.3 or abs(self.pitch) > 0.7 or abs(self.roll) > 0.7:
+        if self.pos[2] < 0.35 or abs(self.pitch) > 0.5 or abs(self.roll) > 0.5:
             done = True
-        goal = np.exp(-2.5*max(0, self.target_vx - self.data.joint("free").qvel[0])**2)
+        
+        goal = 1.0*np.exp(-0.25*np.sum(np.array(self.commands[:2]) - np.array([self.vx, self.vy]) )**2)            
+        goal += 0.5*np.exp(-0.25*np.sum(np.array(self.commands[2]) - np.array(self.yaw_vel) )**2)     
+ 
         joints = np.exp(-0.5*np.sum((np.array(self.joints) - np.array(self.initial_joints))**2))
-        orn = np.exp(-10.0 * Quaternion.absolute_distance(Quaternion(self.orn), Quaternion([0,0,0,1])))
+        orn = np.exp(-10.0 * np.sum((np.array([self.roll, self.pitch]) - np.zeros(2))**2))
         
         # Contacts should match pair-wise. both front's should be off the ground, both backs shouldn't
         contacts = 0.25*(self.contacts["left_front"] - self.contacts["right_back"])**2 
         contacts += 0.25*(self.contacts["right_front"] - self.contacts["left_back"])**2 
         contacts += 0.25*((1 - self.contacts["left_front"]) - self.contacts["right_front"])**2 
         contacts += 0.25*((1 - self.contacts["left_back"]) - self.contacts["right_back"])**2 
-                
 
-        # orn = 0.1*np.exp(-5*np.sum((np.array(self.orn) - np.array([0,0,0,1]))**2))
         reward = 1.5*goal + 0.5*joints + 0.25*orn - 0.25*contacts
+        
         self.ep_reward_dict["Reward/goal"] += goal
         self.ep_reward_dict["Reward/joint"] += joints
         self.ep_reward_dict["Reward/orn"] += orn
@@ -264,7 +273,11 @@ class Env(EnvBaseMJ):
 
         rot = Rotation(self.orn)
         self.roll, self.pitch, self.yaw = rot.as_euler('xyz', degrees=False)
+
         self.imu = [self.roll, self.pitch] + list(self.data.sensordata) 
+        self.vx, self.vy, self.vz = self.data.sensordata[3:6]
+        self.yaw_vel = self.data.sensordata[2]
+
         self.joints = [self.data.joint(name).qpos[0] for name in self.motor_names]
         self.joint_vel = [self.data.joint(name).qvel[0] for name in self.motor_names]
         self.joint_force = list(self.data.actuator_force[:self.ac_size])
