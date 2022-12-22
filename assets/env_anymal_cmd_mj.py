@@ -324,8 +324,12 @@ class Env(EnvBaseMJ):
         contacts += 0.25*((1 - self.contacts["left_front"]) - self.contacts["right_front"])**2 
         contacts += 0.25*((1 - self.contacts["left_back"]) - self.contacts["right_back"])**2 
 
-        reward = 1.5*goal + 0.5*joints + 0.25*orn - 0.25*contacts
+        # reward = 1.5*goal + 0.5*joints + 0.25*orn - 0.25*contacts
+        reward = 1.5*goal + 0.5*joints + 0.1*orn - 0.25*contacts
         
+        # old
+        # reward = 1.5*goal + 0.1*joints + 0.1*orn - 0.1*contacts
+
         self.ep_reward_dict["Reward/goal"] += goal
         self.ep_reward_dict["Reward/joint"] += joints
         self.ep_reward_dict["Reward/orn"] += orn
