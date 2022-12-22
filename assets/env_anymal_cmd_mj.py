@@ -117,7 +117,12 @@ class Env(EnvBaseMJ):
         return return_dict
 
     def get_success(self):
-        return self.pos[0] > 10
+        # return self.pos[0] > 10
+        # if self.rank == 0:
+        #     print("Time at speed", self.time_at_speed, " target ", 2/self.timeStep)
+        # return self.time_at_speed > (2/self.timeStep)
+        return len(self.goal) > 100 and np.mean(self.goal) > 1.0
+
 
     def check_for_success(self):
         return len(self.success) == 5 and (np.array(self.success) == True).all()
@@ -161,6 +166,7 @@ class Env(EnvBaseMJ):
             rot_range = 0.2
             # rot_range = 0.0
             self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), 0], degrees=False)
+            # self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), np.pi], degrees=False)
             self.orn = self.rot.as_quat()
             self.pos = [0,0,self.initial_z]
             self.set_position(pos=self.pos, orn=self.orn, joints=self.initial_joints)
@@ -179,12 +185,16 @@ class Env(EnvBaseMJ):
 
         self.command_ranges = np.array([1,1,1.5])
         self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
+        self.time_at_speed = 0
+        self.goal = []
 
         self.prev_actions = self.joints
         state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return state
 
-    def step(self, actions=None, replay_state=None, additional_stuff=None):
+    def step(self, actions=None, replay_state=None, additional_stuff=None, cmds=None):
+        if cmds is not None:
+            self.commands = cmds
         if self.paused:
             self.target_vx = 0.0
             expert = self.initial_joints    
@@ -200,9 +210,68 @@ class Env(EnvBaseMJ):
                 self.traj_i += 1
 
         if actions is not None:
-            self.actions = list(actions)
+            # self.actions = list(actions)
+            self.actions = list(np.array(self.initial_joints) + np.array(actions))
+            # print(self.actions)
         else:
-            self.actions = [0]*(self.ac_size)
+            # self.actions = [0]*(self.ac_size)
+            self.actions = self.initial_joints
+
+        if self.args.cur:
+            # Sample every 4 seconds
+            if self.steps > 0 and self.steps % int(4 / self.timeStep)==0:
+                self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
+                self.success.append(self.get_success())
+                self.time_at_speed = 0
+                self.goal = []
+
+            # self.commands = [0.0, 1.0,0.0]
+            # self.commands = [1.0, 0.0,0.0]
+            # self.commands = [0.0, 0.0,-1.0]
+
+            world_to_robot_rot_mat = np.array(
+            [[np.cos(-self.yaw), -np.sin(-self.yaw), 0],
+                [np.sin(-self.yaw), np.cos(-self.yaw), 0],
+                [		0,			 0, 1]]
+            )
+
+            robot_to_world_rot_mat = np.array(
+            [[np.cos(-self.yaw), np.sin(-self.yaw), 0],
+                [-np.sin(-self.yaw), np.cos(-self.yaw), 0],
+                [		0,			 0, 1]]
+            )
+
+            vx_cmd, vy_cmd, _ = np.dot(robot_to_world_rot_mat, (self.commands[0], self.commands[1],0))
+            vx, vy, _ = np.dot(robot_to_world_rot_mat, (self.vx, self.vy, self.vz))
+            # vx, vy, _ = np.dot(rot_mat, (self.vx, self.vy, self.vz))
+            
+            forces = np.zeros(6)
+            # forces = np.zeros(18)
+            error = np.abs(np.array(self.commands) - np.array([self.vx, self.vy, self.yaw_vel]))
+            # print(error)
+            # print(self.commands)
+            # print([self.vx, self.vy, self.yaw_vel])
+            # print((np.less(error, (0.2 * np.array(self.command_ranges)))).all())
+            # if (np.less(error, (0.2 * np.array(self.command_ranges)))).all():
+            # if (np.less(error, (0.2 * np.array(self.command_ranges)))).all():
+            if (error < 0.3).all():
+                self.time_at_speed += 1
+            # gain = 10
+            # gain = 20
+            gain = 50
+            # gain = 100
+            z_gain = 200
+            # z_gain = 0
+            forces[0] = gain * (self.Kp / self.initial_Kp) * np.clip((vx_cmd - vx), -1, 1)
+            forces[1] = gain * (self.Kp / self.initial_Kp) * np.clip((vy_cmd - vy), -1, 1)
+            # forces[2] = np.clip(100*gain * (self.Kp / self.initial_Kp) * (self.pos[2] - 0.5), -clip_fact, clip_fact)
+            forces[2] = z_gain * (self.Kp / self.initial_Kp) * np.clip((0.5 - self.pos[2]), -1, 1)
+            # forces[2] = z_gain * (self.Kp / self.initial_Kp) * (1.0 - self.pos[2])
+            # forces[2] = z_gain * (self.Kp / self.initial_Kp) * (self.pos[2] - 0.5)
+            # print( (self.pos[2] - 0.5), forces[2])
+            forces[5] = gain * (self.Kp / self.initial_Kp) * np.clip((self.commands[2] - self.yaw_vel), -1, 1)
+            self.data.xfrc_applied = forces
+            # self.data.qfrc_applied = forces
 
         # This might do something weird with mujoco contacts, and other things in the sim.
         for _ in range(int(np.rint(self.timeStep/self.simStep))):
@@ -233,9 +302,6 @@ class Env(EnvBaseMJ):
         self.total_return += reward
         self.steps += 1
 
-        # Sample every 4 seconds
-        if self.steps % int(4 / self.timeStep)==0:
-            self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
 
         state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return np.array(state), reward, done, None
@@ -245,9 +311,10 @@ class Env(EnvBaseMJ):
         if self.pos[2] < 0.35 or abs(self.pitch) > 0.5 or abs(self.roll) > 0.5:
             done = True
         
-        goal = 1.0*np.exp(-0.25*np.sum(np.array(self.commands[:2]) - np.array([self.vx, self.vy]) )**2)            
-        goal += 0.5*np.exp(-0.25*np.sum(np.array(self.commands[2]) - np.array(self.yaw_vel) )**2)     
- 
+        goal = 1.0*np.exp(-5.0*np.sum(np.array(self.commands[:2]) - np.array([self.vx, self.vy]) )**2)            
+        goal += 0.5*np.exp(-2.5*np.sum(np.array(self.commands[2]) - np.array(self.yaw_vel) )**2)     
+        self.goal.append(goal)
+
         joints = np.exp(-0.5*np.sum((np.array(self.joints) - np.array(self.initial_joints))**2))
         orn = np.exp(-10.0 * np.sum((np.array([self.roll, self.pitch]) - np.zeros(2))**2))
         

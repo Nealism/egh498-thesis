@@ -118,9 +118,11 @@ def get_env(args):
     elif args.env == "franka_reach_pb":
         from assets.env_franka_pb import Env
     elif args.env == "anymal_mj":
-        from assets.env_anymal_mj import Env    
+        from assets.env_anymal_cmd_mj import Env    
         if args.tree_type == "tree":
             args.max_ep_len = 256
+    elif args.env == "anymal_cmd_mj":
+        from assets.env_anymal_cmd_mj import Env    
     elif args.env == "anymal_is":
         from assets.env_anymal_is import Env    
     elif args.env == "anymal_is":
