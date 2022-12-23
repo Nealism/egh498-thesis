@@ -117,10 +117,7 @@ class Env(EnvBaseMJ):
         return return_dict
 
     def get_success(self):
-        # return self.pos[0] > 10
-        # if self.rank == 0:
-        #     print("Time at speed", self.time_at_speed, " target ", 2/self.timeStep)
-        # return self.time_at_speed > (2/self.timeStep)
+        # Success is time spent above a target goal
         return len(self.goal) > 100 and np.mean(self.goal) > 1.0
 
 
@@ -205,16 +202,12 @@ class Env(EnvBaseMJ):
                 self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
                 self.get_trajectory(self.expert_target)
             expert = self.expert_traj[self.traj_i]
-            # expert = self.expert_target
             if self.traj_i < self.traj_size - 1:
                 self.traj_i += 1
 
         if actions is not None:
-            # self.actions = list(actions)
             self.actions = list(np.array(self.initial_joints) + np.array(actions))
-            # print(self.actions)
         else:
-            # self.actions = [0]*(self.ac_size)
             self.actions = self.initial_joints
 
         if self.args.cur:
@@ -225,16 +218,13 @@ class Env(EnvBaseMJ):
                 self.time_at_speed = 0
                 self.goal = []
 
-            # self.commands = [0.0, 1.0,0.0]
-            # self.commands = [1.0, 0.0,0.0]
-            # self.commands = [0.0, 0.0,-1.0]
-
             world_to_robot_rot_mat = np.array(
             [[np.cos(-self.yaw), -np.sin(-self.yaw), 0],
                 [np.sin(-self.yaw), np.cos(-self.yaw), 0],
                 [		0,			 0, 1]]
             )
 
+            # Need to convert robot frame velocities and commands to world frame to apply forces
             robot_to_world_rot_mat = np.array(
             [[np.cos(-self.yaw), np.sin(-self.yaw), 0],
                 [-np.sin(-self.yaw), np.cos(-self.yaw), 0],
@@ -243,35 +233,20 @@ class Env(EnvBaseMJ):
 
             vx_cmd, vy_cmd, _ = np.dot(robot_to_world_rot_mat, (self.commands[0], self.commands[1],0))
             vx, vy, _ = np.dot(robot_to_world_rot_mat, (self.vx, self.vy, self.vz))
-            # vx, vy, _ = np.dot(rot_mat, (self.vx, self.vy, self.vz))
             
             forces = np.zeros(6)
-            # forces = np.zeros(18)
             error = np.abs(np.array(self.commands) - np.array([self.vx, self.vy, self.yaw_vel]))
-            # print(error)
-            # print(self.commands)
-            # print([self.vx, self.vy, self.yaw_vel])
-            # print((np.less(error, (0.2 * np.array(self.command_ranges)))).all())
-            # if (np.less(error, (0.2 * np.array(self.command_ranges)))).all():
-            # if (np.less(error, (0.2 * np.array(self.command_ranges)))).all():
+            
+            # This doesn't seem to work, instead using average goal reward
             if (error < 0.3).all():
                 self.time_at_speed += 1
-            # gain = 10
-            # gain = 20
             gain = 50
-            # gain = 100
             z_gain = 200
-            # z_gain = 0
             forces[0] = gain * (self.Kp / self.initial_Kp) * np.clip((vx_cmd - vx), -1, 1)
             forces[1] = gain * (self.Kp / self.initial_Kp) * np.clip((vy_cmd - vy), -1, 1)
-            # forces[2] = np.clip(100*gain * (self.Kp / self.initial_Kp) * (self.pos[2] - 0.5), -clip_fact, clip_fact)
             forces[2] = z_gain * (self.Kp / self.initial_Kp) * np.clip((0.5 - self.pos[2]), -1, 1)
-            # forces[2] = z_gain * (self.Kp / self.initial_Kp) * (1.0 - self.pos[2])
-            # forces[2] = z_gain * (self.Kp / self.initial_Kp) * (self.pos[2] - 0.5)
-            # print( (self.pos[2] - 0.5), forces[2])
             forces[5] = gain * (self.Kp / self.initial_Kp) * np.clip((self.commands[2] - self.yaw_vel), -1, 1)
             self.data.xfrc_applied = forces
-            # self.data.qfrc_applied = forces
 
         # This might do something weird with mujoco contacts, and other things in the sim.
         for _ in range(int(np.rint(self.timeStep/self.simStep))):
