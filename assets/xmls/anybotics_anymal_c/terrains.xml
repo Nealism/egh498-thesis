@@ -2,11 +2,11 @@
 <mujoco>
     <compiler assetdir="assets"/>
     <asset>
-        <!-- <hfield name="ground_truth" file="test.png" size="10 10 2 0.01"/> -->
-        <hfield name="smooth_curve" file="smooth.png" size ="5 5 3 0.001"/>
+        <hfield name="ground_truth" file="test.png" size="10 10 0.1 0.01"/>
+        <!-- <hfield name="smooth_curve" file="smooth.png" size ="5 5 3 0.001"/> -->
     </asset>
     <worldbody>
-        <!-- <geom name="gt" type="hfield" pos="0 0 0" hfield="ground_truth"/> -->
-        <geom name="sc" type="hfield" pos="5 -5 1" hfield="smooth_curve"/>
+        <geom name="gt" type="hfield" pos="0 0 0" hfield="ground_truth"/>
+        <!-- <geom name="sc" type="hfield" pos="5 -5 1" hfield="smooth_curve"/> -->
     </worldbody>
 </mujoco>

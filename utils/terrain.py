@@ -1,6 +1,6 @@
 import numpy as np
-from pathlib import Path
 import cv2
+from lxml import etree
 
 """
 Class to represent any terrains loaded into mujoco. Terrains are generated
@@ -134,14 +134,4 @@ class TerrainGen():
         return z
 
 if __name__ == "__main__":
-    tg = TerrainGen()
-    ground_truth = tg.gen_rand_ground_truth(0, 255, (300, 300)) 
-    path = str(Path(__file__).parent.resolve())
-    name = '/cv_test.png'
-    t = Terrain(ground_truth, path, name)
-    for i in range(1000):
-        row = np.random.randint(50, 250)
-        col = np.random.randint(50, 250)
-        pos = (row, col)
-        t.display_box(pos, 50, 50)
-    
+    pass
