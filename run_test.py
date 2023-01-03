@@ -39,7 +39,8 @@ def run(args):
     args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
-    pol = torch.load(PATH + "/model.pt")
+    # pol = torch.load(PATH + "/model.pt")
+    pol = torch.load("./resources/cmd_model/model.pt")
 
     if args.do_plot:
         names_to_plot = ["joint_pos" + str(i) for i in range(env.ac_size)]
@@ -51,7 +52,7 @@ def run(args):
     obs = env.reset()
     while True:
         action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
-        obs, _, done, _ = env.step(action)
+        obs, _, done, _ = env.step(action, cmds=[1.0,1.0,0.0])
         if args.do_plot:
             plotter.save_data({name:env.ob_dict[name] for name in names_to_plot})
         if done or env.steps > args.max_ep_len:

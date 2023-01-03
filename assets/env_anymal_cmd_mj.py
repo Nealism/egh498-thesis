@@ -57,7 +57,7 @@ class Env(EnvBaseMJ):
         self.load_terrain_images()
         self.load_robot()
         
-        self.ob_size = 51
+        self.ob_size = 54
         self.ac_size = 12
 
         self.motor_names = ['LF_HAA', 'LF_HFE', 'LF_KFE', 'RF_HAA', 'RF_HFE', 'RF_KFE', 'LH_HAA', 'LH_HFE', 'LH_KFE', 'RH_HAA', 'RH_HFE', 'RH_KFE']
@@ -139,7 +139,9 @@ class Env(EnvBaseMJ):
         return return_dict
 
     def get_success(self):
-        return self.pos[0] > 10
+        # Success is time spent above a target goal
+        return len(self.goal) > 100 and np.mean(self.goal) > 1.0
+
 
     def check_for_success(self):
         return len(self.success) == 5 and (np.array(self.success) == True).all()
@@ -183,6 +185,7 @@ class Env(EnvBaseMJ):
             rot_range = 0.2
             # rot_range = 0.0
             self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), 0], degrees=False)
+            # self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), np.pi], degrees=False)
             self.orn = self.rot.as_quat()
             self.pos = [0,0,self.initial_z]
             self.set_position(pos=self.pos, orn=self.orn, joints=self.initial_joints)
@@ -199,15 +202,21 @@ class Env(EnvBaseMJ):
         self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
         self.get_trajectory(self.expert_target)
 
+        self.command_ranges = np.array([1,1,1.5])
+        self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
+        self.time_at_speed = 0
+        self.goal = []
+
         self.prev_actions = self.joints
-        state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return state
 
-    def step(self, actions=None, replay_state=None, additional_stuff=None):
-        # display map of robot on ground truth
+    def step(self, actions=None, replay_state=None, additional_stuff=None, cmds=None):
         img_pos = self.ground_truth.robot_to_image_pos(self.pos, 10, 10) 
         self.ground_truth.display_box(img_pos, 80, 80, colour=WHITE, thickness=2) 
 
+        if cmds is not None:
+            self.commands = cmds
         if self.paused:
             self.target_vx = 0.0
             expert = self.initial_joints    
@@ -218,14 +227,51 @@ class Env(EnvBaseMJ):
                 self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
                 self.get_trajectory(self.expert_target)
             expert = self.expert_traj[self.traj_i]
-            # expert = self.expert_target
             if self.traj_i < self.traj_size - 1:
                 self.traj_i += 1
 
         if actions is not None:
-            self.actions = list(actions)
+            self.actions = list(np.array(self.initial_joints) + np.array(actions))
         else:
-            self.actions = [0]*(self.ac_size)
+            self.actions = self.initial_joints
+
+        if self.args.cur:
+            # Sample every 4 seconds
+            if self.steps > 0 and self.steps % int(4 / self.timeStep)==0:
+                self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
+                self.success.append(self.get_success())
+                self.time_at_speed = 0
+                self.goal = []
+
+            world_to_robot_rot_mat = np.array(
+            [[np.cos(-self.yaw), -np.sin(-self.yaw), 0],
+                [np.sin(-self.yaw), np.cos(-self.yaw), 0],
+                [		0,			 0, 1]]
+            )
+
+            # Need to convert robot frame velocities and commands to world frame to apply forces
+            robot_to_world_rot_mat = np.array(
+            [[np.cos(-self.yaw), np.sin(-self.yaw), 0],
+                [-np.sin(-self.yaw), np.cos(-self.yaw), 0],
+                [		0,			 0, 1]]
+            )
+
+            vx_cmd, vy_cmd, _ = np.dot(robot_to_world_rot_mat, (self.commands[0], self.commands[1],0))
+            vx, vy, _ = np.dot(robot_to_world_rot_mat, (self.vx, self.vy, self.vz))
+            
+            forces = np.zeros(6)
+            error = np.abs(np.array(self.commands) - np.array([self.vx, self.vy, self.yaw_vel]))
+            
+            # This doesn't seem to work, instead using average goal reward
+            if (error < 0.3).all():
+                self.time_at_speed += 1
+            gain = 50
+            z_gain = 200
+            forces[0] = gain * (self.Kp / self.initial_Kp) * np.clip((vx_cmd - vx), -1, 1)
+            forces[1] = gain * (self.Kp / self.initial_Kp) * np.clip((vy_cmd - vy), -1, 1)
+            forces[2] = z_gain * (self.Kp / self.initial_Kp) * np.clip((0.5 - self.pos[2]), -1, 1)
+            forces[5] = gain * (self.Kp / self.initial_Kp) * np.clip((self.commands[2] - self.yaw_vel), -1, 1)
+            self.data.xfrc_applied = forces
 
         # This might do something weird with mujoco contacts, and other things in the sim.
         for _ in range(int(np.rint(self.timeStep/self.simStep))):
@@ -256,32 +302,34 @@ class Env(EnvBaseMJ):
         self.total_return += reward
         self.steps += 1
 
-        state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+
+        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return np.array(state), reward, done, None
     
     def get_reward(self):
         done = False
-        # done if: below 0.3m, 'pitching' more than 0.7 rads, 'rolling' more than 0.7 rads
-        if self.pos[2] < 0.3 or abs(self.pitch) > 0.7 or abs(self.roll) > 0.7:
+        if self.pos[2] < 0.35 or abs(self.pitch) > 0.5 or abs(self.roll) > 0.5:
             done = True
+        
+        goal = 1.0*np.exp(-5.0*np.sum(np.array(self.commands[:2]) - np.array([self.vx, self.vy]) )**2)            
+        goal += 0.5*np.exp(-2.5*np.sum(np.array(self.commands[2]) - np.array(self.yaw_vel) )**2)     
+        self.goal.append(goal)
 
-        # error in forward velocity (this is main component of reward function)
-        goal = np.exp(-2.5*max(0, self.target_vx - self.data.joint("free").qvel[0])**2)
-        # sum of squared errors in joint positions w.r.t to initial positions 
         joints = np.exp(-0.5*np.sum((np.array(self.joints) - np.array(self.initial_joints))**2))
-        # error in rotation w.r.t. to upright quaternion
-        orn = np.exp(-10.0 * Quaternion.absolute_distance(Quaternion(self.orn), Quaternion([0,0,0,1])))
+        orn = np.exp(-10.0 * np.sum((np.array([self.roll, self.pitch]) - np.zeros(2))**2))
         
         # Contacts should match pair-wise. both front's should be off the ground, both backs shouldn't
         contacts = 0.25*(self.contacts["left_front"] - self.contacts["right_back"])**2 
         contacts += 0.25*(self.contacts["right_front"] - self.contacts["left_back"])**2 
         contacts += 0.25*((1 - self.contacts["left_front"]) - self.contacts["right_front"])**2 
         contacts += 0.25*((1 - self.contacts["left_back"]) - self.contacts["right_back"])**2 
-                
-        # orn = 0.1*np.exp(-5*np.sum((np.array(self.orn) - np.array([0,0,0,1]))**2))
 
-        # NOTE: all components of rew. func. are negative (just doesn't look like it here, SEE ABOVE)
-        reward = 1.5*goal + 0.5*joints + 0.25*orn - 0.25*contacts
+        # reward = 1.5*goal + 0.5*joints + 0.25*orn - 0.25*contacts
+        reward = 1.5*goal + 0.5*joints + 0.1*orn - 0.25*contacts
+        
+        # old
+        # reward = 1.5*goal + 0.1*joints + 0.1*orn - 0.1*contacts
+
         self.ep_reward_dict["Reward/goal"] += goal
         self.ep_reward_dict["Reward/joint"] += joints
         self.ep_reward_dict["Reward/orn"] += orn
@@ -296,7 +344,11 @@ class Env(EnvBaseMJ):
 
         rot = Rotation(self.orn)
         self.roll, self.pitch, self.yaw = rot.as_euler('xyz', degrees=False)
+
         self.imu = [self.roll, self.pitch] + list(self.data.sensordata) 
+        self.vx, self.vy, self.vz = self.data.sensordata[3:6]
+        self.yaw_vel = self.data.sensordata[2]
+
         self.joints = [self.data.joint(name).qpos[0] for name in self.motor_names]
         self.joint_vel = [self.data.joint(name).qvel[0] for name in self.motor_names]
         self.joint_force = list(self.data.actuator_force[:self.ac_size])
