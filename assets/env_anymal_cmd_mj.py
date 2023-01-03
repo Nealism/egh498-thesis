@@ -73,7 +73,7 @@ class Env(EnvBaseMJ):
         
         # array of Terrain objects loaded into the environment
         self.terrains = []
-        self.setup_terrain_xmls("test_terr.xml")
+        # self.setup_terrain_xmls("test_terr.xml")
 
         if self.args.add_terrain:
             self.terrain_generator = TerrainGen()
@@ -165,6 +165,9 @@ class Env(EnvBaseMJ):
         self.mj_waypoint_pos = self.ground_truth.rob_to_img_pos(self.waypoint_pos, 10, 10)
     
     def setup_terrain_xmls(self, file_name):
+        """
+        Creates and populates a terrain xml file
+        """
         # set up mujoco xml backbone
         boiler_plate = os.path.join(self.general_xml_path, "empty.xml")
         file = os.path.join(self.general_xml_path, file_name)
@@ -175,14 +178,19 @@ class Env(EnvBaseMJ):
         compiler = etree.SubElement(root, "compiler", attrib={
             "assetdir":"assets"
         })
+
+        # define assets
         asset = etree.SubElement(root, "asset")
-        wb = etree.SubElement(root, "worldbody")
         gt = etree.SubElement(asset, "hfield", attrib={
             "name":"ground_truth"
         })
+
+        # define worldbody stuff
+        wb = etree.SubElement(root, "worldbody")
         gt = etree.SubElement(wb, "geom", attrib={
             "name":"gt"
         })
+
         indent_xml(root)
         xml.write(file)
     
