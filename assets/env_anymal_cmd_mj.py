@@ -11,6 +11,10 @@ import os
 
 from .env_base_mj import EnvBaseMJ
 from utils.terrain import Terrain, TerrainGen
+from utils.xml_helper import indent_xml
+from lxml import etree
+import shutil
+
 
 ## CONSTANTS ##
 WHITE = (255, 255, 255)
@@ -69,6 +73,7 @@ class Env(EnvBaseMJ):
         
         # array of Terrain objects loaded into the environment
         self.terrains = []
+        self.setup_terrain_xmls("test_terr.xml")
 
         if self.args.add_terrain:
             self.terrain_generator = TerrainGen()
@@ -158,6 +163,28 @@ class Env(EnvBaseMJ):
         rand_y = np.random.uniform(low=self.pos[1]-self.mj_sub_sec_dim[1], high=self.pos[1]+self.mj_sub_sec_dim[1])
         self.waypoint_pos = (rand_x, rand_y)
         self.mj_waypoint_pos = self.ground_truth.rob_to_img_pos(self.waypoint_pos, 10, 10)
+    
+    def setup_terrain_xmls(self, file_name):
+        # set up mujoco xml backbone
+        boiler_plate = os.path.join(self.general_xml_path, "empty.xml")
+        file = os.path.join(self.general_xml_path, file_name)
+        shutil.copy(boiler_plate, file)
+
+        xml = etree.parse(file)
+        root = xml.getroot()
+        compiler = etree.SubElement(root, "compiler", attrib={
+            "assetdir":"assets"
+        })
+        asset = etree.SubElement(root, "asset")
+        wb = etree.SubElement(root, "worldbody")
+        gt = etree.SubElement(asset, "hfield", attrib={
+            "name":"ground_truth"
+        })
+        gt = etree.SubElement(wb, "geom", attrib={
+            "name":"gt"
+        })
+        indent_xml(root)
+        xml.write(file)
     
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:

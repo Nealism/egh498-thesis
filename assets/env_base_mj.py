@@ -10,6 +10,7 @@ comm = MPI.COMM_WORLD
 
 from utils import gen_grass, gen_tree
 
+
 class EnvBaseMJ(EnvBase):
 
     def set_position(self, pos=None, orn=None, joints=None, joint_vel=None):
@@ -44,6 +45,7 @@ class EnvBaseMJ(EnvBase):
         if joint_vel is not None:
             for value, name in zip(joint_vel, self.motor_names):
                 self.set_joint_qvel(name, value)
+    
 
     # ====================================================================================
     # Tree stuff
