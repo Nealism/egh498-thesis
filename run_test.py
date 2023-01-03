@@ -4,11 +4,10 @@ import numpy as np
 import glob
 import time
 from pathlib import Path
-
-home = str(Path.home())
-
 import default_arguments
 from utils.plotter import Plotter
+
+home = str(Path.home())
 
 def run(args): 
 
@@ -52,7 +51,7 @@ def run(args):
     obs = env.reset()
     while True:
         action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
-        obs, _, done, _ = env.step(action, cmds=[1.0,1.0,0.0])
+        obs, _, done, _ = env.step(action, cmds=[0.8,0.6,0])
         if args.do_plot:
             plotter.save_data({name:env.ob_dict[name] for name in names_to_plot})
         if done or env.steps > args.max_ep_len:

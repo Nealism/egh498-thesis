@@ -7,7 +7,7 @@ comm = MPI.COMM_WORLD
 from scipy.spatial.transform import Rotation
 import mujoco_viewer
 from pyquaternion import Quaternion
-import glfw
+import os
 
 from .env_base_mj import EnvBaseMJ
 from utils.terrain import Terrain, TerrainGen
@@ -53,11 +53,35 @@ class Env(EnvBaseMJ):
             self.set_up_xmls()
         
         self.viewer = None
-        self.terrain_generator = TerrainGen()
-        self.load_terrain_images()
-        self.load_robot()
+
+        # dimensions of entire ground truth 
+        self.ground_truth_dim = (500, 500) # image - (i, j)
+        self.mj_ground_truth_dim = (10, 10) # mj - x_rad, y_rad
+
+        #dimensions of the height map sub-section the robot 'sees'
+        self.sub_sec_dim = (80, 80) 
+        self.mj_sub_sec_dim = (self.mj_ground_truth_dim[0] / (self.ground_truth_dim[0] / self.sub_sec_dim[0]),  
+                               self.mj_ground_truth_dim[1] / (self.ground_truth_dim[1] / self.sub_sec_dim[1]))
         
-        self.ob_size = 54
+        # current waypoint position
+        self.waypoint_pos = None
+        self.mj_waypoint_pos = None
+        
+        # array of Terrain objects loaded into the environment
+        self.terrains = []
+
+        if self.args.add_terrain:
+            self.terrain_generator = TerrainGen()
+            self.load_terrain_images()
+        
+        self.load_robot()
+    
+        self.taking_cmds = True # just if I want to use brendan's waking gate (remove when done)
+
+        if self.taking_cmds:
+            self.ob_size = 54
+        else:
+            self.ob_size = 51
         self.ac_size = 12
 
         self.motor_names = ['LF_HAA', 'LF_HFE', 'LF_KFE', 'RF_HAA', 'RF_HFE', 'RF_KFE', 'LH_HAA', 'LH_HFE', 'LH_KFE', 'RH_HAA', 'RH_HFE', 'RH_KFE']
@@ -98,16 +122,43 @@ class Env(EnvBaseMJ):
         # self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
     def load_terrain_images(self):
+        """
+        Generates any images we want to load into mujoco as terrain for the 
+        robot to traverse.
+        """
         # generate and load ground truth image
-        dim = (500, 500)
-        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, dim)
+        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.ground_truth_dim)
         self.ground_truth = Terrain(gt_arr, self.mesh_dir, "ground_truth.png")
+        self.terrains.append(self.ground_truth)
 
         # generate and load other curves
         fn = self.terrain_generator.hump_func
         curve = self.terrain_generator.gen_curve(-5, 5, 5, 5, 500, fn)
         self.curve1 = Terrain(curve, self.mesh_dir, "curve1.png")
-
+        self.terrains.append(self.curve1)
+    
+    def show_map(self, show_waypoint=True):
+        """
+        Displays a birds-eye map of the ground truth the robot is traversing.
+        Also draws a bounding box around the robot's sub-section (image
+        the policy is fed)
+        """
+        img_copy = self.ground_truth.terr_img.copy()
+        box_centre = self.ground_truth.rob_to_img_pos(self.pos, 10, 10) 
+        Terrain.draw_bounding_box(img_copy, box_centre, self.sub_sec_dim[0], self.sub_sec_dim[1])
+        if show_waypoint:
+            Terrain.draw_dot(img_copy, self.mj_waypoint_pos)
+        Terrain.display_img(img_copy)
+    
+    def gen_new_waypoint(self):
+        """
+        Generates a random waypoint within the robot's sub-section
+        """
+        rand_x = np.random.uniform(low=self.pos[0]-self.mj_sub_sec_dim[0], high=self.pos[0]+self.mj_sub_sec_dim[0])
+        rand_y = np.random.uniform(low=self.pos[1]-self.mj_sub_sec_dim[1], high=self.pos[1]+self.mj_sub_sec_dim[1])
+        self.waypoint_pos = (rand_x, rand_y)
+        self.mj_waypoint_pos = self.ground_truth.rob_to_img_pos(self.waypoint_pos, 10, 10)
+    
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
@@ -208,13 +259,27 @@ class Env(EnvBaseMJ):
         self.goal = []
 
         self.prev_actions = self.joints
-        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        if self.taking_cmds:
+            state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        else:
+            state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return state
 
     def step(self, actions=None, replay_state=None, additional_stuff=None, cmds=None):
-        img_pos = self.ground_truth.robot_to_image_pos(self.pos, 10, 10) 
-        self.ground_truth.display_box(img_pos, 80, 80, colour=WHITE, thickness=2) 
+        """
+        TODO: make a self.args.show_map argument
+        we want to be able to show the map, bounding boxes and waypoints even if 
+        person is not using ground truth
 
+        -means we need a map to show people if they haven't loaded in any terrain
+        (empty image)
+        -which in turn means we need the auto xml load thing
+        """
+        if self.args.add_terrain:
+            if self.steps % 100 == 0:
+                self.gen_new_waypoint()
+            self.show_map(show_waypoint=True)
+            
         if cmds is not None:
             self.commands = cmds
         if self.paused:
@@ -302,8 +367,10 @@ class Env(EnvBaseMJ):
         self.total_return += reward
         self.steps += 1
 
-
-        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        if self.taking_cmds:
+            state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        else:
+            state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return np.array(state), reward, done, None
     
     def get_reward(self):
