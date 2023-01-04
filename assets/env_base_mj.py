@@ -6,6 +6,7 @@ from lxml import etree
 import shutil
 import os
 from mpi4py import MPI
+from utils.xml_helper import indent_xml
 comm = MPI.COMM_WORLD
 
 from utils import gen_grass, gen_tree
@@ -52,10 +53,10 @@ class EnvBaseMJ(EnvBase):
     # ====================================================================================
     def save_xml(self, path):
         # Change the location of meshdir (when on the hpc) and save a copy of the current tree
-        replay_scene_dir = self.tree_dir + "/replay_scene" + path + ".xml"
-        replay_tree_dir = self.tree_dir + "/replay_tree" + path + ".xml"
-        scene_dir = self.tree_dir + "/scene_0.xml"
-        tree_dir = self.tree_dir + "/tree_0.xml"
+        replay_scene_dir = self.xml_assets_dir + "/replay_scene" + path + ".xml"
+        replay_tree_dir = self.xml_assets_dir + "/replay_tree" + path + ".xml"
+        scene_dir = self.xml_assets_dir + "/scene_0.xml"
+        tree_dir = self.xml_assets_dir + "/tree_0.xml"
         shutil.copyfile(tree_dir, replay_tree_dir)
         shutil.copyfile(scene_dir, replay_scene_dir)
 
@@ -75,47 +76,92 @@ class EnvBaseMJ(EnvBase):
                 self.save_xml("_test")
             self.save_xml("")
 
+    def get_relative_assets_path(self, copy_path):
+        """
+        Returns the path from the experimental folder (/scratch1/... for hpc) 
+        to the xmls assets folder
+        """
+        # path from experimental folder to normal assets folder
+        dir_depth = len(copy_path.split("/")) - 2
+        return "../" * (dir_depth - 1) + ".." + os.getcwd() + "/" + self.mesh_dir
+
+
     def set_up_xmls(self):
-        # Copies robot_name.xml to experiment directory and updates mesh path. Creates process specific xml's for thread safe loading of trees
-        self.tree_dir = os.path.join(self.PATH, "trees")
+        """
+        Creates process specific xml's for thread safe loading of general assets (not just trees). 
+        xmls are loaded into the experiment directory for easy use. 
+        
+        xml's:
+            robot_name.xml (common to all)
+            scene_{rank}.xml 
+            
+            AND, OPTIONALLY:
+                tree_{rank}.xml 
+                terrain_{rank}.xml
+        
+        NOTE: all held in /xml_assets subdir. (was /trees)
+        """
+        self.xml_assets_dir = os.path.join(self.PATH, "xml_assets")
+        # parent proc. creates robot_name.xml copy
         if self.rank == 0:
-            print("Tree dir:")
-            print(self.tree_dir)
-            if not os.path.exists(self.tree_dir):
-                os.mkdir(self.tree_dir)
+            print(f"\nxml assets dir: {self.xml_assets_dir}")
+            if not os.path.exists(self.xml_assets_dir):
+                os.mkdir(self.xml_assets_dir)
+
             if self.args.control_type == "torque":
                 orig_path = "/".join(self.model_path.split("/")[:-1]) + "/" + self.robot_name + "_torque.xml"
-                copy_path = "/".join(self.tree_dir.split("/")[:-1]) + "/trees/" + self.robot_name + "_torque.xml"
+                copy_path = "/".join(self.xml_assets_dir.split("/")[:-1]) + "/xml_assets/" + self.robot_name + "_torque.xml"
             else:
                 orig_path = "/".join(self.model_path.split("/")[:-1]) + "/" + self.robot_name + ".xml"
-                copy_path = "/".join(self.tree_dir.split("/")[:-1]) + "/trees/" + self.robot_name + ".xml"
+                copy_path = "/".join(self.xml_assets_dir.split("/")[:-1]) + "/xml_assets/" + self.robot_name + ".xml"
             shutil.copyfile(orig_path, copy_path)
 
-            xml = etree.parse(copy_path)
-            dir_depth = len(copy_path.split("/")) - 2
-            for elem in xml.findall("compiler"):
-                elem.attrib['meshdir'] = "../" * (dir_depth - 1) + ".." + os.getcwd() + "/" + self.mesh_dir 
-                elem.attrib['texturedir'] = "../" * (dir_depth - 1) + ".." + os.getcwd() + "/" + self.mesh_dir 
-            xml.write(copy_path, pretty_print=True)
+            # modify robot_name.xml's meshdir and texturedir path
+            robot_xml = etree.parse(copy_path)
+            for elem in robot_xml.findall("compiler"):
+                elem.attrib['meshdir'] = self.get_relative_assets_path(copy_path)
+                elem.attrib['texturedir'] = self.get_relative_assets_path(copy_path)
+            robot_xml.write(copy_path, pretty_print=True)
 
         # Wait for rank == 0 to set up folders
         comm.Barrier()
 
-        #Copy blank tree to new dir
-        orig_path ="/".join(self.model_path.split("/")[:-1]) + "/tree.xml"
-        copy_path = "/".join(self.tree_dir.split("/")[:-1]) + "/trees/tree_" + str(self.rank) + ".xml"
-        shutil.copyfile(orig_path, copy_path)
-
-        #Copy the model file to the new directory and edit the include to include the new tree 
-        model_path = self.tree_dir + "/scene_" + str(self.rank) + ".xml"
+        # each proc. creates a scene_{rank}.xml
+        model_path = self.xml_assets_dir + "/scene_" + str(self.rank) + ".xml"
         shutil.copyfile(self.model_path, model_path)
-        tree_xml = etree.parse(model_path)
-        for elem in tree_xml.getroot():
-            if elem.tag == "include" and elem.attrib['file'] == "tree.xml":
-                elem.attrib["file"] = "tree_" + str(self.rank) + ".xml"
+        scene_xml = etree.parse(model_path)
+
+        # each proc. optionally can create tree_{rank}.xml
+        if self.args.tree_type:
+            # copy blank tree to new dir
+            orig_path ="/".join(self.model_path.split("/")[:-1]) + "/tree.xml"
+            copy_path = "/".join(self.xml_assets_dir.split("/")[:-1]) + "/xml_assets/tree_" + str(self.rank) + ".xml"
+            shutil.copyfile(orig_path, copy_path)
+
+            # edit scene_{rank}.xml include
+            tree_include = etree.SubElement(scene_xml.getroot(), "include")
+            tree_include.attrib["file"] = "tree_" + str(self.rank) + ".xml"
+
+        # each proc. optionally can create terrain_{rank}.xml
+        if self.args.add_terrain:
+            # copy blank terrain to new dir
+            orig_path ="/".join(self.model_path.split("/")[:-1]) + "/base_terrain.xml"
+            copy_path = "/".join(self.xml_assets_dir.split("/")[:-1]) + "/xml_assets/terrain_" + str(self.rank) + ".xml"
+            shutil.copyfile(orig_path, copy_path)
+
+            #modify terrain_{rank}.xml's assetdir path (like we did with robot_xml (above))
+            terrain_xml = etree.parse(copy_path)
+            for elem in terrain_xml.findall("compiler"):
+                elem.attrib['assetdir'] = self.get_relative_assets_path(copy_path)
+            terrain_xml.write(copy_path, pretty_print=True)
+            
+            # edit scene_{rank}.xml include
+            terrain_include = etree.SubElement(scene_xml.getroot(), "include")
+            terrain_include.attrib["file"] = "terrain_" + str(self.rank) + ".xml"
 
         #Then save the new model file
-        tree_xml.write(model_path, pretty_print=True)
+        indent_xml(scene_xml.getroot())
+        scene_xml.write(model_path, pretty_print=True)
 
         # Update the model path
         self.model_path = model_path
@@ -129,7 +175,7 @@ class EnvBaseMJ(EnvBase):
         elif self.args.tree_type == "grass":
             xml, self.tree = gen_grass.generate_tree(base_radius=radius, base_half_height=height, base_damping=damping, base_stiffness=stiffness, pos=pos, rot=rot, num=num, segs_per_branch=segs_per_branch, spread=spread, z_height=z_height)
 
-        tree_path = os.path.join(self.tree_dir, "tree_" + str(self.rank) + ".xml")
+        tree_path = os.path.join(self.xml_assets_dir, "tree_" + str(self.rank) + ".xml")
         etree.ElementTree(xml).write(tree_path, pretty_print=True)
 
     # ====================================================================================

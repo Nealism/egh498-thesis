@@ -53,9 +53,7 @@ class Env(EnvBaseMJ):
         self.mesh_dir = self.general_xml_path + "assets/"
         # self.action_multiplier = 0.0
         
-        if self.args.tree_type:
-            self.set_up_xmls()
-        
+                
         self.viewer = None
 
         # dimensions of entire ground truth 
@@ -79,6 +77,9 @@ class Env(EnvBaseMJ):
             self.terrain_generator = TerrainGen()
             self.load_terrain_images()
         
+        if self.args.tree_type or self.args.add_terrain:
+            self.set_up_xmls()
+
         self.load_robot()
     
         self.taking_cmds = True # just if I want to use brendan's waking gate (remove when done)
@@ -233,7 +234,6 @@ class Env(EnvBaseMJ):
         return len(self.success) == 5 and (np.array(self.success) == True).all()
 
     def reset(self, test=False, model_path=None, restore_state=None):
-
         if self.steps > 0:
             for key in self.reward_dict:
                 self.reward_dict[key].append(self.ep_reward_dict[key]/self.steps)
@@ -313,8 +313,9 @@ class Env(EnvBaseMJ):
         if self.args.add_terrain:
             if self.steps % 100 == 0:
                 self.gen_new_waypoint()
-            self.show_map(show_waypoint=True)
-            
+            if self.rank == 0: # only show map for one env
+                self.show_map(show_waypoint=True)
+
         if cmds is not None:
             self.commands = cmds
         if self.paused:

@@ -1,9 +1,0 @@
-<mujoco>
-  <compiler assetdir="assets"/>
-<asset>
-  <hfield name="ground_truth"/>
-</asset>
-<worldbody>
-  <geom name="gt"/>
-</worldbody>
-</mujoco>
