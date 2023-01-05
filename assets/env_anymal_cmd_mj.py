@@ -10,7 +10,7 @@ from pyquaternion import Quaternion
 import os
 
 from .env_base_mj import EnvBaseMJ
-from utils.terrain import Terrain, TerrainGen
+from utils.terrain import Terrain, Hfield, TerrainGen
 from utils.xml_helper import indent_xml
 from lxml import etree
 import shutil
@@ -30,16 +30,20 @@ class Env(EnvBaseMJ):
     initial_Kp = Kp
     def __init__(self, PATH=None, args=None, writer=None):
 
+        self.test_rank = 0
         self.args = args
-        self.render = args.render and self.rank == 0
+        self.render = args.render and self.rank == self.test_rank
         self.PATH = PATH
         self.writer = writer
         self.master = True 
 
         super().__init__(PATH)
 
-        self.general_xml_path = "assets/xmls/anybotics_anymal_c/"
+        self.robot_name = "anymal_c"
 
+        ##### PATHS #####
+        self.general_xml_path = "assets/xmls/anybotics_anymal_c/"
+        self.base_terrain_xml = "base_terrain.xml"
         # Name of the base link in the xml, for setting the robot position on reset
         self.base_link = "base"
         if self.args.control_type == "torque":
@@ -48,13 +52,19 @@ class Env(EnvBaseMJ):
         elif self.args.control_type == "position":
             self.model_path = self.general_xml_path + "scene.xml"
             self.action_multiplier = 0.2
-
-        self.robot_name = "anymal_c"
         self.mesh_dir = self.general_xml_path + "assets/"
+        
         # self.action_multiplier = 0.0
         
-                
         self.viewer = None
+
+        # waypoint position
+        self.waypoint_pos = None
+        self.mj_waypoint_pos = None
+
+        #######################################
+        #            TERRAIN STUFF            #
+        #######################################
 
         # dimensions of entire ground truth 
         self.ground_truth_dim = (500, 500) # image - (i, j)
@@ -65,20 +75,17 @@ class Env(EnvBaseMJ):
         self.mj_sub_sec_dim = (self.mj_ground_truth_dim[0] / (self.ground_truth_dim[0] / self.sub_sec_dim[0]),  
                                self.mj_ground_truth_dim[1] / (self.ground_truth_dim[1] / self.sub_sec_dim[1]))
         
-        # current waypoint position
-        self.waypoint_pos = None
-        self.mj_waypoint_pos = None
-        
-        # array of Terrain objects loaded into the environment
-        self.terrains = []
-        # self.setup_terrain_xmls("test_terr.xml")
-
-        if self.args.add_terrain:
-            self.terrain_generator = TerrainGen()
-            self.load_terrain_images()
-        
+        # set up base xml files for this rank/process (scene, tree, terrain etc.)
         if self.args.tree_type or self.args.add_terrain:
             self.set_up_xmls()
+
+        # load all Terrain objects into the env
+        if self.args.add_terrain:
+            self.terrains = [] #array of Terrain objects
+            self.terrain_generator = TerrainGen()
+            self.load_terrains()
+            terrain_path = "/".join(self.model_path.split("/")[:-1]) + f"/terrain_{str(self.rank)}.xml"
+            self.populate_terrain_xml(terrain_path) 
 
         self.load_robot()
     
@@ -127,22 +134,19 @@ class Env(EnvBaseMJ):
         # States that we want to restore, for resuming training after running a test
         # self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
-    def load_terrain_images(self):
+    def load_terrains(self):
         """
-        Generates any images we want to load into mujoco as terrain for the 
-        robot to traverse.
+        Generates all Terrain objects for this environment and adds them to the terrains array.
+
+        NOTE: By default, always load the ground truth
+        NOTE: can optionally create other terrains (write code below it)
         """
         # generate and load ground truth image
         gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.ground_truth_dim)
-        self.ground_truth = Terrain(gt_arr, self.mesh_dir, "ground_truth.png")
+        self.ground_truth = Hfield(gt_arr, self.mesh_dir, f"ground_truth_{str(self.rank)}",
+                                   position="0 0 0", size="100 100 0.05 0.001")
         self.terrains.append(self.ground_truth)
-
-        # generate and load other curves
-        fn = self.terrain_generator.hump_func
-        curve = self.terrain_generator.gen_curve(-5, 5, 5, 5, 500, fn)
-        self.curve1 = Terrain(curve, self.mesh_dir, "curve1.png")
-        self.terrains.append(self.curve1)
-    
+        
     def show_map(self, show_waypoint=True):
         """
         Displays a birds-eye map of the ground truth the robot is traversing.
@@ -195,6 +199,21 @@ class Env(EnvBaseMJ):
         indent_xml(root)
         xml.write(file)
     
+    def populate_terrain_xml(self, file_name):
+        file_path = os.path.join(self.general_xml_path, file_name)
+        xml = etree.parse(file_path)
+        root = xml.getroot()
+        # asset element - where all hfields and meshes live
+        asset = etree.SubElement(root, "asset")
+        # worldbody element - where all the referencing geoms live
+        worldbody = etree.SubElement(root, "worldbody")
+
+        # add all terrains to the xml file
+        for terr in self.terrains:
+            terr.add_to_xml(asset, worldbody)
+        indent_xml(root)
+        xml.write(file_name)
+
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
@@ -313,7 +332,7 @@ class Env(EnvBaseMJ):
         if self.args.add_terrain:
             if self.steps % 100 == 0:
                 self.gen_new_waypoint()
-            if self.rank == 0: # only show map for one env
+            if self.rank == self.test_rank: # only show map for one env
                 self.show_map(show_waypoint=True)
 
         if cmds is not None:

@@ -145,7 +145,7 @@ class EnvBaseMJ(EnvBase):
         # each proc. optionally can create terrain_{rank}.xml
         if self.args.add_terrain:
             # copy blank terrain to new dir
-            orig_path ="/".join(self.model_path.split("/")[:-1]) + "/base_terrain.xml"
+            orig_path ="/".join(self.model_path.split("/")[:-1]) + "/" + self.base_terrain_xml
             copy_path = "/".join(self.xml_assets_dir.split("/")[:-1]) + "/xml_assets/terrain_" + str(self.rank) + ".xml"
             shutil.copyfile(orig_path, copy_path)
 
