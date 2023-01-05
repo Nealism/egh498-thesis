@@ -143,7 +143,7 @@ class Env(EnvBaseMJ):
         """
         # generate and load ground truth image
         gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.ground_truth_dim)
-        self.ground_truth = Hfield(gt_arr, self.mesh_dir, f"ground_truth_{str(self.rank)}",
+        self.ground_truth = Hfield(gt_arr, "/".join(self.model_path.split("/")[:-1]) + "/", f"ground_truth_{str(self.rank)}",
                                    position="0 0 0", size="100 100 0.05 0.001")
         self.terrains.append(self.ground_truth)
         
@@ -169,43 +169,16 @@ class Env(EnvBaseMJ):
         self.waypoint_pos = (rand_x, rand_y)
         self.mj_waypoint_pos = self.ground_truth.rob_to_img_pos(self.waypoint_pos, 10, 10)
     
-    def setup_terrain_xmls(self, file_name):
-        """
-        Creates and populates a terrain xml file
-        """
-        # set up mujoco xml backbone
-        boiler_plate = os.path.join(self.general_xml_path, "empty.xml")
-        file = os.path.join(self.general_xml_path, file_name)
-        shutil.copy(boiler_plate, file)
-
-        xml = etree.parse(file)
-        root = xml.getroot()
-        compiler = etree.SubElement(root, "compiler", attrib={
-            "assetdir":"assets"
-        })
-
-        # define assets
-        asset = etree.SubElement(root, "asset")
-        gt = etree.SubElement(asset, "hfield", attrib={
-            "name":"ground_truth"
-        })
-
-        # define worldbody stuff
-        wb = etree.SubElement(root, "worldbody")
-        gt = etree.SubElement(wb, "geom", attrib={
-            "name":"gt"
-        })
-
-        indent_xml(root)
-        xml.write(file)
-    
     def populate_terrain_xml(self, file_name):
+        """
+        Builds up the terrain xml (for this process)  
+        """
         file_path = os.path.join(self.general_xml_path, file_name)
         xml = etree.parse(file_path)
         root = xml.getroot()
-        # asset element - where all hfields and meshes live
+        # asset el - where all hfields and meshes live
         asset = etree.SubElement(root, "asset")
-        # worldbody element - where all the referencing geoms live
+        # worldbody el - where all the referencing geoms live
         worldbody = etree.SubElement(root, "worldbody")
 
         # add all terrains to the xml file

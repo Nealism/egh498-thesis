@@ -138,7 +138,7 @@ class EnvBaseMJ(EnvBase):
             copy_path = "/".join(self.xml_assets_dir.split("/")[:-1]) + "/xml_assets/tree_" + str(self.rank) + ".xml"
             shutil.copyfile(orig_path, copy_path)
 
-            # edit scene_{rank}.xml include
+            # include tree_{rank}.xml in scene_{rank}.xml
             tree_include = etree.SubElement(scene_xml.getroot(), "include")
             tree_include.attrib["file"] = "tree_" + str(self.rank) + ".xml"
 
@@ -149,13 +149,13 @@ class EnvBaseMJ(EnvBase):
             copy_path = "/".join(self.xml_assets_dir.split("/")[:-1]) + "/xml_assets/terrain_" + str(self.rank) + ".xml"
             shutil.copyfile(orig_path, copy_path)
 
-            #modify terrain_{rank}.xml's assetdir path (like we did with robot_xml (above))
+            # create compiler el and modify it's assetdir path (as in robot_xml)
             terrain_xml = etree.parse(copy_path)
-            for elem in terrain_xml.findall("compiler"):
-                elem.attrib['assetdir'] = self.get_relative_assets_path(copy_path)
+            compiler = etree.SubElement(terrain_xml.getroot(), "compiler")
+            compiler.attrib['assetdir'] = self.get_relative_assets_path(copy_path)
             terrain_xml.write(copy_path, pretty_print=True)
             
-            # edit scene_{rank}.xml include
+            # include terrain_{rank}.xml in scene_{rank}.xml
             terrain_include = etree.SubElement(scene_xml.getroot(), "include")
             terrain_include.attrib["file"] = "terrain_" + str(self.rank) + ".xml"
 
