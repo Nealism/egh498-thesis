@@ -55,19 +55,19 @@ class Env(EnvBaseMJ):
 
         # waypoint - goal position for robot
         self.show_waypoint = True
-        self.waypoint_pos = None
-        self.mj_waypoint_pos = None
+        self.waypoint_pos_im = None
+        self.waypoint_pos_mj = None
 
         #######################################
         #            TERRAIN STUFF            #
         #######################################
 
         # ground truth dimensions
-        self.gt_img_dim = (500, 500) # image (max (i, j) in pixels)
+        self.gt_img_dim = (500, 500) # image (max (x, y) in pixels)
         self.gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
         
         # height map dimensions
-        self.hm_img_dim = (100, 100) # image sub-section - (max (i, j) in pixels)
+        self.hm_img_dim = (100, 100) # image sub-section - (max (x, y) in pixels)
         self.hm_mj_dim = (self.gt_mj_dim[0] / (self.gt_img_dim[0] / self.hm_img_dim[0]),  
                                self.gt_mj_dim[1] / (self.gt_img_dim[1] / self.hm_img_dim[1])) # mj hfield sub-section (x_rad, y_rad)
         
@@ -133,10 +133,11 @@ class Env(EnvBaseMJ):
         NOTE: can optionally create other terrains 
         """
         # generate and load ground truth image
-        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.gt_img_dim)
+        # gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.gt_img_dim)
+        gt_arr = self.terrain_generator.gen_cluster(self.gt_img_dim)
         gt_position = (0, 0, 0)
         # NOTE: can change elev. and depth for each env, or keep constant for each (as we've done here)
-        elevation = 0.08
+        elevation = 0.01
         depth = 1
         gt_size = (self.gt_mj_dim[0], self.gt_mj_dim[1], elevation, depth)
         self.ground_truth = Hfield(gt_arr, self.get_parent_dir(self.model_path), f"ground_truth_{str(self.rank)}",
@@ -301,6 +302,8 @@ class Env(EnvBaseMJ):
         if self.args.add_terrain:
             if self.steps % 100 == 0:
                 self.gen_new_waypoint()
+                test = self.ground_truth.compute_sub_section(self.pos[0], self.pos[1], self.hm_img_dim[0], self.hm_img_dim[1])
+                print(test)
             if self.rank == self.view_rank: # only show map for one env
                 self.show_map()
 

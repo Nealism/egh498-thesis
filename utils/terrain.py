@@ -19,8 +19,8 @@ class Terrain():
         self.terr_arr = terr_arr         
         # terrain image (PNG)
         self.terr_img = self.load_terr_img() 
-        # image dimensions (pixels)
-        self.image_dim = self.terr_arr.shape
+        # (X, Y) image dimensions in pixels
+        self.image_dim = (self.terr_arr.shape[1], self.terr_arr.shape[0]) # (X, Y) == (col, row)
 
     def load_terr_img(self):
         """ 
@@ -30,28 +30,6 @@ class Terrain():
         img = cv2.imread(self.img_path)
         return img
     
-    def compute_sub_section(self, i, j, n, m):
-        """
-        Given an (i, j) index in the terrain array, compute the n x m subsection around (i, j)
-
-        Params:
-            i, j - (i, j) index in arr
-            n, m - dimensions of sub-section to compute
-        
-        Returns:
-            sub_section array
-        """
-        min_row, min_col, max_row, max_col = img_helpers.top_left_bot_right(i, j, n, m)
-        # check sub-section is in range of the base arr
-        if (max_row + 1 > self.terr_arr.shape[0] 
-            or max_col + 1 > self.terr_arr.shape[1] 
-            or min_row < 0 
-            or min_col < 0):
-            print("Sub-section out of range")
-            return None
-        
-        return self.terr_arr[min_row:max_row, min_col:max_col]
-
     def add_to_xml(self):
         raise NotImplementedError 
     
@@ -88,19 +66,47 @@ class Hfield(Terrain):
 
     def rob_to_img_pos(self, pos):
         """
-        Converts a position in mujoco to an (i, j) index in the terrain image
+        Converts a position in mujoco (x1, y1) to a position in the hfield image (x2, y2)
 
         NOTE: Assumes hfield is centred at pos == (0, 0, 0) in mujoco
 
         Params:
-            pos - mujoco position
+            pos - mujoco position (x1, y1)
         """
-        x_rad, y_rad = self.size[0], self.size[1]
-        # +x == +i (right in mujoco and right in image respectively)
-        i = int((pos[0] + x_rad) * ((self.image_dim[0] // 2) // x_rad))
-        # +y == -j (up-screen in mujoco and down-screen in image respectively)
-        j = int((-1 * pos[1] + y_rad) * ((self.image_dim[1] // 2) // x_rad))
-        return (i, j)
+        x1, y1 = pos[0], pos[1]
+        x1_rad, y1_rad = self.size[0], self.size[1]
+        x2_rad, y2_rad = self.image_dim[0] // 2, self.image_dim[1] // 2
+        # +x mj == +x im 
+        x = int((x1 + x1_rad) * (x2_rad // x1_rad))
+        # +y mj == -y im (up-screen in mujoco is downscreen in image)
+        y = int((-1 * y1 + y1_rad) * (y2_rad // y1_rad))
+        return (x, y)
+
+    def compute_sub_section(self, x, y, X, Y):
+        """
+        Given a position in mujoco (x, y), compute the X x Y subsection of the hfield array 
+        around it
+
+        Params:
+            x, y - position in mujoco
+            X, Y - dimensions of sub-section to compute 
+        
+        Returns:
+            sub_section array
+        """
+        # (x, y) position in image
+        im_x, im_y = self.rob_to_img_pos((x, y))
+        (min_x, min_y), (max_x, max_y) = img_helpers.top_left_bot_right(im_x, im_y, X, Y)
+        # check sub-section is in range of the base arr
+        if (max_x + 1 > self.image_dim[0]
+            or max_y + 1 > self.image_dim[1]
+            or min_x < 0 
+            or min_y < 0):
+            print("Sub-section out of range")
+            return None
+
+        # (x, y) == (col, row)
+        return self.terr_arr[min_y:max_y+1, min_x:max_x+1]
 
     def add_to_xml(self, hfield_parent, geom_parent):
         """
@@ -109,7 +115,6 @@ class Hfield(Terrain):
         hfield_parent.append(self.hfield_el)
         geom_parent.append(self.geom_el)
     
-
 """
 Class to represent a mesh in mujoco
 """
@@ -127,15 +132,18 @@ class TerrainGen():
     def gen_rand_ground_truth(self, zl, zh, dimensions):
         """
         Randomly generates a 2D numpy array that serves as the basis for the height map.
-        NOTE: zl and zh define the range we sample from 
+
+        Params:
+            zl-zh defines the range we sample heights from 
+            dimensions - (X, Y), NOT (row, col)
         """
         if len(dimensions) != 2:
-            print("Dimensions of ground truth must be of form: (x, y) (or any numpy equivalent)")
+            print("Dimensions of ground truth must be of form: (x, y)")
             return None
-        gt = np.random.uniform(low=zl, high=zh, size=dimensions)
+        gt = np.random.uniform(low=zl, high=zh, size=(dimensions[1], dimensions[0]))
         return gt
-
-    def gen_curve(self, xl, xh, yl, yh, num_points, fn, plot=False):
+    
+    def gen_curve(self, xl, xh, yl, yh, num_points, fn):
         """
         fn is applied element-wise to generate a 2D numpy array that can serve as the basis of a surface in mujoco.
         NOTE: xl, xh, yl, yh define the x and y ranges (dimensions of the array)
@@ -160,3 +168,7 @@ class TerrainGen():
     def gaussian(self, x, y, sigma=1):
         z = 25*(1/(2*np.pi*sigma**2)) * np.exp(-1*((0.1*x**2 + 0.1*y**2)/(2*sigma**2)))
         return z
+
+
+if __name__ == '__main__':
+    pass

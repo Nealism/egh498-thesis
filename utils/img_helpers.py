@@ -4,20 +4,19 @@ import cv2
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (0, 0, 255)
-GREEN = (0, 255, 0)
 
-def top_left_bot_right(i, j, n, m):
+def top_left_bot_right(x, y, X, Y):
     """
-    Returns the top left and bottom right positions of an nxm sub-section
-    centred at (i, j)
+    Returns the top left and bottom right positions of an X x Y sub-section
+    centred at (x,y)
     """
-    min_row = i - n // 2
-    min_col = j - m // 2
-    max_row = i + n // 2 + 1 if n % 2 == 1 else i + m // 2
-    max_col = j + m // 2 + 1 if m % 2 == 1 else j + m // 2
-    return (min_row, min_col), (max_row - 1, max_col - 1)
+    min_x = x - X // 2
+    min_y = y - Y // 2
+    max_x = x + X // 2 + 1 if X % 2 == 1 else x + X // 2
+    max_y = y + Y // 2 + 1 if Y % 2 == 1 else y + Y // 2
+    return (min_x, min_y), (max_x - 1, max_y - 1)
 
-def draw_bounding_box(img, pos, n, m, colour=WHITE, thickness=3):
+def draw_bounding_box(img, pos, X, Y, colour=WHITE, thickness=3):
     """
     Draws a bounding box of dimensions nxm onto the given image 
 
@@ -25,10 +24,10 @@ def draw_bounding_box(img, pos, n, m, colour=WHITE, thickness=3):
     in real time
 
     Params:
-        pos - (i,j) image position of box's centre
-        n,m - dimensions of bounding box (pixels)
+        pos - (x,y) image position of box's centre
+        X,Y - dimensions of bounding box (pixels)
     """
-    tl, br = top_left_bot_right(pos[0], pos[1], n, m)
+    tl, br = top_left_bot_right(pos[0], pos[1], X, Y)
     # draw rectangle on copy to preserve the original
     cv2.rectangle(img, tl, br, colour, thickness)
 
