@@ -62,14 +62,14 @@ class Env(EnvBaseMJ):
         #            TERRAIN STUFF            #
         #######################################
 
-        # dimensions of entire ground truth
-        self.ground_truth_dim = (500, 500) # image - (i, j)
-        self.mj_ground_truth_dim = (10, 10) # mj - x_rad, y_rad
-
-        #dimensions of the height map sub-section the robot 'sees'
-        self.sub_sec_dim = (100, 100) # image - (i, j)
-        self.mj_sub_sec_dim = (self.mj_ground_truth_dim[0] / (self.ground_truth_dim[0] / self.sub_sec_dim[0]),  
-                               self.mj_ground_truth_dim[1] / (self.ground_truth_dim[1] / self.sub_sec_dim[1])) # mj - x_rad, y_rad
+        # ground truth dimensions
+        self.gt_img_dim = (500, 500) # image (max (i, j) in pixels)
+        self.gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
+        
+        # height map dimensions
+        self.hm_img_dim = (100, 100) # image sub-section - (max (i, j) in pixels)
+        self.hm_mj_dim = (self.gt_mj_dim[0] / (self.gt_img_dim[0] / self.hm_img_dim[0]),  
+                               self.gt_mj_dim[1] / (self.gt_img_dim[1] / self.hm_img_dim[1])) # mj hfield sub-section (x_rad, y_rad)
         
         # set up base xml files for this rank/process (scene, tree, terrain etc.)
         if self.args.tree_type or self.args.add_terrain:
@@ -133,11 +133,12 @@ class Env(EnvBaseMJ):
         NOTE: can optionally create other terrains 
         """
         # generate and load ground truth image
-        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.ground_truth_dim)
-        #NOTE: here, each env gets ground truth with same dimensions (heights still random of course)
-        #NOTE: can obviously make it different for each, and in fact, we may end up doing this
-        gt_size = "50 50 0.08 1"
-        gt_position = "0 0 0"
+        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.gt_img_dim)
+        gt_position = (0, 0, 0)
+        # NOTE: can change elev. and depth for each env, or keep constant for each (as we've done here)
+        elevation = 0.08
+        depth = 1
+        gt_size = (self.gt_mj_dim[0], self.gt_mj_dim[1], elevation, depth)
         self.ground_truth = Hfield(gt_arr, self.get_parent_dir(self.model_path), f"ground_truth_{str(self.rank)}",
                                    gt_position, gt_size)
         self.terrains.append(self.ground_truth)
@@ -152,20 +153,20 @@ class Env(EnvBaseMJ):
         the policy is fed)
         """
         img_copy = self.ground_truth.terr_img.copy()
-        box_centre = self.ground_truth.rob_to_img_pos(self.pos, 10, 10) 
-        img_helpers.draw_bounding_box(img_copy, box_centre, self.sub_sec_dim[0], self.sub_sec_dim[1])
+        box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
+        img_helpers.draw_bounding_box(img_copy, box_centre, self.hm_img_dim[0], self.hm_img_dim[1])
         if self.show_waypoint:
-            img_helpers.draw_dot(img_copy, self.mj_waypoint_pos)
+            img_helpers.draw_dot(img_copy, self.waypoint_pos_im)
         img_helpers.display_img(img_copy)
     
     def gen_new_waypoint(self):
         """
         Generates a random waypoint within the robot's current sub-section
         """
-        rand_x = np.random.uniform(low=self.pos[0]-self.mj_sub_sec_dim[0], high=self.pos[0]+self.mj_sub_sec_dim[0])
-        rand_y = np.random.uniform(low=self.pos[1]-self.mj_sub_sec_dim[1], high=self.pos[1]+self.mj_sub_sec_dim[1])
-        self.waypoint_pos = (rand_x, rand_y)
-        self.mj_waypoint_pos = self.ground_truth.rob_to_img_pos(self.waypoint_pos, 10, 10)
+        rand_x = np.random.uniform(low=self.pos[0]-self.hm_mj_dim[0], high=self.pos[0]+self.hm_mj_dim[0])
+        rand_y = np.random.uniform(low=self.pos[1]-self.hm_mj_dim[1], high=self.pos[1]+self.hm_mj_dim[1])
+        self.waypoint_pos_mj = (rand_x, rand_y)
+        self.waypoint_pos_im = self.ground_truth.rob_to_img_pos(self.waypoint_pos_mj)
     
     def populate_terrain_xml(self, file_name):
         """
@@ -300,7 +301,7 @@ class Env(EnvBaseMJ):
         if self.args.add_terrain:
             if self.steps % 100 == 0:
                 self.gen_new_waypoint()
-            if self.rank == self.test_rank: # only show map for one env
+            if self.rank == self.view_rank: # only show map for one env
                 self.show_map()
 
         if cmds is not None:

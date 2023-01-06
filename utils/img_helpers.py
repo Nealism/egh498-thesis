@@ -4,6 +4,7 @@ import cv2
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (0, 0, 255)
+GREEN = (0, 255, 0)
 
 def top_left_bot_right(i, j, n, m):
     """
