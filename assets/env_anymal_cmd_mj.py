@@ -10,15 +10,10 @@ from pyquaternion import Quaternion
 import os
 
 from .env_base_mj import EnvBaseMJ
-from utils.terrain import Terrain, Hfield, TerrainGen
+from utils.terrain import Hfield, TerrainGen
+from utils import img_helpers
 from utils.xml_helper import indent_xml
 from lxml import etree
-import shutil
-
-
-## CONSTANTS ##
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
 
 class Env(EnvBaseMJ):
     # Timestep for mujoco is set in the .xml, and shows up under self.model.opt.timestep
@@ -30,9 +25,9 @@ class Env(EnvBaseMJ):
     initial_Kp = Kp
     def __init__(self, PATH=None, args=None, writer=None):
 
-        self.test_rank = 0
+        self.view_rank = 0
         self.args = args
-        self.render = args.render and self.rank == self.test_rank
+        self.render = args.render and self.rank == self.view_rank
         self.PATH = PATH
         self.writer = writer
         self.master = True 
@@ -58,7 +53,8 @@ class Env(EnvBaseMJ):
         
         self.viewer = None
 
-        # waypoint position
+        # waypoint - goal position for robot
+        self.show_waypoint = True
         self.waypoint_pos = None
         self.mj_waypoint_pos = None
 
@@ -66,14 +62,14 @@ class Env(EnvBaseMJ):
         #            TERRAIN STUFF            #
         #######################################
 
-        # dimensions of entire ground truth 
+        # dimensions of entire ground truth
         self.ground_truth_dim = (500, 500) # image - (i, j)
         self.mj_ground_truth_dim = (10, 10) # mj - x_rad, y_rad
 
         #dimensions of the height map sub-section the robot 'sees'
-        self.sub_sec_dim = (80, 80) 
+        self.sub_sec_dim = (100, 100) # image - (i, j)
         self.mj_sub_sec_dim = (self.mj_ground_truth_dim[0] / (self.ground_truth_dim[0] / self.sub_sec_dim[0]),  
-                               self.mj_ground_truth_dim[1] / (self.ground_truth_dim[1] / self.sub_sec_dim[1]))
+                               self.mj_ground_truth_dim[1] / (self.ground_truth_dim[1] / self.sub_sec_dim[1])) # mj - x_rad, y_rad
         
         # set up base xml files for this rank/process (scene, tree, terrain etc.)
         if self.args.tree_type or self.args.add_terrain:
@@ -84,17 +80,12 @@ class Env(EnvBaseMJ):
             self.terrains = [] #array of Terrain objects
             self.terrain_generator = TerrainGen()
             self.load_terrains()
-            terrain_path = "/".join(self.model_path.split("/")[:-1]) + f"/terrain_{str(self.rank)}.xml"
+            terrain_path = self.get_parent_dir(self.model_path) + f"terrain_{str(self.rank)}.xml"
             self.populate_terrain_xml(terrain_path) 
 
         self.load_robot()
     
-        self.taking_cmds = True # just if I want to use brendan's waking gate (remove when done)
-
-        if self.taking_cmds:
-            self.ob_size = 54
-        else:
-            self.ob_size = 51
+        self.ob_size = 54
         self.ac_size = 12
 
         self.motor_names = ['LF_HAA', 'LF_HFE', 'LF_KFE', 'RF_HAA', 'RF_HFE', 'RF_KFE', 'LH_HAA', 'LH_HFE', 'LH_KFE', 'RH_HAA', 'RH_HFE', 'RH_KFE']
@@ -139,15 +130,22 @@ class Env(EnvBaseMJ):
         Generates all Terrain objects for this environment and adds them to the terrains array.
 
         NOTE: By default, always load the ground truth
-        NOTE: can optionally create other terrains (write code below it)
+        NOTE: can optionally create other terrains 
         """
         # generate and load ground truth image
         gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.ground_truth_dim)
-        self.ground_truth = Hfield(gt_arr, "/".join(self.model_path.split("/")[:-1]) + "/", f"ground_truth_{str(self.rank)}",
-                                   position="0 0 0", size="100 100 0.05 0.001")
+        #NOTE: here, each env gets ground truth with same dimensions (heights still random of course)
+        #NOTE: can obviously make it different for each, and in fact, we may end up doing this
+        gt_size = "50 50 0.08 1"
+        gt_position = "0 0 0"
+        self.ground_truth = Hfield(gt_arr, self.get_parent_dir(self.model_path), f"ground_truth_{str(self.rank)}",
+                                   gt_position, gt_size)
         self.terrains.append(self.ground_truth)
+
+        #generate and load any others below this
+        ########################################
         
-    def show_map(self, show_waypoint=True):
+    def show_map(self):
         """
         Displays a birds-eye map of the ground truth the robot is traversing.
         Also draws a bounding box around the robot's sub-section (image
@@ -155,14 +153,14 @@ class Env(EnvBaseMJ):
         """
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos, 10, 10) 
-        Terrain.draw_bounding_box(img_copy, box_centre, self.sub_sec_dim[0], self.sub_sec_dim[1])
-        if show_waypoint:
-            Terrain.draw_dot(img_copy, self.mj_waypoint_pos)
-        Terrain.display_img(img_copy)
+        img_helpers.draw_bounding_box(img_copy, box_centre, self.sub_sec_dim[0], self.sub_sec_dim[1])
+        if self.show_waypoint:
+            img_helpers.draw_dot(img_copy, self.mj_waypoint_pos)
+        img_helpers.display_img(img_copy)
     
     def gen_new_waypoint(self):
         """
-        Generates a random waypoint within the robot's sub-section
+        Generates a random waypoint within the robot's current sub-section
         """
         rand_x = np.random.uniform(low=self.pos[0]-self.mj_sub_sec_dim[0], high=self.pos[0]+self.mj_sub_sec_dim[0])
         rand_y = np.random.uniform(low=self.pos[1]-self.mj_sub_sec_dim[1], high=self.pos[1]+self.mj_sub_sec_dim[1])
@@ -286,10 +284,7 @@ class Env(EnvBaseMJ):
         self.goal = []
 
         self.prev_actions = self.joints
-        if self.taking_cmds:
-            state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
-        else:
-            state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return state
 
     def step(self, actions=None, replay_state=None, additional_stuff=None, cmds=None):
@@ -306,7 +301,7 @@ class Env(EnvBaseMJ):
             if self.steps % 100 == 0:
                 self.gen_new_waypoint()
             if self.rank == self.test_rank: # only show map for one env
-                self.show_map(show_waypoint=True)
+                self.show_map()
 
         if cmds is not None:
             self.commands = cmds
@@ -395,10 +390,7 @@ class Env(EnvBaseMJ):
         self.total_return += reward
         self.steps += 1
 
-        if self.taking_cmds:
-            state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
-        else:
-            state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return np.array(state), reward, done, None
     
     def get_reward(self):

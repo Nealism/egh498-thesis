@@ -12,6 +12,9 @@ This is a repo of environments from various simulations including MuJoCo and PyB
 - ANYmal from: https://github.com/deepmind/mujoco_menagerie/tree/main/anybotics_anymal_c</br>
 `python3 run.py --env anymal_mj --render`
 
+- ANYmal (from link above) w/ terrain loading and command control</br>
+`python3 run.py --env anymal_cmd_mj --render [--add_terrain]`
+
 - Titan </br>
 `python3 run.py --env titan_mj --render`
 

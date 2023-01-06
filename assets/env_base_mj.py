@@ -109,11 +109,11 @@ class EnvBaseMJ(EnvBase):
                 os.mkdir(self.xml_assets_dir)
 
             if self.args.control_type == "torque":
-                orig_path = "/".join(self.model_path.split("/")[:-1]) + "/" + self.robot_name + "_torque.xml"
-                copy_path = "/".join(self.xml_assets_dir.split("/")[:-1]) + "/xml_assets/" + self.robot_name + "_torque.xml"
+                orig_path = self.get_parent_dir(self.model_path) + self.robot_name + "_torque.xml"
+                copy_path = self.get_parent_dir(self.xml_assets_dir) + "xml_assets/" + self.robot_name + "_torque.xml"
             else:
-                orig_path = "/".join(self.model_path.split("/")[:-1]) + "/" + self.robot_name + ".xml"
-                copy_path = "/".join(self.xml_assets_dir.split("/")[:-1]) + "/xml_assets/" + self.robot_name + ".xml"
+                orig_path = self.get_parent_dir(self.model_path) + self.robot_name + ".xml"
+                copy_path = self.get_parent_dir(self.xml_assets_dir) + "xml_assets/" + self.robot_name + ".xml"
             shutil.copyfile(orig_path, copy_path)
 
             # modify robot_name.xml's meshdir and texturedir path
@@ -134,8 +134,8 @@ class EnvBaseMJ(EnvBase):
         # each proc. optionally can create tree_{rank}.xml
         if self.args.tree_type:
             # copy blank tree to new dir
-            orig_path ="/".join(self.model_path.split("/")[:-1]) + "/tree.xml"
-            copy_path = "/".join(self.xml_assets_dir.split("/")[:-1]) + "/xml_assets/tree_" + str(self.rank) + ".xml"
+            orig_path = self.get_parent_dir(self.model_path) + "tree.xml"
+            copy_path = self.get_parent_dir(self.xml_assets_dir) + "xml_assets/tree_" + str(self.rank) + ".xml"
             shutil.copyfile(orig_path, copy_path)
 
             # include tree_{rank}.xml in scene_{rank}.xml
@@ -145,8 +145,8 @@ class EnvBaseMJ(EnvBase):
         # each proc. optionally can create terrain_{rank}.xml
         if self.args.add_terrain:
             # copy blank terrain to new dir
-            orig_path ="/".join(self.model_path.split("/")[:-1]) + "/" + self.base_terrain_xml
-            copy_path = "/".join(self.xml_assets_dir.split("/")[:-1]) + "/xml_assets/terrain_" + str(self.rank) + ".xml"
+            orig_path = self.get_parent_dir(self.model_path) + self.base_terrain_xml
+            copy_path = self.get_parent_dir(self.xml_assets_dir) + "xml_assets/terrain_" + str(self.rank) + ".xml"
             shutil.copyfile(orig_path, copy_path)
 
             # create compiler el and modify it's assetdir path (as in robot_xml)
@@ -181,6 +181,13 @@ class EnvBaseMJ(EnvBase):
     # ====================================================================================
     # Custom helpers
     # ====================================================================================
+
+    def get_parent_dir(self, file_path):
+        """
+        Returns the parent directory of the given directory/file (cuts off path's last component)
+        """
+        return "/".join(file_path.split("/")[:-1]) + "/"
+
     def print_contacts(self):
         contact_list = self.data.contact
         for dim, contact1, contact2 in zip(contact_list.dim, contact_list.geom1, contact_list.geom2):
