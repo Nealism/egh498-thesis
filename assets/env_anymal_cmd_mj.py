@@ -133,11 +133,10 @@ class Env(EnvBaseMJ):
         NOTE: can optionally create other terrains 
         """
         # generate and load ground truth image
-        # gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.gt_img_dim)
-        gt_arr = self.terrain_generator.gen_cluster(self.gt_img_dim)
+        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.gt_img_dim)
         gt_position = (0, 0, 0)
         # NOTE: can change elev. and depth for each env, or keep constant for each (as we've done here)
-        elevation = 0.01
+        elevation = 0.1
         depth = 1
         gt_size = (self.gt_mj_dim[0], self.gt_mj_dim[1], elevation, depth)
         self.ground_truth = Hfield(gt_arr, self.get_parent_dir(self.model_path), f"ground_truth_{str(self.rank)}",
