@@ -136,7 +136,7 @@ class Env(EnvBaseMJ):
         gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.gt_img_dim)
         gt_position = (0, 0, 0)
         # NOTE: can change elev. and depth for each env, or keep constant for each (as we've done here)
-        elevation = 0.1
+        elevation = 0.01
         depth = 1
         gt_size = (self.gt_mj_dim[0], self.gt_mj_dim[1], elevation, depth)
         self.ground_truth = Hfield(gt_arr, self.get_parent_dir(self.model_path), f"ground_truth_{str(self.rank)}",
@@ -189,7 +189,7 @@ class Env(EnvBaseMJ):
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
-                self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=200, segs_per_branch=4, spread=[[1.0, 7.0],[-1, 1]], z_height=-0.05)
+                self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=5, segs_per_branch=4, spread=[[1.0, 7.0],[-1, 1]], z_height=-0.05)
             elif self.args.tree_type == "tree":
                 self.generate_tree(spread=[[1.0, 2.0],[-0.2, 0.2]])
 
@@ -301,8 +301,6 @@ class Env(EnvBaseMJ):
         if self.args.add_terrain:
             if self.steps % 100 == 0:
                 self.gen_new_waypoint()
-                test = self.ground_truth.compute_sub_section(self.pos[0], self.pos[1], self.hm_img_dim[0], self.hm_img_dim[1])
-                print(test)
             if self.rank == self.view_rank: # only show map for one env
                 self.show_map()
 
