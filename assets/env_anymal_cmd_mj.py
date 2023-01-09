@@ -14,6 +14,7 @@ from utils.terrain import Hfield, TerrainGen
 from utils import img_helpers
 from utils.xml_helper import indent_xml
 from lxml import etree
+import math
 
 class Env(EnvBaseMJ):
     # Timestep for mujoco is set in the .xml, and shows up under self.model.opt.timestep
@@ -53,14 +54,14 @@ class Env(EnvBaseMJ):
         
         self.viewer = None
 
-        # waypoint - goal position for robot
-        self.show_waypoint = True
-        self.waypoint_pos_im = None
-        self.waypoint_pos_mj = None
+        ##### WAY POINT STUFF #####
 
-        #######################################
-        #            TERRAIN STUFF            #
-        #######################################
+        self.show_wp = True # show on map
+        self.wp_pos_mj = None # position in env
+        self.wp_pos_im = None # position in map image
+        self.last_wp_time = None # last time wp was generated
+
+        ##### TERRAIN STUFF #####
 
         # ground truth dimensions
         self.gt_img_dim = (500, 500) # image (max (x, y) in pixels)
@@ -79,7 +80,7 @@ class Env(EnvBaseMJ):
         if self.args.add_terrain:
             self.terrains = [] #array of Terrain objects
             self.terrain_generator = TerrainGen()
-            self.load_terrains()
+            self.load_terrain()
             terrain_path = self.get_parent_dir(self.model_path) + f"terrain_{str(self.rank)}.xml"
             self.populate_terrain_xml(terrain_path) 
 
@@ -125,7 +126,7 @@ class Env(EnvBaseMJ):
         # States that we want to restore, for resuming training after running a test
         # self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
-    def load_terrains(self):
+    def load_terrain(self):
         """
         Generates all Terrain objects for this environment and adds them to the terrains array.
 
@@ -155,18 +156,63 @@ class Env(EnvBaseMJ):
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
         img_helpers.draw_bounding_box(img_copy, box_centre, self.hm_img_dim[0], self.hm_img_dim[1])
-        if self.show_waypoint:
-            img_helpers.draw_dot(img_copy, self.waypoint_pos_im)
+        if self.show_wp:
+            img_helpers.draw_dot(img_copy, self.wp_pos_im)
         img_helpers.display_img(img_copy)
     
-    def gen_new_waypoint(self):
+    def can_gen_waypoint(self):
         """
-        Generates a random waypoint within the robot's current sub-section
+        Returns True iff can generate a way point, False otherwise
+
+        Conditions of wp generation:
+            -have yet to generate one (this episode/rollout) OR;
+            -have exceeded the max time to reach the wp OR;
         """
-        rand_x = np.random.uniform(low=self.pos[0]-self.hm_mj_dim[0], high=self.pos[0]+self.hm_mj_dim[0])
-        rand_y = np.random.uniform(low=self.pos[1]-self.hm_mj_dim[1], high=self.pos[1]+self.hm_mj_dim[1])
-        self.waypoint_pos_mj = (rand_x, rand_y)
-        self.waypoint_pos_im = self.ground_truth.rob_to_img_pos(self.waypoint_pos_mj)
+        if not self.wp_pos_mj:
+            return True
+        return self.data.time - self.last_wp_time >= self.wp_time_lim
+
+    def gen_waypoint(self, point=None):
+        """
+        Generates a new waypoint for the environment 
+
+            point - if not given, waypoint is generated randomly within the robot's current
+                    height map
+        """
+        # custom 
+        if point:
+            x = point[0]
+            y = point[1]
+        # random 
+        else:
+            x = np.random.uniform(low=self.pos[0]-self.hm_mj_dim[0], high=self.pos[0]+self.hm_mj_dim[0])
+            y = np.random.uniform(low=self.pos[1]-self.hm_mj_dim[1], high=self.pos[1]+self.hm_mj_dim[1])
+
+        # set both its mj position AND image position
+        self.wp_pos_mj = (x, y)
+        self.wp_pos_im = self.ground_truth.rob_to_img_pos(self.wp_pos_mj)
+
+        # set time at which waypoint was placed
+        self.last_wp_time = self.data.time
+        
+        # set time limit for robot to reach the waypoint
+        self.wp_time_lim = self.time_to_waypoint()
+
+    def time_to_waypoint(self):
+        """
+        Calculates the app. time for the robot to reach the current wp 
+
+        NOTE: this assumes the robot maintains it's given command velocity to the wp
+        """
+        dx = self.wp_pos_mj[0] - self.pos[0]
+        dy = self.wp_pos_mj[1] - self.pos[1]
+        abs_dist = math.sqrt(dx**2 + dy**2)
+        # assume: already facing in direction of waypoint
+        # NOTE: multiply final time by some scalar (x > 1) to account for this
+        vx = self.commands[0]
+        vy = self.commands[1]
+        abs_vel = math.sqrt(vx**2 + vy**2) 
+        return 1.5*(abs_dist / abs_vel)
     
     def populate_terrain_xml(self, file_name):
         """
@@ -185,11 +231,11 @@ class Env(EnvBaseMJ):
             terr.add_to_xml(asset, worldbody)
         indent_xml(root)
         xml.write(file_name)
-
+    
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
-                self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=5, segs_per_branch=4, spread=[[1.0, 7.0],[-1, 1]], z_height=-0.05)
+                self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=100, segs_per_branch=4, spread=[[1.0, 7.0],[-1, 1]], z_height=-0.05)
             elif self.args.tree_type == "tree":
                 self.generate_tree(spread=[[1.0, 2.0],[-0.2, 0.2]])
 
@@ -229,6 +275,9 @@ class Env(EnvBaseMJ):
             for key in self.reward_dict:
                 self.reward_dict[key].append(self.ep_reward_dict[key]/self.steps)
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
+
+        # reset way point
+        self.wp_pos_mj = None
 
         if self.episodes > -1:
             self.success.append(self.get_success())
@@ -298,14 +347,17 @@ class Env(EnvBaseMJ):
         (empty image)
         -which in turn means we need the auto xml load thing
         """
-        if self.args.add_terrain:
-            if self.steps % 100 == 0:
-                self.gen_new_waypoint()
-            if self.rank == self.view_rank: # only show map for one env
-                self.show_map()
-
         if cmds is not None:
             self.commands = cmds
+
+        if self.args.add_terrain:
+            if self.can_gen_waypoint():
+                self.gen_waypoint()
+            if self.rank == self.view_rank: # only show map for one env
+                self.show_map()
+        else:
+            self.wp_pos_mj = (5, 0)
+
         if self.paused:
             self.target_vx = 0.0
             expert = self.initial_joints    
