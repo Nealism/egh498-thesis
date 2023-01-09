@@ -197,7 +197,7 @@ class MLPGaussianActor(Actor):
     def _distribution(self, obs):
         self.mu = self.mu_net(obs)
         self.std = torch.exp(self.log_std)
-        return Normal(self.mu, self.std) ## 12-d multivariate normal dist. with self.mu=means and self.std=standard devs.
+        return Normal(self.mu, self.std) ## multivariate normal dist. with self.mu=means and self.std=standard devs.
 
     def _log_prob_from_distribution(self, pi, act):
         return pi.log_prob(act).sum(axis=-1)    # Last axis sum needed for Torch Normal distribution
