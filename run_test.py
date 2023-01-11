@@ -38,26 +38,20 @@ def run(args):
     args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
-    # pol = torch.load(PATH + "/model.pt")
-    pol = torch.load("./resources/cmd_model/model.pt")
-
-    if args.do_plot:
-        names_to_plot = ["joint_pos" + str(i) for i in range(env.ac_size)]
-        names_to_plot += ["joint_vel" + str(i) for i in range(env.ac_size)]
-        names_to_plot += ["joint_effort" + str(i) for i in range(env.ac_size)]
-        names_to_plot += ["joint_cmd" + str(i) for i in range(env.ac_size)]
-        plotter = Plotter(names_to_plot)
+    if args.env == "anymal_cmd_mj":
+        pol = torch.load("./resources/cmd_model/model.pt")
+    else:
+        pol = torch.load(PATH + "/model.pt")
 
     obs = env.reset()
     while True:
         action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
-        obs, _, done, _ = env.step(action, cmds=[0.8,0.0,0.0])
-        if args.do_plot:
-            plotter.save_data({name:env.ob_dict[name] for name in names_to_plot})
+        if args.env == "anymal_cmd_mj":
+            obs, _, done, _ = env.step(action, cmds=[0.8,0.0,0.0])
+        else:
+            obs, _, done, _ = env.step(action)
         if done or env.steps > args.max_ep_len:
             obs = env.reset()
-            if args.do_plot:
-                plotter.plot()
 
 if __name__=="__main__":
     args = default_arguments.get_defaults() 
