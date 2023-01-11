@@ -229,16 +229,9 @@ class Env(EnvBaseMJ):
         dy = self.wp_pos_mj[1] - self.pos[1]
         abs_dist = math.sqrt(dx**2 + dy**2)
         
-        # calculate x and y components of max velocity to the waypoint
-        ang = math.atan2(dy, dx)
-        vx = math.cos(ang) * self.max_vel_mag
-        vy = math.sin(ang) * self.max_vel_mag
-        abs_vel = math.sqrt(vx**2 + vy**2) 
-        self.commands = [vx, vy, 0]
-
         # return estimate of time for robot to reach wp
         scaling_factor = 1.5 # NOTE: mult. by scalar to account for assumptions
-        return scaling_factor * (abs_dist / abs_vel)
+        return scaling_factor * (abs_dist / self.max_vel_mag)
 
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
@@ -362,7 +355,7 @@ class Env(EnvBaseMJ):
             if self.can_gen_waypoint():
                 self.gen_waypoint()
 
-            if self.rank == self.view_rank and self.have_map: # only show map for one env
+            if self.rank == self.view_rank and self.render and self.have_map:
                 self.show_map()
 
         if self.paused:
