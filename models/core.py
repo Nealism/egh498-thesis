@@ -232,7 +232,7 @@ class MLPActorCritic(nn.Module):
     def step(self, obs, stochastic=True):
         pi = self.pi._distribution(obs)
         if stochastic:
-            a = pi.sample() ## sample from 12-d normal dist.
+            a = pi.sample() ## sample from normal dist.
         else:
             a = self.pi.mu ## just take mean of dist. as the value
         logp_a = self.pi._log_prob_from_distribution(pi, a)
