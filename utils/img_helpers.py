@@ -1,9 +1,13 @@
 import cv2
 
-# constants
+# colours
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (0, 0, 255)
+GREEN = (0, 255, 0)
+
+# minimum image size can display
+MIN_IMG_DIM = (250, 250)
 
 def top_left_bot_right(x, y, X, Y):
     """
@@ -16,7 +20,7 @@ def top_left_bot_right(x, y, X, Y):
     max_y = y + Y // 2 + 1 if Y % 2 == 1 else y + Y // 2
     return (min_x, min_y), (max_x - 1, max_y - 1)
 
-def draw_bounding_box(img, pos, X, Y, colour=WHITE, thickness=3):
+def draw_bounding_box(img, pos, X, Y, colour=WHITE):
     """
     Draws a bounding box of dimensions nxm onto the given image 
 
@@ -29,12 +33,26 @@ def draw_bounding_box(img, pos, X, Y, colour=WHITE, thickness=3):
     """
     tl, br = top_left_bot_right(pos[0], pos[1], X, Y)
     # draw rectangle on copy to preserve the original
+    thickness = max(2, img.shape[0] // 100)
     cv2.rectangle(img, tl, br, colour, thickness)
 
-def draw_dot(img, pos, radius=5, color=RED, thickness=-1):
+def draw_dot(img, pos, color=RED):
+    """
+    Draw a dot at specified position in the image 
+    """
+    radius = max(2, img.shape[0] // 100)
+    thickness = -1
     cv2.circle(img, pos, radius=radius, color=color, thickness=thickness)
 
 def display_img(img, title="Terrain map"):
+    """
+    Display the image for 1 millisecond
+
+    NOTE: we resize the img to a visible dimension if needed
+
+    """
+    if img.shape[0] < MIN_IMG_DIM[0] or img.shape[1] < MIN_IMG_DIM[1]:
+        img = cv2.resize(img, MIN_IMG_DIM)
     cv2.imshow(title, img)
     cv2.waitKey(1)
 

@@ -64,14 +64,14 @@ class Env(EnvBaseMJ):
         self.max_vel_mag = 1 # max vel. we assume robot can move towards wp at
 
         ##### TERRAIN STUFF #####
-        self.have_map = True
+        self.have_map = False
         
         # ground truth dimensions
-        self.gt_img_dim = (500, 500) # image (max (x, y) in pixels)
+        self.gt_img_dim = (100, 100) # image (max (x, y) in pixels)
         self.gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
         
         # height map dimensions
-        self.hm_img_dim = (100, 100) # image sub-section - (max (x, y) in pixels)
+        self.hm_img_dim = (self.gt_img_dim[0] // 5, self.gt_img_dim[1] // 5) # image sub-section - (max (x, y) in pixels)
         self.hm_mj_dim = (self.gt_mj_dim[0] / (self.gt_img_dim[0] / self.hm_img_dim[0]),  
                                self.gt_mj_dim[1] / (self.gt_img_dim[1] / self.hm_img_dim[1])) # mj hfield sub-section (x_rad, y_rad)
         
