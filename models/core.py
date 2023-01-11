@@ -24,7 +24,7 @@ def mlp(sizes, activation, output_activation=nn.Identity):
 class CNN(nn.Module):
     def __init__(self, im_dim):
         super().__init__()
-        self.im_dim = im_dim
+        self.im_dim = list(im_dim)
         self.conv1 = nn.Conv2d(in_channels=1,out_channels=8,kernel_size=8,stride=4,padding='valid')
         self.conv2 = nn.Conv2d(in_channels=8,out_channels=16,kernel_size=4,stride=2,padding='valid')
 

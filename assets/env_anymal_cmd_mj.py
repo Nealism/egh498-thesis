@@ -67,13 +67,13 @@ class Env(EnvBaseMJ):
         self.have_map = False
         
         # ground truth dimensions
-        self.gt_img_dim = (100, 100) # image (max (x, y) in pixels)
-        self.gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
+        self.terrain_size = (100, 100) # image (max (x, y) in pixels)
+        self.terrain_size_mj = (10, 10) # mj hfield (x_rad, y_rad)
         
         # height map dimensions
-        self.hm_img_dim = (self.gt_img_dim[0] // 5, self.gt_img_dim[1] // 5) # image sub-section - (max (x, y) in pixels)
-        self.hm_mj_dim = (self.gt_mj_dim[0] / (self.gt_img_dim[0] / self.hm_img_dim[0]),  
-                               self.gt_mj_dim[1] / (self.gt_img_dim[1] / self.hm_img_dim[1])) # mj hfield sub-section (x_rad, y_rad)
+        self.hm_size = (self.terrain_size[0] // 5, self.terrain_size[1] // 5) # image sub-section - (max (x, y) in pixels)
+        self.hm_size_mj = (self.terrain_size_mj[0] / (self.terrain_size[0] / self.hm_size[0]),  
+                               self.terrain_size_mj[1] / (self.terrain_size[1] / self.hm_size[1])) # mj hfield sub-section (x_rad, y_rad)
         
         # set up base xml files for this rank/process (scene, tree, terrain etc.)
         if self.args.tree_type or self.args.add_terrain:
@@ -135,14 +135,15 @@ class Env(EnvBaseMJ):
         NOTE: can optionally create other terrains 
         """
         # generate and load ground truth image
-        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.gt_img_dim)
+        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.terrain_size)
         gt_position = (0, 0, 0)
         # NOTE: can change elev. and depth for each env, or keep constant for each (as we've done here)
         elevation = 0.01
         depth = 1
-        gt_size = (self.gt_mj_dim[0], self.gt_mj_dim[1], elevation, depth)
+        gt_size = (self.terrain_size_mj[0], self.terrain_size_mj[1], elevation, depth)
         self.ground_truth = Hfield(gt_arr, self.get_parent_dir(self.model_path), f"ground_truth_{str(self.rank)}",
                                    gt_position, gt_size)
+        self.terrain = self.ground_truth.terr_arr
         self.terrains.append(self.ground_truth)
 
         #generate and load any others below this
@@ -156,7 +157,7 @@ class Env(EnvBaseMJ):
         """
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
-        img_helpers.draw_bounding_box(img_copy, box_centre, self.hm_img_dim[0], self.hm_img_dim[1])
+        img_helpers.draw_bounding_box(img_copy, box_centre, self.hm_size[0], self.hm_size[1])
         if self.show_wp: # way point 
             img_helpers.draw_dot(img_copy, self.wp_pos_im)
         img_helpers.display_img(img_copy)
@@ -204,8 +205,8 @@ class Env(EnvBaseMJ):
             y = point[1]
         # random 
         else:
-            x = np.random.uniform(low=self.pos[0]-self.hm_mj_dim[0], high=self.pos[0]+self.hm_mj_dim[0])
-            y = np.random.uniform(low=self.pos[1]-self.hm_mj_dim[1], high=self.pos[1]+self.hm_mj_dim[1])
+            x = np.random.uniform(low=self.pos[0]-self.hm_size_mj[0], high=self.pos[0]+self.hm_size_mj[0])
+            y = np.random.uniform(low=self.pos[1]-self.hm_size_mj[1], high=self.pos[1]+self.hm_size_mj[1])
 
         # set both its mj position AND image position
         self.wp_pos_mj = (x, y)
