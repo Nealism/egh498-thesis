@@ -13,7 +13,7 @@ all_envs = [
             "franka_reach_dm_mj",
             "franka_reach_pb",
             "anymal_mj",
-            "anymal_mj_isaac",
+            # "anymal_mj_isaac",
             # "anymal_is",
             "titan_pb", 
             "pumpkin_pb",

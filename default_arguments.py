@@ -97,11 +97,6 @@ def get_defaults():
     parser.add_argument('--initial_terrain_difficulty', type=float, default=0.01)
     parser.add_argument('--final_terrain_difficulty', type=float, default=0.5)
 
-    # ========================================================================
-    # Isaac Gym Policy
-    # ========================================================================
-    parser.add_argument('--isaac_policy', default=False, action="store_true")
-
     # knowns, unknowns = parser.parse_known_args()
     args = parser.parse_args()
     return args
