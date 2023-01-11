@@ -1,0 +1,11 @@
+<!-- Minimal example of a hfield in mujoco -->
+<mujoco>
+    <compiler assetdir="assets"/>
+    <asset>
+        <hfield name="ground_truth" file="ground_truth.png" size="100 100 0.1 5"/>
+    </asset>
+    <worldbody>
+        <geom name="gt" type="hfield" pos="0 0 0" hfield="ground_truth"/>
+    </worldbody>
+</mujoco>
+

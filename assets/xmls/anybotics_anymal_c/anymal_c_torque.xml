@@ -108,8 +108,11 @@
         <inertial mass="19.2035" pos="0.0025 0 0.0502071" quat="0.5 0.5 0.5 0.5"
             diaginertia="0.639559 0.624031 0.217374"/>
 
-        <geom name="imu" size="0.05" pos="0.35 0.0 0.12" quat="1 0 0 0" rgba="1 1 0 1" contype="0" conaffinity="0" group="1"/>
-        <site name="imu" pos="0.35 0.0 0.12" quat="1 0 0 0"/>
+        <!-- <geom name="imu" size="0.05" pos="0.35 0.0 0.12" quat="1 0 0 0" rgba="1 1 0 1" contype="0" conaffinity="0" group="1"/>
+        <site name="imu" pos="0.35 0.0 0.12" quat="1 0 0 0"/> -->
+
+        <geom name="imu" size="0.05" pos="0.0 0.0 0.0" quat="1 0 0 0" rgba="1 1 0 1" contype="0" conaffinity="0" group="1"/>
+        <site name="imu" pos="0.0 0.0 0.0" quat="1 0 0 0"/>
 
         <geom mesh="base_0" material="green" class="visual"/>
         <geom mesh="base_1" material="yellow" class="visual"/>

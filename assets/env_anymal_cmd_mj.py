@@ -7,9 +7,14 @@ comm = MPI.COMM_WORLD
 from scipy.spatial.transform import Rotation
 import mujoco_viewer
 from pyquaternion import Quaternion
-import glfw
+import os
 
 from .env_base_mj import EnvBaseMJ
+from utils.terrain import Hfield, TerrainGen
+from utils import img_helpers
+from utils.xml_helper import indent_xml
+from lxml import etree
+import math
 
 class Env(EnvBaseMJ):
     # Timestep for mujoco is set in the .xml, and shows up under self.model.opt.timestep
@@ -21,34 +26,69 @@ class Env(EnvBaseMJ):
     initial_Kp = Kp
     def __init__(self, PATH=None, args=None, writer=None):
 
+        self.view_rank = 0
         self.args = args
-        self.render = args.render and self.rank == 0
+        self.render = args.render and self.rank == self.view_rank
         self.PATH = PATH
         self.writer = writer
         self.master = True 
 
         super().__init__(PATH)
 
+        self.robot_name = "anymal_c"
+
+        ##### PATHS #####
+        self.general_xml_path = "assets/xmls/anybotics_anymal_c/"
+        self.base_terrain_xml = "base_terrain.xml"
         # Name of the base link in the xml, for setting the robot position on reset
         self.base_link = "base"
         if self.args.control_type == "torque":
-            self.model_path = "assets/xmls/anybotics_anymal_c/scene_torque.xml"
+            self.model_path = self.general_xml_path + "scene_torque.xml"
             self.action_multiplier = 20
         elif self.args.control_type == "position":
-            self.model_path = "assets/xmls/anybotics_anymal_c/scene.xml"
+            self.model_path = self.general_xml_path + "scene.xml"
             self.action_multiplier = 0.2
-
-        self.robot_name = "anymal_c"
-        self.mesh_dir = "assets/xmls/anybotics_anymal_c/assets"
+        self.mesh_dir = self.general_xml_path + "assets/"
+        
         # self.action_multiplier = 0.0
         
-        if self.args.tree_type:
-            self.set_up_xmls()
-        
         self.viewer = None
-        self.load_robot()
+
+        ##### WAY POINT STUFF #####
+
+        self.show_wp = True # show on map
+        self.wp_pos_mj = None # position in env
+        self.wp_pos_im = None # position in map image
+        self.last_wp_time = None # last time wp was generated
+        self.max_vel_mag = 1 # max vel. we assume robot can move towards wp at
+
+        ##### TERRAIN STUFF #####
+        self.have_map = True
         
-        self.ob_size = 51
+        # ground truth dimensions
+        self.gt_img_dim = (500, 500) # image (max (x, y) in pixels)
+        self.gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
+        
+        # height map dimensions
+        self.hm_img_dim = (100, 100) # image sub-section - (max (x, y) in pixels)
+        self.hm_mj_dim = (self.gt_mj_dim[0] / (self.gt_img_dim[0] / self.hm_img_dim[0]),  
+                               self.gt_mj_dim[1] / (self.gt_img_dim[1] / self.hm_img_dim[1])) # mj hfield sub-section (x_rad, y_rad)
+        
+        # set up base xml files for this rank/process (scene, tree, terrain etc.)
+        if self.args.tree_type or self.args.add_terrain:
+            self.set_up_xmls()
+
+        # load all Terrain objects into the env
+        if self.args.add_terrain:
+            self.terrains = [] #array of Terrain objects
+            self.terrain_generator = TerrainGen()
+            self.load_terrains()
+            terrain_path = self.get_parent_dir(self.model_path) + f"terrain_{str(self.rank)}.xml"
+            self.populate_terrain_xml(terrain_path) 
+
+        self.load_robot()
+
+        self.ob_size = 54
         self.ac_size = 12
 
         self.motor_names = ['LF_HAA', 'LF_HFE', 'LF_KFE', 'RF_HAA', 'RF_HFE', 'RF_KFE', 'LH_HAA', 'LH_HFE', 'LH_KFE', 'RH_HAA', 'RH_HFE', 'RH_KFE']
@@ -86,6 +126,113 @@ class Env(EnvBaseMJ):
         # States that we want to restore, for resuming training after running a test
         # self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
+    def load_terrains(self):
+        """
+        Generates all Terrain objects for this environment and adds them to the terrains array.
+
+        NOTE: By default, always load the ground truth
+        NOTE: can optionally create other terrains 
+        """
+        # generate and load ground truth image
+        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.gt_img_dim)
+        gt_position = (0, 0, 0)
+        # NOTE: can change elev. and depth for each env, or keep constant for each (as we've done here)
+        elevation = 0.01
+        depth = 1
+        gt_size = (self.gt_mj_dim[0], self.gt_mj_dim[1], elevation, depth)
+        self.ground_truth = Hfield(gt_arr, self.get_parent_dir(self.model_path), f"ground_truth_{str(self.rank)}",
+                                   gt_position, gt_size)
+        self.terrains.append(self.ground_truth)
+
+        #generate and load any others below this
+        ########################################
+
+    def show_map(self):
+        """
+        Displays a birds-eye map of the ground truth the robot is traversing.
+        Also draws a bounding box around the robot's sub-section (image
+        the policy is fed)
+        """
+        img_copy = self.ground_truth.terr_img.copy()
+        box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
+        img_helpers.draw_bounding_box(img_copy, box_centre, self.hm_img_dim[0], self.hm_img_dim[1])
+        if self.show_wp: # way point 
+            img_helpers.draw_dot(img_copy, self.wp_pos_im)
+        img_helpers.display_img(img_copy)
+    
+    def populate_terrain_xml(self, file_name):
+        """
+        Builds up the terrain xml (for this process)  
+        """
+        file_path = os.path.join(self.general_xml_path, file_name)
+        xml = etree.parse(file_path)
+        root = xml.getroot()
+        # asset el - where all hfields and meshes live
+        asset = etree.SubElement(root, "asset")
+        # worldbody el - where all the referencing geoms live
+        worldbody = etree.SubElement(root, "worldbody")
+
+        # add all terrains to the xml file
+        for terr in self.terrains:
+            terr.add_to_xml(asset, worldbody)
+        indent_xml(root)
+        xml.write(file_name)
+        
+    def can_gen_waypoint(self):
+        """
+        Returns True iff can generate a way point, False otherwise
+
+        Conditions of wp generation:
+            -have yet to generate one (this episode/rollout) OR;
+            -have exceeded the max time to reach the wp OR;
+        """
+        if not self.wp_pos_mj:
+            return True
+        return self.data.time - self.last_wp_time >= self.wp_time_lim
+
+    def gen_waypoint(self, point=None):
+        """
+        Generates a new waypoint for the environment 
+
+            point - if not given, waypoint is generated randomly within the robot's current
+                    height map
+        """
+        # custom 
+        if point:
+            x = point[0]
+            y = point[1]
+        # random 
+        else:
+            x = np.random.uniform(low=self.pos[0]-self.hm_mj_dim[0], high=self.pos[0]+self.hm_mj_dim[0])
+            y = np.random.uniform(low=self.pos[1]-self.hm_mj_dim[1], high=self.pos[1]+self.hm_mj_dim[1])
+
+        # set both its mj position AND image position
+        self.wp_pos_mj = (x, y)
+        self.wp_pos_im = self.ground_truth.rob_to_img_pos(self.wp_pos_mj)
+
+        # set time at which waypoint was placed
+        self.last_wp_time = self.data.time
+        
+        # set time limit for robot to reach the waypoint
+        self.wp_time_lim = self.time_to_waypoint()
+    
+    def time_to_waypoint(self):
+        """
+        Calculates the app. time for the robot to reach the current wp 
+
+        NOTE: this assumes: -robot maintains max. velocity to the wp
+                            -the robot was facing the direction of the way point 
+                             when it was set
+        """
+        # calculate straight line distance to wp
+        dx = self.wp_pos_mj[0] - self.pos[0]
+        dy = self.wp_pos_mj[1] - self.pos[1]
+        abs_dist = math.sqrt(dx**2 + dy**2)
+        
+        # return estimate of time for robot to reach wp
+        scaling_factor = 1.5 # NOTE: mult. by scalar to account for assumptions
+        return scaling_factor * (abs_dist / self.max_vel_mag)
+
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
@@ -109,7 +256,7 @@ class Env(EnvBaseMJ):
                 self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data, 'offscreen')
         else:
             print("Can't view mujoco on the HPC.")
-
+        
     def get_log_things(self):
         # Things we want to log each training step (print and add to tensorboard)
         return_dict = {"Kp": self.Kp, "Success": self.success, "Cur": self.args.cur}
@@ -117,17 +264,21 @@ class Env(EnvBaseMJ):
         return return_dict
 
     def get_success(self):
-        return self.pos[0] > 10
+        # Success is time spent above a target goal
+        return len(self.goal) > 100 and np.mean(self.goal) > 1.0
+
 
     def check_for_success(self):
         return len(self.success) == 5 and (np.array(self.success) == True).all()
 
     def reset(self, test=False, model_path=None, restore_state=None):
-
         if self.steps > 0:
             for key in self.reward_dict:
                 self.reward_dict[key].append(self.ep_reward_dict[key]/self.steps)
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
+
+        # reset way point
+        self.wp_pos_mj = None
 
         if self.episodes > -1:
             self.success.append(self.get_success())
@@ -161,6 +312,7 @@ class Env(EnvBaseMJ):
             rot_range = 0.2
             # rot_range = 0.0
             self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), 0], degrees=False)
+            # self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), np.pi], degrees=False)
             self.orn = self.rot.as_quat()
             self.pos = [0,0,self.initial_z]
             self.set_position(pos=self.pos, orn=self.orn, joints=self.initial_joints)
@@ -177,11 +329,35 @@ class Env(EnvBaseMJ):
         self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
         self.get_trajectory(self.expert_target)
 
+        self.command_ranges = np.array([1,1,1.5])
+        self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
+        self.time_at_speed = 0
+        self.goal = []
+
         self.prev_actions = self.joints
-        state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return state
 
-    def step(self, actions=None, replay_state=None, additional_stuff=None):
+    def step(self, actions=None, replay_state=None, additional_stuff=None, cmds=None):
+        """
+        TODO: make a self.args.show_map argument
+        we want to be able to show the map, bounding boxes and waypoints even if 
+        person is not using ground truth
+
+        -means we need a map to show people if they haven't loaded in any terrain
+        (empty image)
+        -which in turn means we need the auto xml load thing
+        """
+        if cmds is not None:
+            self.commands = cmds
+        
+        if self.args.add_terrain:
+            if self.can_gen_waypoint():
+                self.gen_waypoint()
+
+            if self.rank == self.view_rank and self.render and self.have_map:
+                self.show_map()
+
         if self.paused:
             self.target_vx = 0.0
             expert = self.initial_joints    
@@ -192,14 +368,51 @@ class Env(EnvBaseMJ):
                 self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
                 self.get_trajectory(self.expert_target)
             expert = self.expert_traj[self.traj_i]
-            # expert = self.expert_target
             if self.traj_i < self.traj_size - 1:
                 self.traj_i += 1
 
         if actions is not None:
-            self.actions = list(actions)
+            self.actions = list(np.array(self.initial_joints) + np.array(actions))
         else:
-            self.actions = [0]*(self.ac_size)
+            self.actions = self.initial_joints
+
+        if self.args.cur:
+            # Sample every 4 seconds
+            if self.steps > 0 and self.steps % int(4 / self.timeStep)==0:
+                self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
+                self.success.append(self.get_success())
+                self.time_at_speed = 0
+                self.goal = []
+
+            world_to_robot_rot_mat = np.array(
+            [[np.cos(-self.yaw), -np.sin(-self.yaw), 0],
+                [np.sin(-self.yaw), np.cos(-self.yaw), 0],
+                [		0,			 0, 1]]
+            )
+
+            # Need to convert robot frame velocities and commands to world frame to apply forces
+            robot_to_world_rot_mat = np.array(
+            [[np.cos(-self.yaw), np.sin(-self.yaw), 0],
+                [-np.sin(-self.yaw), np.cos(-self.yaw), 0],
+                [		0,			 0, 1]]
+            )
+
+            vx_cmd, vy_cmd, _ = np.dot(robot_to_world_rot_mat, (self.commands[0], self.commands[1],0))
+            vx, vy, _ = np.dot(robot_to_world_rot_mat, (self.vx, self.vy, self.vz))
+            
+            forces = np.zeros(6)
+            error = np.abs(np.array(self.commands) - np.array([self.vx, self.vy, self.yaw_vel]))
+            
+            # This doesn't seem to work, instead using average goal reward
+            if (error < 0.3).all():
+                self.time_at_speed += 1
+            gain = 50
+            z_gain = 200
+            forces[0] = gain * (self.Kp / self.initial_Kp) * np.clip((vx_cmd - vx), -1, 1)
+            forces[1] = gain * (self.Kp / self.initial_Kp) * np.clip((vy_cmd - vy), -1, 1)
+            forces[2] = z_gain * (self.Kp / self.initial_Kp) * np.clip((0.5 - self.pos[2]), -1, 1)
+            forces[5] = gain * (self.Kp / self.initial_Kp) * np.clip((self.commands[2] - self.yaw_vel), -1, 1)
+            self.data.xfrc_applied = forces
 
         # This might do something weird with mujoco contacts, and other things in the sim.
         for _ in range(int(np.rint(self.timeStep/self.simStep))):
@@ -230,26 +443,33 @@ class Env(EnvBaseMJ):
         self.total_return += reward
         self.steps += 1
 
-        state = self.imu + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return np.array(state), reward, done, None
     
     def get_reward(self):
         done = False
-        if self.pos[2] < 0.3 or abs(self.pitch) > 0.7 or abs(self.roll) > 0.7:
+        if self.pos[2] < 0.35 or abs(self.pitch) > 0.5 or abs(self.roll) > 0.5:
             done = True
-        goal = np.exp(-2.5*max(0, self.target_vx - self.data.joint("free").qvel[0])**2)
+        
+        goal = 1.0*np.exp(-5.0*np.sum(np.array(self.commands[:2]) - np.array([self.vx, self.vy]) )**2)            
+        goal += 0.5*np.exp(-2.5*np.sum(np.array(self.commands[2]) - np.array(self.yaw_vel) )**2)     
+        self.goal.append(goal)
+
         joints = np.exp(-0.5*np.sum((np.array(self.joints) - np.array(self.initial_joints))**2))
-        orn = np.exp(-10.0 * Quaternion.absolute_distance(Quaternion(self.orn), Quaternion([0,0,0,1])))
+        orn = np.exp(-10.0 * np.sum((np.array([self.roll, self.pitch]) - np.zeros(2))**2))
         
         # Contacts should match pair-wise. both front's should be off the ground, both backs shouldn't
         contacts = 0.25*(self.contacts["left_front"] - self.contacts["right_back"])**2 
         contacts += 0.25*(self.contacts["right_front"] - self.contacts["left_back"])**2 
         contacts += 0.25*((1 - self.contacts["left_front"]) - self.contacts["right_front"])**2 
         contacts += 0.25*((1 - self.contacts["left_back"]) - self.contacts["right_back"])**2 
-                
 
-        # orn = 0.1*np.exp(-5*np.sum((np.array(self.orn) - np.array([0,0,0,1]))**2))
-        reward = 1.5*goal + 0.5*joints + 0.25*orn - 0.25*contacts
+        # reward = 1.5*goal + 0.5*joints + 0.25*orn - 0.25*contacts
+        reward = 1.5*goal + 0.5*joints + 0.1*orn - 0.25*contacts
+        
+        # old
+        # reward = 1.5*goal + 0.1*joints + 0.1*orn - 0.1*contacts
+
         self.ep_reward_dict["Reward/goal"] += goal
         self.ep_reward_dict["Reward/joint"] += joints
         self.ep_reward_dict["Reward/orn"] += orn
@@ -264,7 +484,11 @@ class Env(EnvBaseMJ):
 
         rot = Rotation(self.orn)
         self.roll, self.pitch, self.yaw = rot.as_euler('xyz', degrees=False)
+
         self.imu = [self.roll, self.pitch] + list(self.data.sensordata) 
+        self.vx, self.vy, self.vz = self.data.sensordata[3:6]
+        self.yaw_vel = self.data.sensordata[2]
+
         self.joints = [self.data.joint(name).qpos[0] for name in self.motor_names]
         self.joint_vel = [self.data.joint(name).qvel[0] for name in self.motor_names]
         self.joint_force = list(self.data.actuator_force[:self.ac_size])

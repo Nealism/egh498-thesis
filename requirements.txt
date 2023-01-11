@@ -1,5 +1,5 @@
 torch
-torchvision
+tensorboard
 tensorboardX
 mpi4py
 tqdm
@@ -13,3 +13,5 @@ pyyaml
 lxml
 joblib
 psutil
+opencv-python
+pkg_resources

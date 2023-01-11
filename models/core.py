@@ -198,7 +198,7 @@ class MLPGaussianActor(Actor):
     def _distribution(self, obs):
         self.mu = self.mu_net(obs)
         self.std = torch.exp(self.log_std)
-        return Normal(self.mu, self.std)
+        return Normal(self.mu, self.std) ## multivariate normal dist. with self.mu=means and self.std=standard devs.
 
     def _log_prob_from_distribution(self, pi, act):
         return pi.log_prob(act).sum(axis=-1)    # Last axis sum needed for Torch Normal distribution
@@ -232,9 +232,9 @@ class MLPActorCritic(nn.Module):
     def step(self, obs, stochastic=True):
         pi = self.pi._distribution(obs)
         if stochastic:
-            a = pi.sample()
+            a = pi.sample() ## sample from normal dist.
         else:
-            a = self.pi.mu
+            a = self.pi.mu ## just take mean of dist. as the value
         logp_a = self.pi._log_prob_from_distribution(pi, a)
         v = self.v(obs)
 
