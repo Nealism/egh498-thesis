@@ -1,5 +1,4 @@
 torch
-torchvision
 tensorboard
 tensorboardX
 mpi4py

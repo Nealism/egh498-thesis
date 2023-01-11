@@ -62,6 +62,7 @@ class Env(EnvBaseMJ):
         self.last_wp_time = None # last time wp was generated
 
         ##### TERRAIN STUFF #####
+        self.have_map = False
 
         # ground truth dimensions
         self.gt_img_dim = (500, 500) # image (max (x, y) in pixels)
@@ -202,17 +203,21 @@ class Env(EnvBaseMJ):
         """
         Calculates the app. time for the robot to reach the current wp 
 
-        NOTE: this assumes the robot maintains it's given command velocity to the wp
+        NOTE: this assumes: -the robot maintains it's given command velocity 
+                             to the wp
+                            -the robot was facing the direction of the way point 
+                             when it was set
         """
         dx = self.wp_pos_mj[0] - self.pos[0]
         dy = self.wp_pos_mj[1] - self.pos[1]
         abs_dist = math.sqrt(dx**2 + dy**2)
-        # assume: already facing in direction of waypoint
-        # NOTE: multiply final time by some scalar (x > 1) to account for this
+        
         vx = self.commands[0]
         vy = self.commands[1]
         abs_vel = math.sqrt(vx**2 + vy**2) 
-        return 1.5*(abs_dist / abs_vel)
+        # NOTE: multiply by some scalar to account for assumptions
+        scaling_factor = 1.5
+        return scaling_factor * (abs_dist / abs_vel)
     
     def populate_terrain_xml(self, file_name):
         """
@@ -235,7 +240,7 @@ class Env(EnvBaseMJ):
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
-                self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=100, segs_per_branch=4, spread=[[1.0, 7.0],[-1, 1]], z_height=-0.05)
+                self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=200, segs_per_branch=4, spread=[[1.0, 7.0],[-1, 1]], z_height=-0.05)
             elif self.args.tree_type == "tree":
                 self.generate_tree(spread=[[1.0, 2.0],[-0.2, 0.2]])
 
@@ -349,14 +354,18 @@ class Env(EnvBaseMJ):
         """
         if cmds is not None:
             self.commands = cmds
-
+        
         if self.args.add_terrain:
             if self.can_gen_waypoint():
                 self.gen_waypoint()
-            if self.rank == self.view_rank: # only show map for one env
+
+            if self.rank == self.view_rank and self.have_map: # only show map for one env
                 self.show_map()
-        else:
-            self.wp_pos_mj = (5, 0)
+
+        # # for testing - set the bot moving towards the waypoint
+        # ang = math.atan2(self.wp_pos_mj[1] - self.pos[1], self.wp_pos_mj[0] - self.pos[0])
+        # sign = -1 if self.wp_pos_mj[1] - self.pos[1] < 0 else 1
+        # self.commands = [math.cos(ang), sign * math.sqrt(1 - (math.cos(ang))**2), 0]
 
         if self.paused:
             self.target_vx = 0.0
