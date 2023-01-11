@@ -1,5 +1,5 @@
 import numpy as np
-from mujoco_py import load_model_from_path, MjSim, MjViewer
+from mujoco import load_model_from_path, MjSim, MjViewer
 from gym import spaces
 import pickle
 from collections import deque

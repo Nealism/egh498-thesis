@@ -416,6 +416,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     local_lens = []
     local_rews = []
     t1 = time.time()
+
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
         for t in range(local_steps_per_epoch):

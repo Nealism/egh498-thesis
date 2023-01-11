@@ -1,4 +1,6 @@
 from .env_base import EnvBase
+import math
+from utils import img_helpers
 import mujoco
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -8,9 +10,7 @@ import os
 from mpi4py import MPI
 from utils.xml_helper import indent_xml
 comm = MPI.COMM_WORLD
-
 from utils import gen_grass, gen_tree
-
 
 class EnvBaseMJ(EnvBase):
 
@@ -46,10 +46,9 @@ class EnvBaseMJ(EnvBase):
         if joint_vel is not None:
             for value, name in zip(joint_vel, self.motor_names):
                 self.set_joint_qvel(name, value)
-    
 
     # ====================================================================================
-    # Tree stuff
+    # General assets stuff - Trees, Terrains etc.
     # ====================================================================================
     def save_xml(self, path):
         # Change the location of meshdir (when on the hpc) and save a copy of the current tree

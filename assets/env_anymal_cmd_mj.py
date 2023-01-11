@@ -60,10 +60,11 @@ class Env(EnvBaseMJ):
         self.wp_pos_mj = None # position in env
         self.wp_pos_im = None # position in map image
         self.last_wp_time = None # last time wp was generated
+        self.max_vel_mag = 1 # max vel. we assume robot can move towards wp at
 
         ##### TERRAIN STUFF #####
-        self.have_map = False
-
+        self.have_map = True
+        
         # ground truth dimensions
         self.gt_img_dim = (500, 500) # image (max (x, y) in pixels)
         self.gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
@@ -81,12 +82,12 @@ class Env(EnvBaseMJ):
         if self.args.add_terrain:
             self.terrains = [] #array of Terrain objects
             self.terrain_generator = TerrainGen()
-            self.load_terrain()
+            self.load_terrains()
             terrain_path = self.get_parent_dir(self.model_path) + f"terrain_{str(self.rank)}.xml"
             self.populate_terrain_xml(terrain_path) 
 
         self.load_robot()
-    
+
         self.ob_size = 54
         self.ac_size = 12
 
@@ -127,7 +128,7 @@ class Env(EnvBaseMJ):
         # States that we want to restore, for resuming training after running a test
         # self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
-    def load_terrain(self):
+    def load_terrains(self):
         """
         Generates all Terrain objects for this environment and adds them to the terrains array.
 
@@ -147,7 +148,7 @@ class Env(EnvBaseMJ):
 
         #generate and load any others below this
         ########################################
-        
+
     def show_map(self):
         """
         Displays a birds-eye map of the ground truth the robot is traversing.
@@ -157,10 +158,28 @@ class Env(EnvBaseMJ):
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
         img_helpers.draw_bounding_box(img_copy, box_centre, self.hm_img_dim[0], self.hm_img_dim[1])
-        if self.show_wp:
+        if self.show_wp: # way point 
             img_helpers.draw_dot(img_copy, self.wp_pos_im)
         img_helpers.display_img(img_copy)
     
+    def populate_terrain_xml(self, file_name):
+        """
+        Builds up the terrain xml (for this process)  
+        """
+        file_path = os.path.join(self.general_xml_path, file_name)
+        xml = etree.parse(file_path)
+        root = xml.getroot()
+        # asset el - where all hfields and meshes live
+        asset = etree.SubElement(root, "asset")
+        # worldbody el - where all the referencing geoms live
+        worldbody = etree.SubElement(root, "worldbody")
+
+        # add all terrains to the xml file
+        for terr in self.terrains:
+            terr.add_to_xml(asset, worldbody)
+        indent_xml(root)
+        xml.write(file_name)
+        
     def can_gen_waypoint(self):
         """
         Returns True iff can generate a way point, False otherwise
@@ -198,45 +217,31 @@ class Env(EnvBaseMJ):
         
         # set time limit for robot to reach the waypoint
         self.wp_time_lim = self.time_to_waypoint()
-
+    
     def time_to_waypoint(self):
         """
         Calculates the app. time for the robot to reach the current wp 
 
-        NOTE: this assumes: -the robot maintains it's given command velocity 
-                             to the wp
+        NOTE: this assumes: -robot maintains max. velocity to the wp
                             -the robot was facing the direction of the way point 
                              when it was set
         """
+        # calculate straight line distance to wp
         dx = self.wp_pos_mj[0] - self.pos[0]
         dy = self.wp_pos_mj[1] - self.pos[1]
         abs_dist = math.sqrt(dx**2 + dy**2)
         
-        vx = self.commands[0]
-        vy = self.commands[1]
+        # calculate x and y components of max velocity to the waypoint
+        ang = math.atan2(dy, dx)
+        vx = math.cos(ang) * self.max_vel_mag
+        vy = math.sin(ang) * self.max_vel_mag
         abs_vel = math.sqrt(vx**2 + vy**2) 
-        # NOTE: multiply by some scalar to account for assumptions
-        scaling_factor = 1.5
-        return scaling_factor * (abs_dist / abs_vel)
-    
-    def populate_terrain_xml(self, file_name):
-        """
-        Builds up the terrain xml (for this process)  
-        """
-        file_path = os.path.join(self.general_xml_path, file_name)
-        xml = etree.parse(file_path)
-        root = xml.getroot()
-        # asset el - where all hfields and meshes live
-        asset = etree.SubElement(root, "asset")
-        # worldbody el - where all the referencing geoms live
-        worldbody = etree.SubElement(root, "worldbody")
+        self.commands = [vx, vy, 0]
 
-        # add all terrains to the xml file
-        for terr in self.terrains:
-            terr.add_to_xml(asset, worldbody)
-        indent_xml(root)
-        xml.write(file_name)
-    
+        # return estimate of time for robot to reach wp
+        scaling_factor = 1.5 # NOTE: mult. by scalar to account for assumptions
+        return scaling_factor * (abs_dist / abs_vel)
+
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
@@ -361,11 +366,6 @@ class Env(EnvBaseMJ):
 
             if self.rank == self.view_rank and self.have_map: # only show map for one env
                 self.show_map()
-
-        # # for testing - set the bot moving towards the waypoint
-        # ang = math.atan2(self.wp_pos_mj[1] - self.pos[1], self.wp_pos_mj[0] - self.pos[0])
-        # sign = -1 if self.wp_pos_mj[1] - self.pos[1] < 0 else 1
-        # self.commands = [math.cos(ang), sign * math.sqrt(1 - (math.cos(ang))**2), 0]
 
         if self.paused:
             self.target_vx = 0.0

@@ -133,6 +133,7 @@ class MLPActorCriticPerception(nn.Module):
         # build value function
         self.v  = MLPCriticPerception(obs_dim, hidden_sizes, activation, self.pi.z_net)
 
+
     def step(self, obs, im, stochastic=True):
         pi = self.pi._distribution(obs, im)
         if stochastic:
