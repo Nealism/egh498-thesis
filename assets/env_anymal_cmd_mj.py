@@ -37,6 +37,7 @@ class Env(EnvBaseMJ):
 
         self.robot_name = "anymal_c"
 
+
         ##### PATHS #####
         self.general_xml_path = "assets/xmls/anybotics_anymal_c/"
         self.base_terrain_xml = "base_terrain.xml"
