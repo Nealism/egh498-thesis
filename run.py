@@ -34,7 +34,7 @@ def run(args):
     logger_kwargs = setup_logger_kwargs(args.exp, args.seed)
     logger_kwargs["output_dir"] = PATH
 
-    ppo(env, ac_kwargs=dict(hidden_sizes=[args.num_nodes]*args.num_layers), seed=args.seed, epochs=args.epochs, PATH=PATH, writer=writer, local_epoch_len=args.local_epoch_len, logger_kwargs=logger_kwargs, perception=args.perception)
+    ppo(env, ac_kwargs=dict(hidden_sizes=[args.num_nodes]*args.num_layers), seed=args.seed, epochs=args.epochs, PATH=PATH, writer=writer, local_epoch_len=args.local_epoch_len, logger_kwargs=logger_kwargs, use_perception=args.use_perception)
 
 if __name__=="__main__":
     args = default_arguments.get_defaults() 

@@ -20,10 +20,10 @@ class PPOBufferPerception:
     for calculating the advantages of state-action pairs.
     """
 
-    def __init__(self, obs_dim, im_dim, act_dim, size, gamma=0.99, lam=0.95):
-        self.obs_buf = np.zeros(core.combined_shape(size, obs_dim), dtype=np.float32)
-        self.im_buf = np.zeros(core.combined_shape(size, im_dim), dtype=np.float32)
-        self.act_buf = np.zeros(core.combined_shape(size, act_dim), dtype=np.float32)
+    def __init__(self, ob_size, im_size, ac_size, size, gamma=0.99, lam=0.95):
+        self.obs_buf = np.zeros(core.combined_shape(size, ob_size), dtype=np.float32)
+        self.im_buf = np.zeros(core.combined_shape(size, im_size), dtype=np.float32)
+        self.act_buf = np.zeros(core.combined_shape(size, ac_size), dtype=np.float32)
         self.adv_buf = np.zeros(size, dtype=np.float32)
         self.rew_buf = np.zeros(size, dtype=np.float32)
         self.ret_buf = np.zeros(size, dtype=np.float32)
@@ -98,9 +98,9 @@ class PPOBuffer:
     for calculating the advantages of state-action pairs.
     """
 
-    def __init__(self, obs_dim, act_dim, size, gamma=0.99, lam=0.95):
-        self.obs_buf = np.zeros(core.combined_shape(size, obs_dim), dtype=np.float32)
-        self.act_buf = np.zeros(core.combined_shape(size, act_dim), dtype=np.float32)
+    def __init__(self, ob_size, ac_size, size, gamma=0.99, lam=0.95):
+        self.obs_buf = np.zeros(core.combined_shape(size, ob_size), dtype=np.float32)
+        self.act_buf = np.zeros(core.combined_shape(size, ac_size), dtype=np.float32)
         self.adv_buf = np.zeros(size, dtype=np.float32)
         self.rew_buf = np.zeros(size, dtype=np.float32)
         self.ret_buf = np.zeros(size, dtype=np.float32)
@@ -170,7 +170,7 @@ class PPOBuffer:
 def ppo(env, ac_kwargs=dict(), seed=0, 
         steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
         vf_lr=1e-3, train_pi_iters=100, train_v_iters=100, lam=0.97, max_ep_len=2048, local_epoch_len=2048,
-        target_kl=0.01, logger_kwargs=dict(), save_freq=10, PATH=None, writer=None, perception=False):
+        target_kl=0.01, logger_kwargs=dict(), save_freq=10, PATH=None, writer=None, use_perception=False):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -188,7 +188,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             ===========  ================  ======================================
             Symbol       Shape             Description
             ===========  ================  ======================================
-            ``a``        (batch, act_dim)  | Numpy array of actions for each 
+            ``a``        (batch, ac_size)  | Numpy array of actions for each 
                                            | observation.
             ``v``        (batch,)          | Numpy array of value estimates
                                            | for the provided observations.
@@ -290,14 +290,14 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-    obs_dim = env.observation_space.shape
-    act_dim = env.action_space.shape
+    ob_size = env.observation_space.shape
+    ac_size = env.action_space.shape
 
     # Create actor-critic module
-    if perception:
+    if use_perception:
         actor_critic=core.MLPActorCriticPerception
-        im_dim = env.terrain_size
-        ac = actor_critic(env.observation_space, im_dim, env.action_space, **ac_kwargs)
+        im_size = env.im_size
+        ac = actor_critic(env.observation_space, im_size, env.action_space, **ac_kwargs)
         train_pi_iters = 10
         train_v_iters = 10
     else:    
@@ -317,20 +317,20 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # local_steps_per_epoch = int(steps_per_epoch / num_procs())
     local_steps_per_epoch = local_epoch_len
     steps_per_epoch = local_epoch_len * num_procs()
-    if perception:
-        buf = PPOBufferPerception(obs_dim, im_dim, act_dim, local_steps_per_epoch, gamma, lam)
+    if use_perception:
+        buf = PPOBufferPerception(ob_size, im_size, ac_size, local_steps_per_epoch, gamma, lam)
     else:
-        buf = PPOBuffer(obs_dim, act_dim, local_steps_per_epoch, gamma, lam)
+        buf = PPOBuffer(ob_size, ac_size, local_steps_per_epoch, gamma, lam)
 
     # Set up function for computing PPO policy loss
     def compute_loss_pi(data):
-        if perception:
+        if use_perception:
             obs, im, act, adv, logp_old = data['obs'], data['im'], data['act'], data['adv'], data['logp']
         else:
             obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
 
         # Policy loss
-        if perception:
+        if use_perception:
             pi, logp = ac.pi(obs, im, act)
         else:
             pi, logp = ac.pi(obs, act)
@@ -349,7 +349,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
     # Set up function for computing value loss
     def compute_loss_v(data):
-        if perception:
+        if use_perception:
             obs, im, ret = data['obs'], data['im'], data['ret']
             return ((ac.v(obs, im) - ret)**2).mean()
         else: 
@@ -410,8 +410,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # Prepare for interaction with environment
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
-    if perception:
-        im = env.terrain
+    if use_perception:
+        im = env.get_image()
 
     local_lens = []
     local_rews = []
@@ -420,18 +420,20 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
         for t in range(local_steps_per_epoch):
-            if perception:
+            if use_perception:
                 a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
             else:
                 a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
 
             next_o, r, d, _ = env.step(a)
-
+            if use_perception:
+                next_im = env.get_image()
+            
             ep_ret += r
             ep_len += 1
 
             # save and log
-            if perception:
+            if use_perception:
                 buf.store(o, im, a, r, v, logp)
             else:
                 buf.store(o, a, r, v, logp)
@@ -439,6 +441,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             
             # Update obs (critical!)
             o = next_o
+            if use_perception:
+                im = next_im
 
             timeout = ep_len == env.args.max_ep_len
             terminal = d or timeout
@@ -447,7 +451,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             if terminal or epoch_ended:
                 # if trajectory didn't reach terminal state, bootstrap value target
                 if (timeout or epoch_ended) and not d:
-                    if perception:
+                    if use_perception:
                         _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                     else:
                         _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32))
@@ -460,22 +464,26 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                     local_rews.append(ep_ret)
                     local_lens.append(ep_len)
                 o, ep_ret, ep_len = env.reset(), 0, 0
-                if perception:
-                    im = env.terrain
+                if use_perception:
+                    im = env.get_image()
         if (epoch % save_freq == 0) or (epoch == epochs-1):
             if proc_id() == 0:
                 print("Saving model")
                 torch.save(ac, PATH + "model.pt")
             # Wait for all processes before doing an update
             comm.Barrier()
-            save_state = env.get_env_state()
-            restore_state = [env.pos, env.orn, env.joints]
-            test_success = run_test(env, PATH + "model.pt")
-            if proc_id() == 0:
-                print("Test success:", test_success)
-                writer.add_scalar("SuccessTest", np.mean(test_success), epoch)
-            env.reset(test=True, restore_state=restore_state)
-            env.restore_env_state(save_state)
+            # Currently runnning a test shuts the physics server for PyBullet, unsure why
+            if "pb" not in env.args.env:
+                save_state = env.get_env_state()
+                restore_state = [env.pos, env.orn, env.joints]
+                test_success = run_test(env, PATH + "model.pt", use_perception=use_perception)
+                if proc_id() == 0:
+                    print("Test success:", test_success)
+                    writer.add_scalar("SuccessTest", np.mean(test_success), epoch)
+                env.reset(test=True, restore_state=restore_state)
+                if use_perception:
+                    im = env.get_image()
+                env.restore_env_state(save_state)
 
         # Perform PPO update!
         update(epoch)
@@ -521,7 +529,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         logger.dump_tabular()
         t1 = time.time()
 
-def run_test(env, model):
+def run_test(env, model, use_perception=False):
     # Test policy without any randomness
     try:
         ac = torch.load(model)
@@ -539,10 +547,17 @@ def run_test(env, model):
     env.args.disturbances = False
     env.args.record_sim = False
     ob = env.reset()
+    if use_perception:
+        im = env.get_image()
     done = False
     while True:
-        act, _, _ = ac.step(torch.as_tensor(ob, dtype=torch.float32), stochastic=False)
+        if use_perception:
+            act, _, _ = ac.step(torch.as_tensor(ob, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)
+        else:
+            act, _, _ = ac.step(torch.as_tensor(ob, dtype=torch.float32), stochastic=False)
         ob, rew, done, _ = env.step(act)
+        if use_perception:
+            im = env.get_image()
         if done or env.steps > env.args.max_ep_len:
             break
     success = env.get_success()

@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 from torch.distributions.normal import Normal
 from torch.distributions.categorical import Categorical
-# from spinup.utils.mpi_running_mean_std_torch import RunningMeanStdTorch
 
 def combined_shape(length, shape=None):
     if shape is None:
@@ -28,18 +27,15 @@ class CNN(nn.Module):
         self.conv1 = nn.Conv2d(in_channels=1,out_channels=8,kernel_size=8,stride=4,padding='valid')
         self.conv2 = nn.Conv2d(in_channels=8,out_channels=16,kernel_size=4,stride=2,padding='valid')
 
-        # Gross
-        self.fc = nn.Linear(2880, 64)
-        
-        # Maybe something like this?
-        # self.fc = nn.LazyLinear(64)
+        # Lazy initialisation of linear layer without knowing input dimensions. Requires a 'dry' run to initialise the size
+        self.fc = nn.LazyLinear(64)
 
     def forward(self, x):
         x = torch.reshape(x, [-1] + self.im_dim)
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = torch.flatten(x, 1) 
-        x = F.tanh(self.fc(x))
+        x = torch.tanh(self.fc(x))
         return x
 
 def count_vars(module):
@@ -94,6 +90,8 @@ class MLPGaussianActorPerception(ActorPerception):
         log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
         self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
         self.z_net = CNN(im_dim)
+        # Need to do a dry run to initialise Lazy module
+        self.z_net(torch.zeros(self.im_dim))
         self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
 
     def _distribution(self, obs, im):
