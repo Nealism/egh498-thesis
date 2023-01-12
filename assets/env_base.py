@@ -11,6 +11,14 @@ class EnvBase():
         if self.args.do_plot:
             self.plotter = Plotter(PATH=PATH)
 
+    def get_log_things(self):
+        # Things we want to log each training step (print and add to tensorboard)
+        return_dict = {}
+        return return_dict
+
+    def get_image(self):
+        return np.zeros(self.im_size)
+
     def get_env_state(self):
         save_dict = {}
         for state in self.__dict__:
@@ -29,7 +37,7 @@ class EnvBase():
 
     def record_sim_state(self, best=False, test=False, additional_arguments=None):
         if self.args.record_sim and self.rank == 0:
-            if additional_arguments:
+            if additional_arguments is not None:
                 self.sim_data.append(additional_arguments)
             pickle.dump(np.array(self.sim_data, dtype=object), open(self.PATH + "sim_data","wb"))
             if self.args.do_plot and self.episodes % 20 == 0:

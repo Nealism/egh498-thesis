@@ -13,7 +13,8 @@ from assets.env_base_pb import EnvBasePB
 from assets.env_mocap_pb import EnvExp
 
 class Env(EnvBasePB):
-
+    # Terrain size and image size are the same
+    terrain_size = im_size = [1,100,100]
     def __init__(self, PATH=None, args=None, writer=None):
 
         self.rank = comm.Get_rank()
@@ -30,6 +31,7 @@ class Env(EnvBasePB):
         self.Kp = 400
         self.initial_Kp = self.Kp
         self.ROBOT_HEIGHT = 1.2
+        self.best_return = 0
 
         # Needed if importing as Gym environment
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
@@ -489,3 +491,6 @@ class Env(EnvBasePB):
 
         forces = 20.0*(max_dist/self.final_disturbance)*np.random.random(self.ac_size)
         p.setJointMotorControlArray(self.Id, self.motors, controlMode=p.TORQUE_CONTROL, forces=forces)
+
+    def get_image(self):
+        return self.terrain

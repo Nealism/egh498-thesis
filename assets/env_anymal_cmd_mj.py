@@ -90,6 +90,7 @@ class Env(EnvBaseMJ):
 
         self.ob_size = 54
         self.ac_size = 12
+        self.im_size = [1] + list(self.hm_img_dim)
 
         self.motor_names = ['LF_HAA', 'LF_HFE', 'LF_KFE', 'RF_HAA', 'RF_HFE', 'RF_KFE', 'LH_HAA', 'LH_HFE', 'LH_KFE', 'RH_HAA', 'RH_HFE', 'RH_KFE']
         # Needed if importing as Gym environment
