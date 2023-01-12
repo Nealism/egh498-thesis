@@ -29,7 +29,7 @@ class CNN(nn.Module):
         self.conv2 = nn.Conv2d(in_channels=8,out_channels=16,kernel_size=4,stride=2,padding='valid')
 
         # Gross
-        self.fc = nn.Linear(2880, 64)
+        self.fc = nn.Linear(121, 64)
         
         # Maybe something like this?
         # self.fc = nn.LazyLinear(64)
@@ -41,6 +41,7 @@ class CNN(nn.Module):
         x = torch.flatten(x, 1) 
         x = F.tanh(self.fc(x))
         return x
+
 
 def count_vars(module):
     return sum([np.prod(p.shape) for p in module.parameters()])

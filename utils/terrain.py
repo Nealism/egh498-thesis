@@ -1,4 +1,5 @@
 import numpy as np
+import os 
 import cv2
 from lxml import etree
 from utils import img_helpers
@@ -56,15 +57,19 @@ class Hfield(Terrain):
         self.size_str = f"{size[0]} {size[1]} {size[2]} {size[3]}"
         self.position_str = f"{position[0]} {position[1]} {position[2]}"
 
-        # xml hfield element
-        self.hfield_el = etree.Element("hfield", attrib={"name":self.name,
+        # hfield element and its referencing geom
+        self.hfield_el, self.geom_el = self.config_hfield_geom()
+        
+    def config_hfield_geom(self):
+        hfield_el = etree.Element("hfield", attrib={"name":self.name,
                                                     "file":self.img_path,
                                                     "size":self.size_str})
-        # xml geom element (referencing hfield)
-        self.geom_el = etree.Element("geom", attrib={"name":self.name,
-                                                 "type":"hfield",
-                                                 "pos":self.position_str,
-                                                 "hfield":self.name})
+
+        geom_el = etree.Element("geom", attrib={"name":self.name,
+                                                    "type":"hfield",
+                                                    "pos":self.position_str,
+                                                    "hfield":self.name})
+        return hfield_el, geom_el
 
     def rob_to_img_pos(self, pos):
         """
@@ -110,13 +115,6 @@ class Hfield(Terrain):
         # (x, y) == (col, row)
         return self.terr_arr[min_y:max_y+1, min_x:max_x+1]
 
-    def add_to_xml(self, hfield_parent, geom_parent):
-        """
-        Adds both the hfield and its corresponding geom to the terrain file
-        """
-        hfield_parent.append(self.hfield_el)
-        geom_parent.append(self.geom_el)
-    
 """
 Class to represent a mesh in mujoco
 """

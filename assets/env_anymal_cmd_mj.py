@@ -79,15 +79,10 @@ class Env(EnvBaseMJ):
         if self.args.tree_type or self.args.add_terrain:
             self.set_up_xmls()
 
-        # load all Terrain objects into the env
-        if self.args.add_terrain:
-            self.terrains = [] #array of Terrain objects
-            self.terrain_generator = TerrainGen()
-            self.load_terrains()
-            terrain_path = self.get_parent_dir(self.model_path) + f"terrain_{str(self.rank)}.xml"
-            self.populate_terrain_xml(terrain_path) 
-
+        # load mujoco model and data (robot itself, trees, terrains etc.)
+        self.first_time = True
         self.load_robot()
+        self.first_time = False
 
         self.ob_size = 54
         self.ac_size = 12
@@ -134,11 +129,13 @@ class Env(EnvBaseMJ):
         NOTE: By default, always load the ground truth
         NOTE: can optionally create other terrains 
         """
+        self.terrains = []
+        self.terrain_generator = TerrainGen()
         # generate and load ground truth image
         gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.terrain_size)
         gt_position = (0, 0, 0)
         # NOTE: can change elev. and depth for each env, or keep constant for each (as we've done here)
-        elevation = 0.01
+        elevation = 0.1
         depth = 1
         gt_size = (self.terrain_size_mj[0], self.terrain_size_mj[1], elevation, depth)
         self.ground_truth = Hfield(gt_arr, self.get_parent_dir(self.model_path), f"ground_truth_{str(self.rank)}",
@@ -162,11 +159,10 @@ class Env(EnvBaseMJ):
             img_helpers.draw_dot(img_copy, self.wp_pos_im)
         img_helpers.display_img(img_copy)
     
-    def populate_terrain_xml(self, file_name):
+    def populate_terrain_xml(self, file_path):
         """
         Builds up the terrain xml (for this process)  
         """
-        file_path = os.path.join(self.general_xml_path, file_name)
         xml = etree.parse(file_path)
         root = xml.getroot()
         # asset el - where all hfields and meshes live
@@ -176,9 +172,26 @@ class Env(EnvBaseMJ):
 
         # add all terrains to the xml file
         for terr in self.terrains:
-            terr.add_to_xml(asset, worldbody)
+            asset.append(terr.hfield_el)
+            worldbody.append(terr.geom_el)
         indent_xml(root)
-        xml.write(file_name)
+        xml.write(file_path)
+    
+    def reconfig_terrain_xml(self, file_path, terr_obj):
+        """
+        Reconfigure the xml for the given terrain object.
+        NOTE: if only change is PNG image (name remains same), don't need to configure
+        """
+        xml = etree.parse(file_path)
+        asset, worldbody = xml.findall('asset')[0], xml.findall('worldbody')[0]
+        hfield = [hf for hf in asset.findall('hfield') if hf.attrib['name'] == terr_obj.name][0]
+        geom = [gm for gm in worldbody.findall('geom') if gm.attrib['name'] == terr_obj.name][0]
+        asset.remove(hfield)
+        worldbody.remove(geom)
+        asset.append(terr_obj.hfield_el)
+        worldbody.append(terr_obj.geom_el)
+        indent_xml(xml.getroot())
+        xml.write(file_path)
         
     def can_gen_waypoint(self):
         """
@@ -236,22 +249,35 @@ class Env(EnvBaseMJ):
         return scaling_factor * (abs_dist / self.max_vel_mag)
 
     def load_robot(self):
+        # load in grass/trees
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
                 self.generate_tree(radius=0.02, height=0.4, damping=1, stiffness=2, pos=[0,0,0],rot=[1,0,0,0], num=200, segs_per_branch=4, spread=[[1.0, 7.0],[-1, 1]], z_height=-0.05)
             elif self.args.tree_type == "tree":
                 self.generate_tree(spread=[[1.0, 2.0],[-0.2, 0.2]])
+        
+        # load in terrains
+        if not self.args.replay and self.args.add_terrain:
+            self.load_terrains()
+            terrain_path = self.get_parent_dir(self.model_path) + f"terrain_{str(self.rank)}.xml"
+            if self.first_time:
+                self.populate_terrain_xml(terrain_path)
+            else:
+                self.reconfig_terrain_xml(terrain_path, self.ground_truth)
 
         self.model = mujoco.MjModel.from_xml_path(self.model_path)
         self.data = mujoco.MjData(self.model)
 
         # Mujoco_viewer doesn't work on the hpc, shouldn't render there anyway
         if not self.args.training_on_hpc:
-            if isinstance(self.viewer, mujoco_viewer.MujocoViewer):
+            # if isinstance(self.viewer, mujoco_viewer.MujocoViewer):
+            if 0:
                 # Replace model and data of an existing viewer
                 self.viewer.model = self.model
                 self.viewer.data = self.data
             elif self.render:
+                if self.viewer:
+                    self.viewer.close()
                 self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)
             else:
                 # Offscreen might help getting images?
@@ -302,7 +328,9 @@ class Env(EnvBaseMJ):
         
         if model_path is not None:
             self.model_path = model_path 
-        if self.args.tree_type or model_path is not None:
+
+        # must reset mj model and data if loading new trees/grass/terrain every episode
+        if self.args.tree_type or self.args.add_terrain or model_path is not None:
             self.load_robot()
 
         mujoco.mj_resetData(self.model, self.data)
