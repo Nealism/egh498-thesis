@@ -15,6 +15,7 @@ from utils import img_helpers
 from utils.xml_helper import indent_xml
 from lxml import etree
 import math
+from configs.anymal_cmd_mj_cfg import AnymalCmdMjCfg
 
 class Env(EnvBaseMJ):
     # Timestep for mujoco is set in the .xml, and shows up under self.model.opt.timestep
@@ -32,6 +33,7 @@ class Env(EnvBaseMJ):
         self.PATH = PATH
         self.writer = writer
         self.master = True 
+        self.cfg = AnymalCmdMjCfg
 
         super().__init__(PATH)
 
@@ -88,8 +90,8 @@ class Env(EnvBaseMJ):
 
         self.load_robot()
 
-        self.ob_size = 54
-        self.ac_size = 12
+        self.ob_size = self.cfg.env.ob_size
+        self.ac_size = self.cfg.env.ac_size
 
         self.motor_names = ['LF_HAA', 'LF_HFE', 'LF_KFE', 'RF_HAA', 'RF_HFE', 'RF_KFE', 'LH_HAA', 'LH_HFE', 'LH_KFE', 'RH_HAA', 'RH_HFE', 'RH_KFE']
         # Needed if importing as Gym environment
