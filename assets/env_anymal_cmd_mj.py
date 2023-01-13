@@ -86,7 +86,7 @@ class Env(EnvBaseMJ):
 
         self.ob_size = self.env_cfg.ob_size
         self.ac_size = self.env_cfg.ac_size
-        self.im_size = [1] + list(self.hm_img_dim)
+        self.im_size = [1] + list(self.terr_cfg.hm_img_dim)
 
         self.motor_names = self.robot_cfg.motor_names
         # Needed if importing as Gym environment
@@ -250,6 +250,15 @@ class Env(EnvBaseMJ):
 
         self.model = mujoco.MjModel.from_xml_path(self.model_path)
         self.data = mujoco.MjData(self.model)
+
+        # load in terrains
+        if not self.args.replay and self.args.add_terrain:
+            self.load_terrains()
+            terrain_path = self.get_parent_dir(self.model_path) + f"terrain_{str(self.rank)}.xml"
+            if self.first_time:
+                self.populate_terrain_xml(terrain_path)
+            else:
+                self.reconfig_terrain_xml(terrain_path, self.ground_truth)
 
         # Mujoco_viewer doesn't work on the hpc, shouldn't render there anyway
         if not self.args.training_on_hpc:
