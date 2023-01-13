@@ -123,7 +123,11 @@ class Env(EnvBaseMJ):
         self.terrains = []
         self.terrain_generator = TerrainGen()
         # generate and load ground truth image
-        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.terr_cfg.gt_img_dim)
+
+        # gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.terr_cfg.gt_img_dim)
+        gt_arr = np.ones((self.terr_cfg.gt_img_dim))
+        gt_arr[200:300, 300:320] = 0.5
+
         gt_path = self.get_parent_dir(self.model_path)
         gt_name = f"ground_truth_{str(self.rank)}"
         gt_position = self.terr_cfg.hf_centre_pos
@@ -136,6 +140,9 @@ class Env(EnvBaseMJ):
         ########################################
     
     def get_image(self):
+        """
+
+        """
         subsection = self.ground_truth.compute_sub_section(self.pos[0], self.pos[1], *self.terr_cfg.hm_img_dim)
         return np.reshape(subsection, self.im_size)
 
@@ -219,7 +226,6 @@ class Env(EnvBaseMJ):
         # set both its mj position AND image position
         self.wp_pos_mj = (x, y)
         self.wp_pos_im = self.ground_truth.rob_to_img_pos(self.wp_pos_mj)
-        print(self.wp_pos_mj)
 
         # set time at which waypoint was placed
         self.last_wp_time = self.data.time

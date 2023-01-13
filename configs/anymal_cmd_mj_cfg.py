@@ -18,9 +18,9 @@ class AnymalCmdMjCfg():
         hm_mj_dim = (gt_mj_dim[0] / gt_to_hm_ratio, gt_mj_dim[1] / gt_to_hm_ratio)
 
         # hfield config
-        hf_centre_pos = (0, 0, 0)
-        hf_elev = 0.1
-        hf_depth = 1
+        hf_centre_pos = (0, 0, 1.5)
+        hf_elev = 1
+        hf_depth = 0.2
 
         class grass:
             radius = 0.02
@@ -42,8 +42,8 @@ class AnymalCmdMjCfg():
         tree_params = get_attribute_dict(tree)
 
     class map:
-        show_map = True
-        show_waypoint = True
+        show_map = False
+        show_waypoint = False
         max_vel_to_wp = 1.0
         wp_time_scalar = 1.5
 
@@ -61,7 +61,7 @@ class AnymalCmdMjCfg():
     class robot:
         torque_act_mult = 20
         pos_act_mult = 0.2
-        init_z = 0.7
+        init_z = 0.7 + 1.5 + 1
         init_joints = [-0.2,0.6,-1.0, 0.2,0.6,-1.0, -0.2,-0.6,1.0, 0.2,-0.6,1.0]
         right_swing = [-0.2,0.0,-0.8, 0.2,1.0,-1.0, -0.2,-0.4,1.0, 0.2,-1.0,0.0]
         left_swing = [-0.2,1.0,-1.0, 0.2,0.0,-0.8, -0.2,-1.0,0.0, 0.2,-0.4,1.0]

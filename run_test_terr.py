@@ -1,15 +1,12 @@
-import torch
-import os
-import numpy as np
-import glob
-import time
-from pathlib import Path
+from assets.env_anymal_cmd_mj import Env
 import default_arguments
-from utils.plotter import Plotter
+from pathlib import Path
+import time
+import glob
 
 home = str(Path.home())
 
-def run(args): 
+def run(args):
 
     if args.hpc:
         path_home = "/hpc-scratch/" + home.split("/")[-1]
@@ -32,28 +29,12 @@ def run(args):
         latest_folder = args.folder
 
     PATH = path_home + latest_folder
-    
-    Env, args = default_arguments.get_env(args)   
-    args.render = True
-    args.record_sim = False
+    Env, args = default_arguments.get_env(args)
     env = Env(PATH=PATH, args=args)
-
-    if args.env == "anymal_cmd_mj":
-        pol = torch.load("./resources/cmd_model/model.pt")
-    else:
-        pol = torch.load(PATH + "/model.pt")
-
-    obs = env.reset()
+    env.reset()
     while True:
-        action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
-        if args.env == "anymal_cmd_mj":
-            obs, _, done, _ = env.step(action, cmds=[0.0,0.0,0.0])
-        else:
-            obs, _, done, _ = env.step(action)
-        if done or env.steps > args.max_ep_len:
-            obs = env.reset()
-
-
-if __name__== "__main__":
-    args = default_arguments.get_defaults() 
+        env.step([0]*12)
+        
+if __name__ == "__main__":
+    args = default_arguments.get_defaults()
     run(args)
