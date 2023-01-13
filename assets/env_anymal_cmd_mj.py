@@ -47,7 +47,6 @@ class Env(EnvBaseMJ):
 
         self.robot_name = "anymal_c"
 
-
         ##### PATHS #####
 
         self.general_xml_path = "assets/xmls/anybotics_anymal_c/"
@@ -124,11 +123,7 @@ class Env(EnvBaseMJ):
         self.terrains = []
         self.terrain_generator = TerrainGen()
         # generate and load ground truth image
-
-        # gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.terr_cfg.gt_img_dim)
-        gt_arr = np.zeros(self.terr_cfg.gt_img_dim)
-        gt_arr[230:270, 230:270] = 255
-
+        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.terr_cfg.gt_img_dim)
         gt_path = self.get_parent_dir(self.model_path)
         gt_name = f"ground_truth_{str(self.rank)}"
         gt_position = self.terr_cfg.hf_centre_pos
