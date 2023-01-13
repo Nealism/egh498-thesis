@@ -90,6 +90,7 @@ class Env(EnvBaseMJ):
 
         self.ob_size = self.env_cfg.ob_size
         self.ac_size = self.env_cfg.ac_size
+        self.im_size = [1] + list(self.hm_img_dim)
 
         self.motor_names = self.robot_cfg.motor_names
         # Needed if importing as Gym environment
