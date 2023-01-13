@@ -35,6 +35,7 @@ class Env(EnvBaseMJ):
         self.master = True 
 
         ### CONFIGS ###
+
         self.cfg = AnymalCmdMjCfg
         self.env_cfg = self.cfg.env
         self.terr_cfg = self.cfg.terrain
@@ -47,6 +48,7 @@ class Env(EnvBaseMJ):
         self.robot_name = "anymal_c"
 
         ##### PATHS #####
+
         self.general_xml_path = "assets/xmls/anybotics_anymal_c/"
         self.base_terrain_xml = "base_terrain.xml"
         # Name of the base link in the xml, for setting the robot position on reset
@@ -63,26 +65,14 @@ class Env(EnvBaseMJ):
         
         self.viewer = None
 
-        
         ##### WAY POINT STUFF #####
 
-        self.show_wp = True # show on map
         self.wp_pos_mj = None # position in env
         self.wp_pos_im = None # position in map image
         self.last_wp_time = None # last time wp was generated
-        self.max_vel_mag = 1 # max vel. we assume robot can move towards wp at
+        self.max_vel_to_wp = self.map_cfg.max_vel_to_wp # max vel. expect robot to maintain moving towards wp
 
         ##### TERRAIN STUFF #####
-        self.have_map = True
-        
-        # # ground truth dimensions
-        # self.gt_img_dim = (500, 500) # image (max (x, y) in pixels)
-        # self.gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
-        
-        # # height map dimensions
-        # self.hm_img_dim = (100, 100) # image sub-section - (max (x, y) in pixels)
-        # self.hm_mj_dim = (self.gt_mj_dim[0] / (self.gt_img_dim[0] / self.hm_img_dim[0]),  
-        #                        self.gt_mj_dim[1] / (self.gt_img_dim[1] / self.hm_img_dim[1])) # mj hfield sub-section (x_rad, y_rad)
         
         # set up base xml files for this rank/process (scene, tree, terrain etc.)
         if self.args.tree_type or self.args.add_terrain:
@@ -114,8 +104,7 @@ class Env(EnvBaseMJ):
         self.initial_z = self.robot_cfg.init_z
 
         self.episodes = -1
-        self.success = deque([0.0], maxlen=5)
-        self.target_radius = 0.12
+        self.success = deque([0.0], maxlen=self.rew_cfg.goal.max_succ_len)
         self.sim_data = []
         self.best_return = 0
 
@@ -137,13 +126,12 @@ class Env(EnvBaseMJ):
         """
         # generate and load ground truth image
         gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.cfg.terrain.gt_img_dim)
-        gt_position = (0, 0, 0)
-        # NOTE: can change elev. and depth for each env, or keep constant for each (as we've done here)
-        elevation = 0.01
-        depth = 1
-        gt_size = (self.cfg.terrain.gt_mj_dim[0], self.cfg.terrain.gt_mj_dim[1], elevation, depth)
-        self.ground_truth = Hfield(gt_arr, self.get_parent_dir(self.model_path), f"ground_truth_{str(self.rank)}",
-                                   gt_position, gt_size)
+        gt_path = self.get_parent_dir(self.model_path)
+        gt_name = f"ground_truth_{str(self.rank)}"
+        gt_position = self.terr_cfg.hf_centre_pos
+        gt_size = (*self.terr_cfg.gt_mj_dim, self.terr_cfg.hf_elev, self.terr_cfg.hf_depth)
+
+        self.ground_truth = Hfield(gt_arr, gt_path, gt_name, gt_position, gt_size) 
         self.terrains.append(self.ground_truth)
 
         #generate and load any others below this
@@ -158,7 +146,7 @@ class Env(EnvBaseMJ):
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
         img_helpers.draw_bounding_box(img_copy, box_centre, self.cfg.terrain.hm_img_dim[0], self.cfg.terrain.hm_img_dim[1])
-        if self.show_wp: # way point 
+        if self.map_cfg.show_waypoint: 
             img_helpers.draw_dot(img_copy, self.wp_pos_im)
         img_helpers.display_img(img_copy)
     
@@ -235,7 +223,7 @@ class Env(EnvBaseMJ):
         
         # return estimate of time for robot to reach wp
         # NOTE: multiply by scalar to account for the assumptions made (see above)
-        return self.map_cfg.wp_time_scalar * (abs_dist / self.max_vel_mag)
+        return self.map_cfg.wp_time_scalar * (abs_dist / self.max_vel_to_wp)
 
     def load_robot(self):
         if not self.args.replay and self.args.tree_type:
@@ -271,14 +259,12 @@ class Env(EnvBaseMJ):
         # Success is time spent above a target goal
         min_goal_len = self.rew_cfg.goal.min_goal_len
         mean_goal_tgt = self.rew_cfg.goal.mean_goal_tgt
-
         return (len(self.goal) > min_goal_len and 
                 np.mean(self.goal) > mean_goal_tgt)
 
     def check_for_success(self):
-        success_len = self.rew_cfg.goal.success_len
-
-        return (len(self.success) == success_len and 
+        max_len = self.rew_cfg.goal.max_succ_len
+        return (len(self.success) == max_len and 
                 (np.array(self.success) == True).all())
 
     def reset(self, test=False, model_path=None, restore_state=None):
@@ -339,7 +325,7 @@ class Env(EnvBaseMJ):
         self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
         self.get_trajectory(self.expert_target)
 
-        self.command_ranges = np.array([1,1,1.5])
+        self.command_ranges = np.array(self.env_cfg.cmd_ranges)
         self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
         self.time_at_speed = 0
         self.goal = []
@@ -365,7 +351,7 @@ class Env(EnvBaseMJ):
             if self.can_gen_waypoint():
                 self.gen_waypoint()
 
-            if self.rank == self.view_rank and self.render and self.have_map:
+            if self.rank == self.view_rank and self.render and self.map_cfg.show_map:
                 self.show_map()
 
         if self.paused:

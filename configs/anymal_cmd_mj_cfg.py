@@ -4,15 +4,21 @@ class AnymalCmdMjCfg():
     class env:
         ob_size = 54
         ac_size = 12
+        cmd_ranges = [1, 1, 1.5]
     
     class terrain:
-        gt_img_dim = (500, 500) 
-        gt_mj_dim = (10, 10)
-        hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5)
-        hm_mj_dim = (gt_mj_dim[0] / (gt_img_dim[0] / hm_img_dim[0]),  
-                               gt_mj_dim[1] / (gt_img_dim[1] / hm_img_dim[1])) 
+        # ground truth dimensions
+        gt_img_dim = (500, 500) # image (max (x, y) in pixels)
+        gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
+
+        # height map dimensions
+        hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
+        hm_mj_dim = (gt_mj_dim[0] / (gt_img_dim[0] / hm_img_dim[0]), 
+                               gt_mj_dim[1] / (gt_img_dim[1] / hm_img_dim[1]))  # mj hfield sub-section
+
+        # hfield config
         hf_centre_pos = (0, 0, 0)
-        hf_elev = 0.01
+        hf_elev = 0.05
         hf_depth = 1
 
         class grass:
@@ -30,21 +36,21 @@ class AnymalCmdMjCfg():
         class tree:
             spread = [[1.0, 2.0], [-0.2, 0.2]]
         
+        # dict of all class attributes eg: {'radius': 0.02, ... }
         grass_params = get_attribute_dict(grass)
         tree_params = get_attribute_dict(tree)
 
     class map:
         show_map = False
         show_waypoint = False
-        max_vel_to_waypoint = 1
+        max_vel_to_wp = 1
         wp_time_scalar = 1.5
 
-    
     class reward:
         class goal:
             min_goal_len = 100
             mean_goal_tgt = 1.0
-            success_len = 5
+            max_succ_len = 5
         
         class done:
             min_z = 0.35
