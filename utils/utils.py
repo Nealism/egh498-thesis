@@ -54,6 +54,11 @@ def display_images(im1, im2=None, im3=None, lag=1):
             cv2.imshow("frame", np.hstack([i1,i2,i3]))
             cv2.waitKey(lag)
 
+def get_attribute_dict(class_name):
+    return {k:v for k,v in class_name.__dict__.items() 
+            if not k.startswith("__") and 
+            not callable(v)}
+
 # def flatten_lists(listoflists):
 #     return [el for list_ in listoflists for el in list_]
 
