@@ -145,7 +145,7 @@ class Env(EnvBaseMJ):
         """
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
-        img_helpers.draw_bounding_box(img_copy, box_centre, self.cfg.terrain.hm_img_dim[0], self.cfg.terrain.hm_img_dim[1])
+        img_helpers.draw_bounding_box(img_copy, box_centre, *self.cfg.terrain.hm_img_dim) 
         if self.map_cfg.show_waypoint: 
             img_helpers.draw_dot(img_copy, self.wp_pos_im)
         img_helpers.display_img(img_copy)
