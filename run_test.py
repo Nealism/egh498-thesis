@@ -6,7 +6,6 @@ import time
 from pathlib import Path
 import default_arguments
 from utils.plotter import Plotter
-from configs.anymal_cmd_mj_cfg import AnymalCmdMjCfg
 
 home = str(Path.home())
 
