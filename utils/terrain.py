@@ -91,8 +91,8 @@ class Hfield(Terrain):
 
     def compute_sub_section(self, x, y, X, Y):
         """
-        Given a position in mujoco (x, y), compute the X x Y subsection of the hfield array 
-        around it
+        Compute the X x Y subsection of the hfield array around the robot, who is centred
+        at mujoco position (x, y)
 
         Params:
             x, y - position in mujoco

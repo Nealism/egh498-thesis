@@ -124,7 +124,11 @@ class Env(EnvBaseMJ):
         self.terrains = []
         self.terrain_generator = TerrainGen()
         # generate and load ground truth image
-        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.cfg.terrain.gt_img_dim)
+
+        # gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.terr_cfg.gt_img_dim)
+        gt_arr = np.zeros(self.terr_cfg.gt_img_dim)
+        gt_arr[230:270, 230:270] = 255
+
         gt_path = self.get_parent_dir(self.model_path)
         gt_name = f"ground_truth_{str(self.rank)}"
         gt_position = self.terr_cfg.hf_centre_pos
@@ -135,6 +139,10 @@ class Env(EnvBaseMJ):
 
         #generate and load any others below this
         ########################################
+    
+    def get_image(self):
+        subsection = self.ground_truth.compute_sub_section(self.pos[0], self.pos[1], *self.terr_cfg.hm_img_dim)
+        return np.reshape(subsection, self.im_size)
 
     def show_map(self):
         """
@@ -144,7 +152,7 @@ class Env(EnvBaseMJ):
         """
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
-        img_helpers.draw_bounding_box(img_copy, box_centre, *self.cfg.terrain.hm_img_dim) 
+        img_helpers.draw_bounding_box(img_copy, box_centre, *self.terr_cfg.hm_img_dim) 
         if self.map_cfg.show_waypoint: 
             img_helpers.draw_dot(img_copy, self.wp_pos_im)
         img_helpers.display_img(img_copy)
@@ -208,14 +216,15 @@ class Env(EnvBaseMJ):
             y = point[1]
         # random 
         else:
-            x_low, y_low = self.pos[0]-self.cfg.terrain.hm_mj_dim[0], self.pos[1]-self.cfg.terrain.hm_mj_dim[1]
-            x_high, y_high = self.pos[0]+self.cfg.terrain.hm_mj_dim[0], self.pos[1]+self.cfg.terrain.hm_mj_dim[1]
+            x_low, y_low = self.pos[0]-self.terr_cfg.hm_mj_dim[0], self.pos[1]-self.terr_cfg.hm_mj_dim[1]
+            x_high, y_high = self.pos[0]+self.terr_cfg.hm_mj_dim[0], self.pos[1]+self.terr_cfg.hm_mj_dim[1]
             x = np.random.uniform(low=x_low, high=x_high)
             y = np.random.uniform(low=y_low, high=y_high)
 
         # set both its mj position AND image position
         self.wp_pos_mj = (x, y)
         self.wp_pos_im = self.ground_truth.rob_to_img_pos(self.wp_pos_mj)
+        print(self.wp_pos_mj)
 
         # set time at which waypoint was placed
         self.last_wp_time = self.data.time
@@ -263,6 +272,7 @@ class Env(EnvBaseMJ):
         # Mujoco_viewer doesn't work on the hpc, shouldn't render there anyway
         if not self.args.training_on_hpc:
             if self.render:
+                # new viewer every episode s.t. correct env appears every time
                 if self.viewer:
                     self.viewer.close()
                 self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)

@@ -11,14 +11,15 @@ class AnymalCmdMjCfg():
         gt_img_dim = (500, 500) # image (max (x, y) in pixels)
         gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
 
+        gt_to_hm_ratio = 5
+
         # height map dimensions
-        hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
-        hm_mj_dim = (gt_mj_dim[0] / (gt_img_dim[0] / hm_img_dim[0]), 
-                               gt_mj_dim[1] / (gt_img_dim[1] / hm_img_dim[1]))  # mj hfield sub-section
+        hm_img_dim = (gt_img_dim[0] // gt_to_hm_ratio, gt_img_dim[1] // gt_to_hm_ratio) # image sub-section
+        hm_mj_dim = (gt_mj_dim[0] / gt_to_hm_ratio, gt_mj_dim[1] / gt_to_hm_ratio)
 
         # hfield config
         hf_centre_pos = (0, 0, 0)
-        hf_elev = 0.05
+        hf_elev = 0.1
         hf_depth = 1
 
         class grass:
@@ -41,9 +42,9 @@ class AnymalCmdMjCfg():
         tree_params = get_attribute_dict(tree)
 
     class map:
-        show_map = False
-        show_waypoint = False
-        max_vel_to_wp = 1
+        show_map = True
+        show_waypoint = True
+        max_vel_to_wp = 1.0
         wp_time_scalar = 1.5
 
     class reward:
