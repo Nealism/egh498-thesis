@@ -17,7 +17,7 @@ def get_defaults():
     parser.add_argument('--hpc', default=False, action="store_true")
     parser.add_argument('--test', default=False, action="store_true")
     parser.add_argument('--just_expert', default=False, action="store_true")
-    parser.add_argument('--perception', default=False, action="store_true")
+    parser.add_argument('--use_perception', default=False, action="store_true")
     parser.add_argument('--apply_disturbances', default=False, action="store_true")
     parser.add_argument('--record_sim', default=True, action="store_false")
     parser.add_argument('--frameless', default=True, action="store_false")
