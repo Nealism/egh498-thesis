@@ -262,12 +262,7 @@ class Env(EnvBaseMJ):
 
         # Mujoco_viewer doesn't work on the hpc, shouldn't render there anyway
         if not self.args.training_on_hpc:
-            # if isinstance(self.viewer, mujoco_viewer.MujocoViewer):
-            if 0:
-                # Replace model and data of an existing viewer
-                self.viewer.model = self.model
-                self.viewer.data = self.data
-            elif self.render:
+            if self.render:
                 if self.viewer:
                     self.viewer.close()
                 self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)
