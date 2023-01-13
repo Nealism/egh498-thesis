@@ -53,6 +53,7 @@ def run(args):
         if done or env.steps > args.max_ep_len:
             obs = env.reset()
 
-if __name__=="__main__":
+
+if __name__== "__main__":
     args = default_arguments.get_defaults() 
     run(args)
