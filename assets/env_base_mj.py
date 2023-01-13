@@ -173,7 +173,6 @@ class EnvBaseMJ(EnvBase):
             xml, self.tree = tree.generate_tree()
         elif self.args.tree_type == "grass":
             xml, self.tree = gen_grass.generate_tree(base_radius=radius, base_half_height=height, base_damping=damping, base_stiffness=stiffness, pos=pos, rot=rot, num=num, segs_per_branch=segs_per_branch, spread=spread, z_height=z_height)
-
         tree_path = os.path.join(self.xml_assets_dir, "tree_" + str(self.rank) + ".xml")
         etree.ElementTree(xml).write(tree_path, pretty_print=True)
 
