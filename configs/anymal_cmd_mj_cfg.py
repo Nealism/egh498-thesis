@@ -5,22 +5,26 @@ class AnymalCmdMjCfg():
         ob_size = 54
         ac_size = 12
         cmd_ranges = [1, 1, 1.5]
+        simStep = 1/500
+        timeStep = 1/100
+        Kp = 400
+        initial_Kp = Kp
+        view_rank = 0
     
     class terrain:
         # ground truth dimensions
         gt_img_dim = (500, 500) # image (max (x, y) in pixels)
         gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
 
-        gt_to_hm_ratio = 5
-
         # height map dimensions
-        hm_img_dim = (gt_img_dim[0] // gt_to_hm_ratio, gt_img_dim[1] // gt_to_hm_ratio) # image sub-section
-        hm_mj_dim = (gt_mj_dim[0] / gt_to_hm_ratio, gt_mj_dim[1] / gt_to_hm_ratio)
+        hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
+        hm_mj_dim = (gt_mj_dim[0] / (gt_img_dim[0] / hm_img_dim[0]), 
+                               gt_mj_dim[1] / (gt_img_dim[1] / hm_img_dim[1]))  # mj hfield sub-section
 
         # hfield config
-        hf_centre_pos = (0, 0, 1.5)
-        hf_elev = 1
-        hf_depth = 0.2
+        hf_centre_pos = (0, 0, 0)
+        hf_elev = 0.05
+        hf_depth = 1
 
         class grass:
             radius = 0.02
@@ -44,7 +48,7 @@ class AnymalCmdMjCfg():
     class map:
         show_map = False
         show_waypoint = False
-        max_vel_to_wp = 1.0
+        max_vel_to_wp = 1
         wp_time_scalar = 1.5
 
     class reward:
@@ -61,7 +65,7 @@ class AnymalCmdMjCfg():
     class robot:
         torque_act_mult = 20
         pos_act_mult = 0.2
-        init_z = 0.7 + 1.5 + 1
+        init_z = 0.7
         init_joints = [-0.2,0.6,-1.0, 0.2,0.6,-1.0, -0.2,-0.6,1.0, 0.2,-0.6,1.0]
         right_swing = [-0.2,0.0,-0.8, 0.2,1.0,-1.0, -0.2,-0.4,1.0, 0.2,-1.0,0.0]
         left_swing = [-0.2,1.0,-1.0, 0.2,0.0,-0.8, -0.2,-1.0,0.0, 0.2,-0.4,1.0]
