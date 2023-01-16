@@ -5,6 +5,10 @@ class AnymalCmdMjCfg():
         ob_size = 54
         ac_size = 12
         cmd_ranges = [1, 1, 1.5]
+        simStep = 1/500
+        timeStep = 1/100
+        Kp = 400
+        initial_Kp = Kp
     
     class terrain:
         # ground truth dimensions
