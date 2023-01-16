@@ -20,28 +20,29 @@ from configs.anymal_cmd_mj_cfg import AnymalCmdMjCfg
 class Env(EnvBaseMJ):
     # Timestep for mujoco is set in the .xml, and shows up under self.model.opt.timestep
     # Default is 0.002, changing this might affect the contact model. 
-    simStep = 1/500
-    timeStep = 1/100
-    rank = comm.Get_rank()
-    Kp = 400
-    initial_Kp = Kp
     def __init__(self, PATH=None, args=None, writer=None):
 
-        self.view_rank = 0
-        self.args = args
-        self.render = args.render and self.rank == self.view_rank
-        self.PATH = PATH
-        self.writer = writer
-        self.master = True 
-
         ### CONFIGS ###
-
         self.cfg = AnymalCmdMjCfg
         self.env_cfg = self.cfg.env
         self.terr_cfg = self.cfg.terrain
         self.map_cfg = self.cfg.map
         self.rew_cfg = self.cfg.reward
         self.robot_cfg = self.cfg.robot
+
+        self.view_rank = self.env_cfg.view_rank
+        self.args = args
+        self.render = args.render and self.rank == self.view_rank
+        self.PATH = PATH
+        self.writer = writer
+        self.master = True 
+
+        self.simStep = self.env_cfg.simStep
+        self.timeStep = self.env_cfg.timeStep
+        self.Kp = self.env_cfg.Kp
+        self.initial_Kp = self.env_cfg.initial_Kp
+
+        self.rank = comm.Get_rank()
 
         super().__init__(PATH)
 
