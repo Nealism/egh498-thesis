@@ -14,7 +14,9 @@ class Env():
         self.args = args
         self.render = render
         self.master = True 
-  
+        
+        super().__init__()
+
         if self.args.render and self.master:
             self.physicsClientId = p.connect(p.GUI)
         else:

@@ -23,6 +23,8 @@ class Env(EnvBasePB):
         self.PATH = PATH
         self.writer = writer
         self.master = True 
+        
+        super().__init__(PATH)
 
         self.simStep = 1/240
         self.timeStep = 1/120
@@ -39,7 +41,7 @@ class Env(EnvBasePB):
         
         self.episodes = -1
         
-        self.env_exp = EnvExp(args)
+        self.env_exp = EnvExp(self.PATH, self.args)
         self.target_speed = 1.0
         self.target_yaw = 0.0
         self.initial_joints = [0.0] * 15 + [ 0.5, -0.5, -1.5707] + [-0.5, 0.5, -1.5707]

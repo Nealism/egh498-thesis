@@ -103,7 +103,6 @@ class EnvBaseMJ(EnvBase):
         self.xml_assets_dir = os.path.join(self.PATH, "xml_assets")
         # parent proc. creates robot_name.xml copy
         if self.rank == 0:
-            print(f"\nxml assets dir: {self.xml_assets_dir}")
             if not os.path.exists(self.xml_assets_dir):
                 os.mkdir(self.xml_assets_dir)
 
