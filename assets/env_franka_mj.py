@@ -22,6 +22,9 @@ class Env(EnvBaseMJ):
         self.PATH = PATH
         self.writer = writer
         self.master = True 
+
+        super().__init__(PATH)
+
         if self.args.use_ball:
             self.model = load_model_from_path("assets/xmls/franka_panda_ball.xml")  
             self.ob_size = 44

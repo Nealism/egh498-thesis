@@ -28,6 +28,8 @@ class Env(EnvBaseMJ):
         self.writer = writer
         self.master = True 
 
+        super().__init__(PATH)
+        
         self.robot_name = "panda"
         self.mesh_dir = "assets/xmls/franka_emika_panda/assets"
 

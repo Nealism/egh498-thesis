@@ -7,6 +7,8 @@ from utils.plotter import Plotter
 
 class EnvBase():
     def __init__(self, PATH):
+        if self.args.use_perception:
+            self.im_size = [1,48,48]
         self.all_log_things = {}
         if self.args.do_plot:
             self.plotter = Plotter(PATH=PATH)

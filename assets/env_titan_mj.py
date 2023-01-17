@@ -25,6 +25,8 @@ class Env(EnvBaseMJ):
         self.writer = writer
         self.master = True 
 
+        super().__init__(PATH)
+
         # Name of the base link in the xml, for setting the robot position on reset
         self.base_link = "base"
         self.model_path = "assets/urdfs/titan_meshes/scene.xml"

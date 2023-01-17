@@ -14,20 +14,20 @@ class EnvExp(EnvBasePB):
     timeStep = 1/120
     ac_size = 21
     ob_size = 57
-    def __init__(self, args=None, render=False, with_feet=True, master=False):
+    def __init__(self, PATH=None, args=None, render=False, with_feet=True, master=False):
 
         self.args = args
         self.render = render and self.rank == 0
+        self.PATH = PATH
         self.with_feet = with_feet
         self.master = master 
+
+        super().__init__(PATH)
 
         if self.master:
             self.load_robot()
 
-        if self.args.perception:
-            self.policy = torch.load("/scratch1/$USER/results/checkpoint/22_06_2022_15_25_24/pyt_save/model.pt")
-        else:
-            self.load_mocap()
+        self.load_mocap()
 
     def load_mocap(self):
         subject = '02'
