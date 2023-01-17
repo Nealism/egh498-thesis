@@ -3,8 +3,6 @@
   <size njmax="8000" nconmax="4000"/>
 
   <include file="panda_torque.xml"/>
-    
-  <include file="tree.xml"/>
 
   <statistic center="0.3 0 0.4" extent="1"/>
 

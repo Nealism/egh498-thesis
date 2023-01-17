@@ -219,7 +219,6 @@ class tree():
                 # Add the new segment to the frontier
                 frontier_segments.append(new_seg)
 
-        print("Tree size: ", body_count)
         # Generate the xml for the tree
         xml = etree.Element("mujocoinclude")
         body = etree.Element("worldbody")

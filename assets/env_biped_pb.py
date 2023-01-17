@@ -51,6 +51,8 @@ class Env(EnvBasePB):
         self.args = args
         self.max_disturbance = self.args.initial_disturbance
 
+        super().__init__(PATH)
+        
         if self.args.multi_robots:
             self.robots = {}
             self.robot_num = 0

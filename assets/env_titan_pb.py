@@ -22,6 +22,8 @@ class Env(EnvBasePB):
         self.writer = writer
         self.master = True 
 
+        super().__init__(PATH)
+
         self.simStep = 1/240
         self.timeStep = 1/120
         if "pumpkin" in self.args.env:
