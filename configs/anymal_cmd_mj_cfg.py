@@ -14,7 +14,7 @@ class AnymalCmdMjCfg():
     class terrain:
         # ground truth dimensions
         gt_img_dim = (500, 500) # image (max (x, y) in pixels)
-        gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
+        gt_mj_dim = (5, 5) # mj hfield (x_rad, y_rad)
 
         # height map dimensions
         hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
@@ -23,8 +23,12 @@ class AnymalCmdMjCfg():
 
         # hfield config
         hf_centre_pos = (0, 0, 0)
-        hf_elev = 0.05
+        hf_max_elev = 2
         hf_depth = 1
+
+        # extra hfield config
+        hf_base_elev = 0.5
+        init_z = 0.7 + hf_base_elev
 
         class grass:
             radius = 0.02
@@ -65,7 +69,6 @@ class AnymalCmdMjCfg():
     class robot:
         torque_act_mult = 20
         pos_act_mult = 0.2
-        init_z = 0.7
         init_joints = [-0.2,0.6,-1.0, 0.2,0.6,-1.0, -0.2,-0.6,1.0, 0.2,-0.6,1.0]
         right_swing = [-0.2,0.0,-0.8, 0.2,1.0,-1.0, -0.2,-0.4,1.0, 0.2,-1.0,0.0]
         left_swing = [-0.2,1.0,-1.0, 0.2,0.0,-0.8, -0.2,-1.0,0.0, 0.2,-0.4,1.0]

@@ -40,15 +40,21 @@ class Terrain():
 Sub-class of Terrain to represent an hfield in mujoco 
 """
 class Hfield(Terrain):
-    def __init__(self, terr_arr, path, name, position=(0, 0, 0), size=(100, 100, 0.01, 0.01)):
+    def __init__(self, terr_arr, path, name, 
+                position=(0,0,0), size=(10, 10, 0.1, 1), from_PNG=False):
         """
         Added params:
             position - x,y,z position the hfield is centred at in mujoco
             size - x_rad, y_rad, elevation, base_z:
 
                     x_rad, y_rad - mujoco uses radius instead of length/width
-                    elevation - data is normalised between 0-1, which is then scaled by this elevation value
+                    elevation - data is normalised between 0-1, which is then scaled by this 
+                                elevation value
                     base_z - depth of box in -z direction (serves as 'base')
+
+            from_PNG - iff true, generate hfield from PNG, otherwise, load yourself later   
+                     - loaded like so: 
+                            self.model.hfield_data = {numpy array of els in interval [0, 1]}
         """
         super().__init__(terr_arr, path, name)
         self.size = size
@@ -57,18 +63,24 @@ class Hfield(Terrain):
         self.size_str = f"{size[0]} {size[1]} {size[2]} {size[3]}"
         self.position_str = f"{position[0]} {position[1]} {position[2]}"
 
+        self.from_PNG = from_PNG
+
         # hfield element and its referencing geom
         self.hfield_el, self.geom_el = self.config_hfield_geom()
         
     def config_hfield_geom(self):
-        hfield_el = etree.Element("hfield", attrib={"name":self.name,
-                                                    "file":self.img_path,
-                                                    "size":self.size_str})
+        # generate hfield el
+        hfield_el = etree.Element("hfield", attrib={"name":self.name, "size":self.size_str})
+        if self.from_PNG:
+            hfield_el["file"] = self.img_path
+        else:
+            hfield_el.attrib["nrow"] = str(self.image_dim[1])
+            hfield_el.attrib["ncol"] = str(self.image_dim[0])
 
-        geom_el = etree.Element("geom", attrib={"name":self.name,
-                                                    "type":"hfield",
-                                                    "pos":self.position_str,
-                                                    "hfield":self.name})
+        # generate referencing geom
+        geom_attr = {"name":self.name,"type":"hfield","pos":self.position_str, "hfield":self.name}
+        geom_el = etree.Element("geom", geom_attr)
+        
         return hfield_el, geom_el
 
     def rob_to_img_pos(self, pos):
@@ -129,43 +141,67 @@ NOTE: Terrain objects DO NOT require their terrain arrays to be generated this w
 if they wish, this just provides some already-configured ones.
 """
 class TerrainGen():
-    def gen_rand_ground_truth(self, zl, zh, dimensions):
+    def uniform_rand_terrain(self, zl, zh, dim):
         """
-        Randomly generates a 2D numpy array that serves as the basis for the height map.
+        Generates a uniformly random terrain array between height zl and zh
 
         Params:
             zl-zh defines the range we sample heights from 
-            dimensions - (X, Y), NOT (row, col)
+            dims - (X, Y), NOT (row, col)
         """
-        if len(dimensions) != 2:
+        if len(dim) != 2:
             print("Dimensions of ground truth must be of form: (x, y)")
             return None
-        gt = np.random.uniform(low=zl, high=zh, size=(dimensions[1], dimensions[0]))
+        gt = np.random.uniform(low=zl, high=zh, size=(dim[1], dim[0]))
         return gt
     
-    def gen_curve(self, xl, xh, yl, yh, num_points, fn):
+    def add_divot(self, base_arr, pos, radius, min_z, max_z, divot=True):
+        x0, y0 = pos[1], pos[0]
+        scalar = (max_z - min_z) / radius**2
+        f = self.hump(scalar, x0, y0, min_z, radius)
+        fn = np.vectorize(f, otypes=[float])
+        arr = np.fromfunction(fn, base_arr.shape, dtype=float)
+        base_arr+=arr
+        return base_arr
+    
+    def gen_test(self, mj_max_elev, mj_base_elev, dim):
+        im_base_elev = (1 / mj_max_elev) * mj_base_elev
+        gt = self.uniform_rand_terrain(im_base_elev, im_base_elev+0.01, (dim[1], dim[0]))
+        gt = self.add_divot_mound(gt, (320, 250), 50, -0.15, 0)
+        return gt
+
+    ###################### LOCAL TERRAIN FUNCTIONS ######################
+
+    def hump(self, scalar, x0, y0, z0, radius):
+        return (lambda row, col: 
+                scalar*((col - x0)**2 + (row - y0)**2) + z0 
+                if (col - x0)**2 + (row - y0)**2 < radius**2 
+                else 0)
+
+    ###################### WHOLE TERRAIN FUNCTIONS ######################
+
+    def gen_curve(self, xl, xh, yl, yh, fn):
         """
         fn is applied element-wise to generate a 2D numpy array that can serve as the basis of an 
         environment terrain
         NOTE: xl, xh, yl, yh define the x and y ranges (dimensions of the array)
         """
-        x = np.linspace(xl, xh, num_points)
-        y = np.linspace(yl, yh, num_points)
+        x = np.linspace(xl, xh, xh-xl+1)
+        y = np.linspace(yl, yh, yh-xl+1)
         x, y = np.meshgrid(x, y)
         fn = np.vectorize(fn)
         z = fn(x, y)
         # TODO : add plotting option
         return z
-
-    ###################### TERRAIN FUNCTIONS ######################
     
     def saddle_func(self, x, y):
         return np.square(x) - np.square(y)
 
-    def hump_func(self, x, y):
-        z = 5*(np.square(x) + np.square(y))
+    def hump_func(self, x_0, y_0, x, y, scalar):
+        z = scalar*(np.square(x - x_0) + np.square(y - y_0))
         return z
     
     def gaussian(self, x, y, sigma=1):
         z = 25*(1/(2*np.pi*sigma**2)) * np.exp(-1*((0.1*x**2 + 0.1*y**2)/(2*sigma**2)))
         return z
+    

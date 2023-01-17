@@ -30,6 +30,8 @@ class Env(EnvBaseMJ):
         self.rew_cfg = self.cfg.reward
         self.robot_cfg = self.cfg.robot
 
+        self.rank = comm.Get_rank()
+
         self.view_rank = self.env_cfg.view_rank
         self.args = args
         self.render = args.render and self.rank == self.view_rank
@@ -41,8 +43,6 @@ class Env(EnvBaseMJ):
         self.timeStep = self.env_cfg.timeStep
         self.Kp = self.env_cfg.Kp
         self.initial_Kp = self.env_cfg.initial_Kp
-
-        self.rank = comm.Get_rank()
 
         super().__init__(PATH)
 
@@ -98,7 +98,7 @@ class Env(EnvBaseMJ):
         self.right_swing = self.robot_cfg.right_swing
         self.left_swing = self.robot_cfg.left_swing
 
-        self.initial_z = self.robot_cfg.init_z
+        self.initial_z = self.terr_cfg.init_z
 
         self.episodes = -1
         self.success = deque([0.0], maxlen=self.rew_cfg.goal.max_succ_len)
@@ -126,13 +126,13 @@ class Env(EnvBaseMJ):
         # generate and load ground truth image
 
         # gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.terr_cfg.gt_img_dim)
-        gt_arr = np.ones((self.terr_cfg.gt_img_dim))
-        gt_arr[200:300, 300:320] = 0.5
-
+        gt_arr = self.terrain_generator.gen_test(self.terr_cfg.hf_max_elev, 
+                                                 self.terr_cfg.hf_base_elev,
+                                                 self.terr_cfg.gt_img_dim)
         gt_path = self.get_parent_dir(self.model_path)
         gt_name = f"ground_truth_{str(self.rank)}"
         gt_position = self.terr_cfg.hf_centre_pos
-        gt_size = (*self.terr_cfg.gt_mj_dim, self.terr_cfg.hf_elev, self.terr_cfg.hf_depth)
+        gt_size = (*self.terr_cfg.gt_mj_dim, self.terr_cfg.hf_max_elev, self.terr_cfg.hf_depth)
 
         self.ground_truth = Hfield(gt_arr, gt_path, gt_name, gt_position, gt_size) 
         self.terrains.append(self.ground_truth)
@@ -142,7 +142,9 @@ class Env(EnvBaseMJ):
     
     def get_image(self):
         """
-
+        Returns an egocentric height map centred at the robot. 
+        This takes the form of an NxM sub-section of the terrain array,
+        where (N, M) == self.terr_cfg.hm_img_dim
         """
         subsection = self.ground_truth.compute_sub_section(self.pos[0], self.pos[1], *self.terr_cfg.hm_img_dim)
         return np.reshape(subsection, self.im_size)
@@ -259,9 +261,6 @@ class Env(EnvBaseMJ):
             elif self.args.tree_type == "tree":
                 self.generate_tree(**self.terr_cfg.tree_params)
 
-        self.model = mujoco.MjModel.from_xml_path(self.model_path)
-        self.data = mujoco.MjData(self.model)
-
         # load in terrains
         if not self.args.replay and self.args.add_terrain:
             self.load_terrains()
@@ -270,6 +269,12 @@ class Env(EnvBaseMJ):
                 self.populate_terrain_xml(terrain_path)
             else:
                 self.reconfig_terrain_xml(terrain_path, self.ground_truth)
+
+        self.model = mujoco.MjModel.from_xml_path(self.model_path)
+        self.data = mujoco.MjData(self.model)
+
+        # self.model.hfield_data = np.ones(self.terr_cfg.gt_img_dim).flatten()
+        self.model.hfield_data = self.ground_truth.terr_arr.flatten()
 
         # Mujoco_viewer doesn't work on the hpc, shouldn't render there anyway
         if not self.args.training_on_hpc:
