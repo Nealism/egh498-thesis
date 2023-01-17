@@ -133,7 +133,6 @@ Class to represent a mesh in mujoco
 class Mesh(Terrain):
     pass
 
-
 """
 A class to generate terrain arrays for Terrain objects (see above)
 
@@ -155,30 +154,68 @@ class TerrainGen():
         gt = np.random.uniform(low=zl, high=zh, size=(dim[1], dim[0]))
         return gt
     
-    def add_divot(self, base_arr, pos, radius, min_z, max_z, divot=True):
-        x0, y0 = pos[1], pos[0]
-        scalar = (max_z - min_z) / radius**2
-        f = self.hump(scalar, x0, y0, min_z, radius)
+    def add_hole_mound(self, base_arr, pos, radius, max_min):
+        """
+        Adds a hole/mound to the given terrain array. 
+
+        The hole mound is a curve of the form: z = a*(x^2 + y^2), where a is some
+        scalar (visualise here: https://www.geogebra.org/3d?lang=en)
+
+        NOTE: the curve defines the DIFFERENCE in heights, which we then add to the 
+              given array
+    
+        Params: 
+            base_arr - terrain array to add the curve to
+            pos - (x, y) position in array the curve will be centred at
+            radius - radius of curve 
+            max_min - defines either the maximum z (for mound) or minimum z (for hole)
+                      NOTE: this minimum/maximum occurs at point pos (obviously)
+        """
+        x0, y0 = pos[0], pos[1]
+        # -ve max_min == hole (+ve scalar), +ve max_min == mound (-ve scalar)
+        scalar = -1*max_min / radius**2
+        f = self.hump(scalar, x0, y0, max_min, radius)
+        # vectorized lambda function to compute the function for a given (x, y)
         fn = np.vectorize(f, otypes=[float])
+        # array of heights to be added to our base array
         arr = np.fromfunction(fn, base_arr.shape, dtype=float)
         base_arr+=arr
         return base_arr
-    
+
+    def add_wall(self, base_arr, x0, y0, xwid, ywid, height):
+        xl, xh = x0 - xwid // 2, x0 + xwid // 2
+        yl, yh = y0 - ywid // 2, y0 + ywid // 2
+        base_arr[yl:yh, xl:xh] = height
+        return base_arr
+
     def gen_test(self, mj_max_elev, mj_base_elev, dim):
         im_base_elev = (1 / mj_max_elev) * mj_base_elev
         gt = self.uniform_rand_terrain(im_base_elev, im_base_elev+0.01, (dim[1], dim[0]))
-        gt = self.add_divot_mound(gt, (320, 250), 50, -0.15, 0)
+        # gt = self.add_hole_mound(gt, (330, 250), 30, 0.12)
+        gt = self.add_hole_mound(gt, (300, 250), 7, -0.12)
+        # gt = self.add_hole_mound(gt, (3, 265), 7, -0.15)
+        # gt = self.add_hole_mound(gt, (330, 265), 7, 0.15)
+        # gt = self.add_wall(gt, 370, 220, 10, 40, 0.5)
+        
+        # gt = self.add_wall(gt, 200, 200, 10, 100, 0.9)
         return gt
 
-    ###################### LOCAL TERRAIN FUNCTIONS ######################
+    ###################### LOCAL TERRAIN ######################
 
     def hump(self, scalar, x0, y0, z0, radius):
+        """
+        Returns a lambda function to compute:
+            z = scalar * ((x - x0)^2 + (y - y0)^2) + z0
+        for all elements in an NxM matrix that lie within the given radius
+
+        NOTE: all elements outside the radius are given value 0
+        """
         return (lambda row, col: 
                 scalar*((col - x0)**2 + (row - y0)**2) + z0 
                 if (col - x0)**2 + (row - y0)**2 < radius**2 
                 else 0)
-
-    ###################### WHOLE TERRAIN FUNCTIONS ######################
+    
+    ###################### WHOLE TERRAIN ######################
 
     def gen_curve(self, xl, xh, yl, yh, fn):
         """

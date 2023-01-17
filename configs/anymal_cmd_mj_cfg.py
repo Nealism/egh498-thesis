@@ -14,7 +14,7 @@ class AnymalCmdMjCfg():
     class terrain:
         # ground truth dimensions
         gt_img_dim = (500, 500) # image (max (x, y) in pixels)
-        gt_mj_dim = (5, 5) # mj hfield (x_rad, y_rad)
+        gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
 
         # height map dimensions
         hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
@@ -34,10 +34,10 @@ class AnymalCmdMjCfg():
             radius = 0.02
             height = 0.4
             damping = 1
-            stiffness = 2
-            pos = [0, 0, 0]
+            stiffness = 1.5
+            pos = [0, 0, 0.5]
             rot = [1, 0, 0, 0]
-            num = 200
+            num = 100
             segs_per_branch = 4
             spread = [[1.0, 7.0], [-1, 1]]
             z_height = -0.05
@@ -50,8 +50,8 @@ class AnymalCmdMjCfg():
         tree_params = get_attribute_dict(tree)
 
     class map:
-        show_map = False
-        show_waypoint = False
+        show_map = True
+        show_waypoint = True
         max_vel_to_wp = 1
         wp_time_scalar = 1.5
 

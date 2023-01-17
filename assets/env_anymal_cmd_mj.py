@@ -107,7 +107,7 @@ class Env(EnvBaseMJ):
 
         self.steps = 0
 
-        self.reward_names = ["Reward/goal", "Reward/joint", "Reward/orn", "Reward/contacts"]
+        self.reward_names = ["Reward/goal"]
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 
@@ -476,7 +476,7 @@ class Env(EnvBaseMJ):
         self.get_observation()
 
         self.save_sim_state()
-        reward, done = self.get_reward()
+        reward, done = self.get_reward_new()
         self.prev_actions = self.actions
         self.total_return += reward
         self.steps += 1
@@ -486,7 +486,9 @@ class Env(EnvBaseMJ):
     
     def get_reward(self):
         done = False
-        if self.pos[2] < 0.35 or abs(self.pitch) > 0.5 or abs(self.roll) > 0.5:
+        if (self.pos[2] < self.rew_cfg.done.min_z or 
+           abs(self.pitch) > self.rew_cfg.done.max_pitch or 
+           abs(self.roll) > self.rew_cfg.done.max_roll):
             done = True
         
         goal = 1.0*np.exp(-5.0*np.sum(np.array(self.commands[:2]) - np.array([self.vx, self.vy]) )**2)            
@@ -513,7 +515,20 @@ class Env(EnvBaseMJ):
         self.ep_reward_dict["Reward/orn"] += orn
         self.ep_reward_dict["Reward/contacts"] += contacts
         return reward, done
+    
+    def get_reward_new(self):
+        done = False
+        if (self.pos[2] < self.rew_cfg.done.min_z or 
+           abs(self.pitch) > self.rew_cfg.done.max_pitch or 
+           abs(self.roll) > self.rew_cfg.done.max_roll):
+            done = True
 
+        # robot-pos vs. wp position - sum of squared diff (trying to minimise, hence negative)
+        goal = np.sum(np.array(np.square(self.pos[:2] - np.array(self.wp_pos_mj))))
+        reward = -1.0*goal
+        self.ep_reward_dict["Reward/goal"] += reward
+        return reward, done
+    
     def get_observation(self):
         # Keep an eye on these to make sure they are getting what you think)
         self.pos = self.data.body(self.base_link).xpos.copy()
