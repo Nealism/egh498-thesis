@@ -51,8 +51,8 @@ class AnymalCmdMjCfg():
         tree_params = get_attribute_dict(tree)
 
     class map:
-        show_map = True
-        show_waypoint = True
+        show_map = False
+        show_waypoint = False
         max_vel_to_wp = 1
         wp_time_scalar = 1.5
 

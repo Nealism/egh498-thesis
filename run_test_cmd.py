@@ -1,3 +1,6 @@
+"""
+Have dedicated test runner for anymal_cmd_mj because of it's unique structure
+"""
 import numpy as np
 import torch
 from assets.env_anymal_cmd_mj import Env

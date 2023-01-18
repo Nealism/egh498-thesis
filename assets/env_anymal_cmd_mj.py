@@ -93,7 +93,7 @@ class Env(EnvBaseMJ):
         self.im_size = [1] + list(self.cfg.terrain.hm_img_dim)
 
         # Needed if importing as Gym environment
-        self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
+        self.action_space = spaces.Box(-10000*np.ones(self.cmd_size), 10000*np.ones(self.cmd_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
         
         self.episodes = -1
@@ -383,15 +383,6 @@ class Env(EnvBaseMJ):
         return hlp_obs_vec 
 
     def step(self, cmds, replay_state=None):
-        """
-        TODO: make a self.args.show_map argument
-        we want to be able to show the map, bounding boxes and waypoints even if 
-        person is not using ground truth
-
-        -means we need a map to show people if they haven't loaded in any terrain
-        (empty image)
-        -which in turn means we need the auto xml load thing
-        """
         if self.args.add_terrain:
             if self.rank == self.view_rank and self.render and self.map_cfg.show_map:
                 self.show_map()
@@ -399,7 +390,7 @@ class Env(EnvBaseMJ):
         if self.can_gen_waypoint():
                 self.gen_waypoint()
         
-        self.commands = cmds
+        self.commands = list(cmds)
         actions = self.low_lev_pol.step(torch.tensor(np.array(self.get_llp_obs()).astype(np.float32)), stochastic=False)[0]
         self.actions = list(np.array(self.initial_joints) + np.array(actions))
 
