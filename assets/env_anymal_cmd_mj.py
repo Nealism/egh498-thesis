@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import mujoco
 from gym import spaces
 from collections import deque
@@ -8,13 +9,13 @@ from scipy.spatial.transform import Rotation
 import mujoco_viewer
 from pyquaternion import Quaternion
 import os
+from lxml import etree
+import math
 
 from .env_base_mj import EnvBaseMJ
 from utils.terrain import Hfield, TerrainGen
 from utils import img_helpers
 from utils.xml_helper import indent_xml
-from lxml import etree
-import math
 from configs.anymal_cmd_mj_cfg import AnymalCmdMjCfg
 
 class Env(EnvBaseMJ):
@@ -23,6 +24,7 @@ class Env(EnvBaseMJ):
     def __init__(self, PATH=None, args=None, writer=None):
 
         ### CONFIGS ###
+
         self.cfg = AnymalCmdMjCfg
         self.env_cfg = self.cfg.env
         self.terr_cfg = self.cfg.terrain
@@ -38,18 +40,20 @@ class Env(EnvBaseMJ):
         self.PATH = PATH
         self.writer = writer
         self.master = True 
+        self.viewer = None
 
         self.simStep = self.env_cfg.simStep
         self.timeStep = self.env_cfg.timeStep
         self.Kp = self.env_cfg.Kp
         self.initial_Kp = self.env_cfg.initial_Kp
 
-        super().__init__(PATH)
-
         self.robot_name = "anymal_c"
+
+        super().__init__(PATH)
 
         ##### PATHS #####
 
+        self.LLP_PATH = "./resources/cmd_model/model.pt"
         self.general_xml_path = "assets/xmls/anybotics_anymal_c/"
         self.base_terrain_xml = "base_terrain.xml"
         # Name of the base link in the xml, for setting the robot position on reset
@@ -62,44 +66,36 @@ class Env(EnvBaseMJ):
             self.action_multiplier = self.robot_cfg.pos_act_mult
         self.mesh_dir = self.general_xml_path + "assets/"
         
-        # self.action_multiplier = 0.0
-        
-        self.viewer = None
-
-        ##### WAY POINT STUFF #####
+        ##### WAY POINT #####
 
         self.wp_pos_mj = None # position in env
         self.wp_pos_im = None # position in map image
         self.last_wp_time = None # last time wp was generated
         self.max_vel_to_wp = self.map_cfg.max_vel_to_wp # max vel. expect robot to maintain moving towards wp
 
-        ##### TERRAIN STUFF #####
-        
+        ##### TERRAIN #####
+
         # set up base xml files for this rank/process (scene, tree, terrain etc.)
         if self.args.tree_type or self.args.add_terrain:
             self.set_up_xmls()
-
         # load mujoco model and data (robot itself, trees, terrains etc.)
         self.first_time = True
         self.load_robot()
         self.first_time = False
 
+        ##### ENV #####
+
+        self.low_lev_pol = torch.load(self.LLP_PATH)
+
         self.ob_size = self.env_cfg.ob_size
         self.ac_size = self.env_cfg.ac_size
+        self.cmd_size = self.env_cfg.cmd_size
         self.im_size = [1] + list(self.cfg.terrain.hm_img_dim)
 
-        self.motor_names = self.robot_cfg.motor_names
         # Needed if importing as Gym environment
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
-
-        # left front, right front, left back, right back
-        self.initial_joints = self.robot_cfg.init_joints
-        self.right_swing = self.robot_cfg.right_swing
-        self.left_swing = self.robot_cfg.left_swing
-
-        self.initial_z = self.terr_cfg.init_z
-
+        
         self.episodes = -1
         self.success = deque([0.0], maxlen=self.rew_cfg.goal.max_succ_len)
         self.sim_data = []
@@ -107,9 +103,17 @@ class Env(EnvBaseMJ):
 
         self.steps = 0
 
-        self.reward_names = ["Reward/goal"]
+        self.reward_names = ["Reward/goal", "Reward/joints", "Reward/contacts", "Reward/orn"]
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
+
+        ##### ROBOT #####
+        self.motor_names = self.robot_cfg.motor_names
+        # left front, right front, left back, right back
+        self.initial_joints = self.robot_cfg.init_joints
+        self.right_swing = self.robot_cfg.right_swing
+        self.left_swing = self.robot_cfg.left_swing
+        self.initial_z = self.terr_cfg.init_z
 
         # States that we want to restore, for resuming training after running a test
         # self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
@@ -228,7 +232,8 @@ class Env(EnvBaseMJ):
 
         # set both its mj position AND image position
         self.wp_pos_mj = (x, y)
-        self.wp_pos_im = self.ground_truth.rob_to_img_pos(self.wp_pos_mj)
+        if self.args.add_terrain:
+            self.wp_pos_im = self.ground_truth.rob_to_img_pos(self.wp_pos_mj)
 
         # set time at which waypoint was placed
         self.last_wp_time = self.data.time
@@ -274,7 +279,8 @@ class Env(EnvBaseMJ):
         self.data = mujoco.MjData(self.model)
 
         # self.model.hfield_data = np.ones(self.terr_cfg.gt_img_dim).flatten()
-        self.model.hfield_data = self.ground_truth.terr_arr.flatten()
+        if self.args.add_terrain:
+            self.model.hfield_data = self.ground_truth.terr_arr.flatten()
 
         # Mujoco_viewer doesn't work on the hpc, shouldn't render there anyway
         if not self.args.training_on_hpc:
@@ -369,6 +375,7 @@ class Env(EnvBaseMJ):
 
         self.command_ranges = np.array(self.env_cfg.cmd_ranges)
         self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
+        # self.commands = [0, 0, 0]
         self.time_at_speed = 0
         self.goal = []
 
@@ -376,7 +383,7 @@ class Env(EnvBaseMJ):
         state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return state
 
-    def step(self, actions=None, replay_state=None, additional_stuff=None, cmds=None):
+    def step(self, actions, cmds=None, obs=None, replay_state=None):
         """
         TODO: make a self.args.show_map argument
         we want to be able to show the map, bounding boxes and waypoints even if 
@@ -386,15 +393,15 @@ class Env(EnvBaseMJ):
         (empty image)
         -which in turn means we need the auto xml load thing
         """
-        if cmds is not None:
-            self.commands = cmds
-        
         if self.args.add_terrain:
-            if self.can_gen_waypoint():
-                self.gen_waypoint()
-
             if self.rank == self.view_rank and self.render and self.map_cfg.show_map:
                 self.show_map()
+
+        if self.can_gen_waypoint():
+                self.gen_waypoint()
+        
+        self.commands = cmds
+        # self.obs = obs
 
         if self.paused:
             self.target_vx = 0.0
@@ -409,53 +416,11 @@ class Env(EnvBaseMJ):
             if self.traj_i < self.traj_size - 1:
                 self.traj_i += 1
 
-        if actions is not None:
-            self.actions = list(np.array(self.initial_joints) + np.array(actions))
-        else:
-            self.actions = self.initial_joints
-
-        if self.args.cur:
-            # Sample every 4 seconds
-            if self.steps > 0 and self.steps % int(4 / self.timeStep)==0:
-                self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
-                self.success.append(self.get_success())
-                self.time_at_speed = 0
-                self.goal = []
-
-            world_to_robot_rot_mat = np.array(
-            [[np.cos(-self.yaw), -np.sin(-self.yaw), 0],
-                [np.sin(-self.yaw), np.cos(-self.yaw), 0],
-                [		0,			 0, 1]]
-            )
-
-            # Need to convert robot frame velocities and commands to world frame to apply forces
-            robot_to_world_rot_mat = np.array(
-            [[np.cos(-self.yaw), np.sin(-self.yaw), 0],
-                [-np.sin(-self.yaw), np.cos(-self.yaw), 0],
-                [		0,			 0, 1]]
-            )
-
-            vx_cmd, vy_cmd, _ = np.dot(robot_to_world_rot_mat, (self.commands[0], self.commands[1],0))
-            vx, vy, _ = np.dot(robot_to_world_rot_mat, (self.vx, self.vy, self.vz))
-            
-            forces = np.zeros(6)
-            error = np.abs(np.array(self.commands) - np.array([self.vx, self.vy, self.yaw_vel]))
-            
-            # This doesn't seem to work, instead using average goal reward
-            if (error < 0.3).all():
-                self.time_at_speed += 1
-            gain = 50
-            z_gain = 200
-            forces[0] = gain * (self.Kp / self.initial_Kp) * np.clip((vx_cmd - vx), -1, 1)
-            forces[1] = gain * (self.Kp / self.initial_Kp) * np.clip((vy_cmd - vy), -1, 1)
-            forces[2] = z_gain * (self.Kp / self.initial_Kp) * np.clip((0.5 - self.pos[2]), -1, 1)
-            forces[5] = gain * (self.Kp / self.initial_Kp) * np.clip((self.commands[2] - self.yaw_vel), -1, 1)
-            self.data.xfrc_applied = forces
+        # self.actions = self.low_lev_pol.step(torch.tensor(np.array(self.obs).astype(np.float32)), stochastic=False)[0]
+        self.actions = actions
 
         # This might do something weird with mujoco contacts, and other things in the sim.
         for _ in range(int(np.rint(self.timeStep/self.simStep))):
-
-            # self.set_position(pos=[0,0,0.5], orn=[0,0,0,1])
 
             if replay_state is not None:
                 self.set_position(pos=replay_state[0], orn=replay_state[1])
@@ -476,14 +441,19 @@ class Env(EnvBaseMJ):
         self.get_observation()
 
         self.save_sim_state()
-        reward, done = self.get_reward_new()
+        reward, done = self.get_reward()
         self.prev_actions = self.actions
         self.total_return += reward
         self.steps += 1
 
-        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
+        state = self.get_robot_state()
         return np.array(state), reward, done, None
     
+    def get_robot_state(self):
+        return (self.imu + self.commands + self.joints + 
+                self.joint_vel + self.joint_force + 
+                [contact for contact in self.contacts.values()])
+
     def get_reward(self):
         done = False
         if (self.pos[2] < self.rew_cfg.done.min_z or 
@@ -511,7 +481,7 @@ class Env(EnvBaseMJ):
         # reward = 1.5*goal + 0.1*joints + 0.1*orn - 0.1*contacts
 
         self.ep_reward_dict["Reward/goal"] += goal
-        self.ep_reward_dict["Reward/joint"] += joints
+        self.ep_reward_dict["Reward/joints"] += joints
         self.ep_reward_dict["Reward/orn"] += orn
         self.ep_reward_dict["Reward/contacts"] += contacts
         return reward, done

@@ -31,10 +31,11 @@ def run(args):
     PATH = path_home + latest_folder
     Env, args = default_arguments.get_env(args)
     env = Env(PATH=PATH, args=args)
-    env.reset()
+    obs = env.reset()
     while True:
-        env.step([0]*12)
-        
+        obs, _, done, _ = env.step(cmds=[0.7, 0.0, 0.0], obs=obs)
+        if done or env.steps > args.max_ep_len:
+            obs = env.reset()
 if __name__ == "__main__":
     args = default_arguments.get_defaults()
     run(args)

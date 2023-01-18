@@ -3,7 +3,8 @@ from utils.utils import get_attribute_dict
 class AnymalCmdMjCfg():
     class env:
         ob_size = 54
-        ac_size = 3
+        cmd_size = 3 # (Vx, Vy, Vz) - output of hlp
+        ac_size = 12  # robot joint positions - output of llp
         cmd_ranges = [1, 1, 1.5]
         simStep = 1/500
         timeStep = 1/100
@@ -27,7 +28,7 @@ class AnymalCmdMjCfg():
         hf_depth = 1
 
         # extra hfield config
-        hf_base_elev = 0.5
+        hf_base_elev = 0
         init_z = 0.7 + hf_base_elev
 
         class grass:
