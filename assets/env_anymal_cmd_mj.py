@@ -383,7 +383,7 @@ class Env(EnvBaseMJ):
         state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
         return state
 
-    def step(self, actions, cmds=None, obs=None, replay_state=None):
+    def step(self, cmds=None, obs=None, replay_state=None):
         """
         TODO: make a self.args.show_map argument
         we want to be able to show the map, bounding boxes and waypoints even if 
@@ -401,7 +401,7 @@ class Env(EnvBaseMJ):
                 self.gen_waypoint()
         
         self.commands = cmds
-        # self.obs = obs
+        self.obs = obs
 
         if self.paused:
             self.target_vx = 0.0
@@ -416,8 +416,7 @@ class Env(EnvBaseMJ):
             if self.traj_i < self.traj_size - 1:
                 self.traj_i += 1
 
-        # self.actions = self.low_lev_pol.step(torch.tensor(np.array(self.obs).astype(np.float32)), stochastic=False)[0]
-        self.actions = actions
+        self.actions = self.low_lev_pol.step(torch.tensor(np.array(self.obs).astype(np.float32)), stochastic=False)[0]
 
         # This might do something weird with mujoco contacts, and other things in the sim.
         for _ in range(int(np.rint(self.timeStep/self.simStep))):
