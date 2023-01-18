@@ -28,7 +28,8 @@ class AnymalCmdMjCfg():
         hf_depth = 1
 
         # extra hfield config
-        hf_base_elev = 0
+        hf_base_dz = 0.055
+        hf_base_elev = 0.2
         init_z = 0.7 + hf_base_elev
 
         class grass:

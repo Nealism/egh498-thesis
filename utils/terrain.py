@@ -188,9 +188,9 @@ class TerrainGen():
         base_arr[yl:yh, xl:xh] = height
         return base_arr
 
-    def gen_test(self, mj_max_elev, mj_base_elev, dim):
+    def gen_test(self, mj_max_elev, mj_base_elev, dim, base_dz):
         im_base_elev = (1 / mj_max_elev) * mj_base_elev
-        gt = self.uniform_rand_terrain(im_base_elev, im_base_elev+0.01, (dim[1], dim[0]))
+        gt = self.uniform_rand_terrain(im_base_elev, im_base_elev+base_dz, (dim[1], dim[0]))
         # gt = self.add_hole_mound(gt, (330, 250), 30, 0.12)
         # gt = self.add_hole_mound(gt, (300, 250), 7, -0.12)
         # gt = self.add_hole_mound(gt, (3, 265), 7, -0.15)

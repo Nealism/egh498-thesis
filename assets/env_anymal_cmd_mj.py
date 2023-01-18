@@ -131,7 +131,8 @@ class Env(EnvBaseMJ):
         # generate and load ground truth image
         gt_arr = self.terrain_generator.gen_test(self.terr_cfg.hf_max_elev, 
                                                  self.terr_cfg.hf_base_elev,
-                                                 self.terr_cfg.gt_img_dim)
+                                                 self.terr_cfg.gt_img_dim,
+                                                 self.terr_cfg.hf_base_dz)
         gt_path = self.get_parent_dir(self.model_path)
         gt_name = f"ground_truth_{str(self.rank)}"
         gt_position = self.terr_cfg.hf_centre_pos
