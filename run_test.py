@@ -38,18 +38,11 @@ def run(args):
     args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
-    if args.env == "anymal_cmd_mj":
-        pol = torch.load("./resources/cmd_model/model.pt")
-    else:
-        pol = torch.load(PATH + "/model.pt")
-
+    pol = torch.load(PATH + "/model.pt")
     obs = env.reset()
     while True:
         action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
-        if args.env == "anymal_cmd_mj":
-            obs, _, done, _ = env.step(action, cmds=[0.7,0.0,0.0])
-        else:
-            obs, _, done, _ = env.step(action)
+        obs, _, done, _ = env.step(action)
         if done or env.steps > args.max_ep_len:
             obs = env.reset()
 

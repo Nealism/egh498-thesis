@@ -103,7 +103,7 @@ class Env(EnvBaseMJ):
 
         self.steps = 0
 
-        self.reward_names = ["Reward/goal", "Reward/joints", "Reward/contacts", "Reward/orn"]
+        self.reward_names = ["Reward/goal"]
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 
@@ -375,15 +375,14 @@ class Env(EnvBaseMJ):
 
         self.command_ranges = np.array(self.env_cfg.cmd_ranges)
         self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
-        # self.commands = [0, 0, 0]
         self.time_at_speed = 0
         self.goal = []
 
         self.prev_actions = self.joints
-        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
-        return state
+        hlp_obs_vec = self.get_hlp_obs()
+        return hlp_obs_vec 
 
-    def step(self, cmds=None, obs=None, replay_state=None):
+    def step(self, cmds, replay_state=None):
         """
         TODO: make a self.args.show_map argument
         we want to be able to show the map, bounding boxes and waypoints even if 
@@ -401,7 +400,8 @@ class Env(EnvBaseMJ):
                 self.gen_waypoint()
         
         self.commands = cmds
-        self.obs = obs
+        actions = self.low_lev_pol.step(torch.tensor(np.array(self.get_llp_obs()).astype(np.float32)), stochastic=False)[0]
+        self.actions = list(np.array(self.initial_joints) + np.array(actions))
 
         if self.paused:
             self.target_vx = 0.0
@@ -415,8 +415,6 @@ class Env(EnvBaseMJ):
             expert = self.expert_traj[self.traj_i]
             if self.traj_i < self.traj_size - 1:
                 self.traj_i += 1
-
-        self.actions = self.low_lev_pol.step(torch.tensor(np.array(self.obs).astype(np.float32)), stochastic=False)[0]
 
         # This might do something weird with mujoco contacts, and other things in the sim.
         for _ in range(int(np.rint(self.timeStep/self.simStep))):
@@ -440,15 +438,26 @@ class Env(EnvBaseMJ):
         self.get_observation()
 
         self.save_sim_state()
-        reward, done = self.get_reward()
+        reward, done = self.get_reward_new()
         self.prev_actions = self.actions
         self.total_return += reward
         self.steps += 1
 
-        state = self.get_robot_state()
-        return np.array(state), reward, done, None
+        hlp_obs_vec = self.get_hlp_obs()
+        return np.array(hlp_obs_vec), reward, done, None
     
-    def get_robot_state(self):
+    def get_hlp_obs(self):
+        """
+        Returns the obs. vector that is fed to the high-level policy 
+        """
+        return (self.imu + self.commands + self.joints + 
+                self.joint_vel + self.joint_force + 
+                [contact for contact in self.contacts.values()])
+    
+    def get_llp_obs(self):
+        """
+        Returns the obs. vector that is fed to the low-level policy
+        """
         return (self.imu + self.commands + self.joints + 
                 self.joint_vel + self.joint_force + 
                 [contact for contact in self.contacts.values()])

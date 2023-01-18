@@ -1,3 +1,5 @@
+import numpy as np
+import torch
 from assets.env_anymal_cmd_mj import Env
 import default_arguments
 from pathlib import Path
@@ -31,9 +33,20 @@ def run(args):
     PATH = path_home + latest_folder
     Env, args = default_arguments.get_env(args)
     env = Env(PATH=PATH, args=args)
+
+    testing = True
+    if testing:
+        pol = torch.load("./resources/cmd_model/model.pt")
+    else: 
+        pol = torch.load(PATH + "/model.pt")
+
     obs = env.reset()
     while True:
-        obs, _, done, _ = env.step(cmds=[0.7, 0.0, 0.0], obs=obs)
+        if testing:
+            cmds = [0.7, 0.0, 0.0]
+        else:
+            cmds = pol.step(torch.tensor(np.array(obs).astype(np.float_32), stochastic=False))[0]
+        obs, _, done, _ = env.step(cmds=cmds)
         if done or env.steps > args.max_ep_len:
             obs = env.reset()
 if __name__ == "__main__":
