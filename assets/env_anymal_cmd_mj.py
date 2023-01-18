@@ -89,11 +89,11 @@ class Env(EnvBaseMJ):
 
         self.ob_size = self.env_cfg.ob_size
         self.ac_size = self.env_cfg.ac_size
-        self.cmd_size = self.env_cfg.cmd_size
+        self.joints_size = self.env_cfg.joints_size
         self.im_size = [1] + list(self.cfg.terrain.hm_img_dim)
 
         # Needed if importing as Gym environment
-        self.action_space = spaces.Box(-10000*np.ones(self.cmd_size), 10000*np.ones(self.cmd_size), dtype=np.float32)
+        self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
         
         self.episodes = -1
@@ -123,13 +123,12 @@ class Env(EnvBaseMJ):
         Generates all Terrain objects for this environment and adds them to the terrains array.
 
         NOTE: By default, always load the ground truth
-        NOTE: can optionally create other terrains 
+        NOTE: can optionally create other terrains, but note that one ground truth can
+              create a lot of terrain variability
         """
         self.terrains = []
         self.terrain_generator = TerrainGen()
         # generate and load ground truth image
-
-        # gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.terr_cfg.gt_img_dim)
         gt_arr = self.terrain_generator.gen_test(self.terr_cfg.hf_max_elev, 
                                                  self.terr_cfg.hf_base_elev,
                                                  self.terr_cfg.gt_img_dim)
@@ -319,9 +318,6 @@ class Env(EnvBaseMJ):
                 self.reward_dict[key].append(self.ep_reward_dict[key]/self.steps)
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 
-        # reset way point
-        self.wp_pos_mj = None
-
         if self.episodes > -1:
             self.success.append(self.get_success())
             target = None
@@ -373,6 +369,10 @@ class Env(EnvBaseMJ):
         self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
         self.get_trajectory(self.expert_target)
 
+        # reset way point
+        if self.can_gen_waypoint():
+            self.gen_waypoint()
+
         self.command_ranges = np.array(self.env_cfg.cmd_ranges)
         self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
         self.time_at_speed = 0
@@ -415,11 +415,11 @@ class Env(EnvBaseMJ):
             else:            
                 if self.args.cur:
                     if self.args.just_expert:
-                        self.data.ctrl[:self.ac_size] = (self.Kp / self.initial_Kp)*np.array(expert)
+                        self.data.ctrl[:self.joints_size] = (self.Kp / self.initial_Kp)*np.array(expert)
                     else:
-                        self.data.ctrl[:self.ac_size] = self.action_multiplier*np.array(self.actions) + (self.Kp / self.initial_Kp) * np.array(expert)
+                        self.data.ctrl[:self.joints_size] = self.action_multiplier*np.array(self.actions) + (self.Kp / self.initial_Kp) * np.array(expert)
                 else:
-                    self.data.ctrl[:self.ac_size] = self.action_multiplier*np.array(self.actions)
+                    self.data.ctrl[:self.joints_size] = self.action_multiplier*np.array(self.actions)
                             
             mujoco.mj_step(self.model, self.data)
         
@@ -439,15 +439,14 @@ class Env(EnvBaseMJ):
     
     def get_hlp_obs(self):
         """
-        Returns the obs. vector that is fed to the high-level policy 
+        Returns the obs. vector that is fed to the high-level policy (52-d)
         """
-        return (self.imu + self.commands + self.joints + 
-                self.joint_vel + self.joint_force + 
-                [contact for contact in self.contacts.values()])
+        return (self.imu + self.commands + self.joints + list(self.wp_pos_mj) +
+                self.joint_vel + self.joint_force)
     
     def get_llp_obs(self):
         """
-        Returns the obs. vector that is fed to the low-level policy
+        Returns the obs. vector that is fed to the low-level policy (54-d)
         """
         return (self.imu + self.commands + self.joints + 
                 self.joint_vel + self.joint_force + 
@@ -513,7 +512,7 @@ class Env(EnvBaseMJ):
 
         self.joints = [self.data.joint(name).qpos[0] for name in self.motor_names]
         self.joint_vel = [self.data.joint(name).qvel[0] for name in self.motor_names]
-        self.joint_force = list(self.data.actuator_force[:self.ac_size])
+        self.joint_force = list(self.data.actuator_force[:self.joints_size])
 
         # Should be an easier way to get a specific contact?
         self.feet = ["left_front", "right_front", "left_back", "right_back"]

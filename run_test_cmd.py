@@ -49,7 +49,7 @@ def run(args):
             cmds = [0.7, 0.0, 0.0]
         else:
             cmds = pol.step(torch.tensor(np.array(obs).astype(np.float_32), stochastic=False))[0]
-        obs, _, done, _ = env.step(cmds=cmds)
+        obs, _, done, _ = env.step(cmds)
         if done or env.steps > args.max_ep_len:
             obs = env.reset()
 if __name__ == "__main__":

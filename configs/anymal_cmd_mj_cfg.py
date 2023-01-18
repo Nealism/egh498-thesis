@@ -2,9 +2,9 @@ from utils.utils import get_attribute_dict
 
 class AnymalCmdMjCfg():
     class env:
-        ob_size = 54
-        cmd_size = 3 # (Vx, Vy, Vz) - output of hlp
-        ac_size = 12  # robot joint positions - output of llp
+        ob_size = 52
+        ac_size = 3 # (Vx, Vy, Vz) - output of hlp
+        joints_size = 12  # robot joint positions - output of llp
         cmd_ranges = [1, 1, 1.5]
         simStep = 1/500
         timeStep = 1/100
@@ -14,8 +14,8 @@ class AnymalCmdMjCfg():
     
     class terrain:
         # ground truth dimensions
-        gt_img_dim = (500, 500) # image (max (x, y) in pixels)
-        gt_mj_dim = (10, 10) # mj hfield (x_rad, y_rad)
+        gt_img_dim = (250, 250) # image (max (x, y) in pixels)
+        gt_mj_dim = (15, 15) # mj hfield (x_rad, y_rad)
 
         # height map dimensions
         hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
