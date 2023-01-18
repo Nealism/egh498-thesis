@@ -3,7 +3,7 @@ from utils.utils import get_attribute_dict
 class AnymalCmdMjCfg():
     class env:
         ob_size = 54
-        ac_size = 12
+        ac_size = 3
         cmd_ranges = [1, 1, 1.5]
         simStep = 1/500
         timeStep = 1/100
