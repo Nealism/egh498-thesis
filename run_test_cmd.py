@@ -38,16 +38,14 @@ def run(args):
     Env, args = default_arguments.get_env(args)
     env = Env(PATH=PATH, args=args)
 
-    testing = False
-    if testing:
-        pol = torch.load("./resources/cmd_model/model.pt")
-    else: 
+    testing = True
+    if not testing:
         pol = torch.load(PATH + "/model.pt")
 
     obs = env.reset()
     while True:
         if testing:
-            cmds = [1.2, 0.0, 0.0]
+            cmds = [0.7, 0.0, 0.0]
         else:
             cmds = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
         obs, _, done, _ = env.step(cmds)

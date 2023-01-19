@@ -20,7 +20,9 @@ class AnymalCmdMjCfg():
         gt_centre_pos = (0, 0, 0) # position in mj gt centred at
         gt_max_elev = 2 # max elevation of ground truth
         gt_base_elev = 0.1 * gt_max_elev  # base elevation of ground truth's surface 
-        # gt_rand_dz = 0.025 * gt_max_elev # max height of the random undulation ABOVE the base (dz)
+
+        # NOTE: set later because it depends on a CL arg (rand_dz_mult)
+        gt_rand_dz = None # max height of the random undulation ABOVE the gt's base height (max random dz)
         gt_depth = 1 # -ve z component of gt (how far gt goes into floor)
 
         init_z = 0.7 + gt_base_elev # initial elevation of the robot (height=0.7 normally)
@@ -35,7 +37,7 @@ class AnymalCmdMjCfg():
             height = 0.4
             damping = 1
             stiffness = 1.5
-            pos = [0, 0, 0.5]
+            pos = [0, 0, None] # z component set later as it depends on gt_base_elev
             rot = [1, 0, 0, 0]
             num = 100
             segs_per_branch = 4

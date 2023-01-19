@@ -33,7 +33,7 @@ class Env(EnvBaseMJ):
         self.robot_cfg = self.cfg.robot
 
         self.rank = comm.Get_rank()
-
+        
         self.view_rank = self.env_cfg.view_rank
         self.args = args
         self.render = args.render and self.rank == self.view_rank 
@@ -41,6 +41,10 @@ class Env(EnvBaseMJ):
         self.writer = writer
         self.master = True 
         self.viewer = None
+
+        # set CL-dependent config vars
+        self.terr_cfg.gt_rand_dz = self.args.rand_dz_mult * self.terr_cfg.gt_max_elev
+        self.terr_cfg.grass.pos[2] = self.terr_cfg.gt_base_elev
 
         self.simStep = self.env_cfg.simStep
         self.timeStep = self.env_cfg.timeStep
@@ -81,7 +85,6 @@ class Env(EnvBaseMJ):
         self.first_time = True
         self.load_robot()
         self.first_time = False
-        
 
         ##### ENV #####
 
@@ -129,9 +132,7 @@ class Env(EnvBaseMJ):
         self.terrains = []
         self.terrain_generator = TerrainGen()
 
-        # max height of the random undulation ABOVE the gt's base height (max random dz)
-        self.terr_cfg.gt_rand_dz = self.args.rand_dz_mult * self.terr_cfg.gt_max_elev
-
+        
         # generate and load ground truth image
         if self.args.add_terrain:
             gt_arr = self.terrain_generator.gen_test(self.terr_cfg.gt_max_elev, 

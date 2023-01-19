@@ -29,7 +29,8 @@ class Terrain():
         """ 
         Saves the terrain image to its path and returns it
         """ 
-        cv2.imwrite(self.img_path, self.terr_arr)
+        im = self.terr_arr * 255
+        cv2.imwrite(self.img_path, im)
         img = cv2.imread(self.img_path)
         return img
     
