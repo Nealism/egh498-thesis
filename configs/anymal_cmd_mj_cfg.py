@@ -20,7 +20,7 @@ class AnymalCmdMjCfg():
         gt_centre_pos = (0, 0, 0) # position in mj gt centred at
         gt_max_elev = 2 # max elevation of ground truth
         gt_base_elev = 0.1 * gt_max_elev  # base elevation of ground truth's surface 
-        gt_rand_dz = 0.025 * gt_max_elev # max height of the random undulation ABOVE the base (dz)
+        # gt_rand_dz = 0.025 * gt_max_elev # max height of the random undulation ABOVE the base (dz)
         gt_depth = 1 # -ve z component of gt (how far gt goes into floor)
 
         init_z = 0.7 + gt_base_elev # initial elevation of the robot (height=0.7 normally)
@@ -50,7 +50,9 @@ class AnymalCmdMjCfg():
         tree_params = get_attribute_dict(tree)
 
     class map:
-        max_vel_to_wp = 1.5
+        # represents a 'best case' vel. of the bot towards the waypoint
+        max_vel_to_wp = 0.8
+        # multiply expected time to wp by some scalar to give it some leeway
         wp_time_scalar = 1.5
 
     class reward:

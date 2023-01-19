@@ -4,10 +4,12 @@
 # Experiment type
 # ==================================================================================
 declare -a Experiments=(
-                        "exp/terrain_a_little_higher"
+                        "no_terrain"
+                        "0.01_terrain"
                         )
 declare -a Arguments=(
-                      "--cpu 64 --env anymal_cmd_mj --training_on_hpc --add_terrain --epochs 2000"
+                      "--cpu 64 --env anymal_cmd_mj --training_on_hpc --epochs 4000"
+                      "--cpu 64 --env anymal_cmd_mj --training_on_hpc --epochs 4000 --add_terrain --rand_dz_mult 0.01"
                       )
             
 export SBATCH_ACCOUNT=OD-219033

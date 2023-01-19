@@ -19,6 +19,7 @@ def run(args):
         path_home = "/scratch1/" + home.split("/")[-1]
 
     path_home += "/results/" + args.env + "/" + args.exp + "/"
+    # path_home += "/results/" + args.env + "/" + "exp/" +  args.exp + "/"
 
     if args.folder == "":
         # Get latest experiment (eg: latest model inside test folder)
@@ -37,7 +38,7 @@ def run(args):
     Env, args = default_arguments.get_env(args)
     env = Env(PATH=PATH, args=args)
 
-    testing = True
+    testing = False
     if testing:
         pol = torch.load("./resources/cmd_model/model.pt")
     else: 
@@ -48,7 +49,7 @@ def run(args):
         if testing:
             cmds = [1.2, 0.0, 0.0]
         else:
-            cmds = pol.step(torch.tensor(np.array(obs).astype(np.float_32), stochastic=False))[0]
+            cmds = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
         obs, _, done, _ = env.step(cmds)
         if done or env.steps > args.max_ep_len:
             obs = env.reset()

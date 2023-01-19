@@ -76,12 +76,12 @@ class Env(EnvBaseMJ):
         ##### TERRAIN #####
 
         # set up base xml files for this rank/process (scene, tree, terrain etc.)
-        # if self.args.tree_type or self.args.add_terrain:
         self.set_up_xmls()
         # load mujoco model and data (robot itself, trees, terrains etc.)
         self.first_time = True
         self.load_robot()
         self.first_time = False
+        
 
         ##### ENV #####
 
@@ -128,6 +128,10 @@ class Env(EnvBaseMJ):
         """
         self.terrains = []
         self.terrain_generator = TerrainGen()
+
+        # max height of the random undulation ABOVE the gt's base height (max random dz)
+        self.terr_cfg.gt_rand_dz = self.args.rand_dz_mult * self.terr_cfg.gt_max_elev
+
         # generate and load ground truth image
         if self.args.add_terrain:
             gt_arr = self.terrain_generator.gen_test(self.terr_cfg.gt_max_elev, 
@@ -280,7 +284,9 @@ class Env(EnvBaseMJ):
         self.model = mujoco.MjModel.from_xml_path(self.model_path)
         self.data = mujoco.MjData(self.model)
 
-        # self.model.hfield_data = np.ones(self.terr_cfg.gt_img_dim).flatten()
+        # where we load the hfield into mj
+        # NOTE: this is much faster than converting the array into a PNG
+        #       and loading it
         if self.args.add_terrain:
             self.model.hfield_data = self.ground_truth.terr_arr.flatten()
 
@@ -428,7 +434,7 @@ class Env(EnvBaseMJ):
         self.get_observation()
 
         self.save_sim_state()
-        reward, done = self.get_reward_new()
+        reward, done = self.get_reward_1()
         self.prev_actions = self.actions
         self.total_return += reward
         self.steps += 1
@@ -483,7 +489,7 @@ class Env(EnvBaseMJ):
         self.ep_reward_dict["Reward/contacts"] += contacts
         return reward, done
     
-    def get_reward_new(self):
+    def get_reward_1(self):
         done = False
         if (self.pos[2] < self.rew_cfg.done.min_z or 
            abs(self.pitch) > self.rew_cfg.done.max_pitch or 
@@ -495,6 +501,9 @@ class Env(EnvBaseMJ):
         reward = -1.0*goal
         self.ep_reward_dict["Reward/goal"] += reward
         return reward, done
+    
+    def get_reward_2(self):
+        pass
     
     def get_observation(self):
         # Keep an eye on these to make sure they are getting what you think)
