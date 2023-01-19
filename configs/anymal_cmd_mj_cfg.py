@@ -13,24 +13,22 @@ class AnymalCmdMjCfg():
         view_rank = 0
     
     class terrain:
-        # ground truth dimensions
-        gt_img_dim = (250, 250) # image (max (x, y) in pixels)
-        gt_mj_dim = (15, 15) # mj hfield (x_rad, y_rad)
+        #### GROUND TRUTH CONFIG ####
+        gt_img_dim = (250, 250) # image dimensions - (x, y) in pixels
+        gt_mj_dim = (15, 15) # mj hfield dimensions - (x_rad, y_rad) in metres
+
+        gt_centre_pos = (0, 0, 0) # position in mj gt centred at
+        gt_max_elev = 2 # max elevation of ground truth
+        gt_base_elev = 0.1 * gt_max_elev  # base elevation of ground truth's surface 
+        gt_rand_dz = 0.025 * gt_max_elev # max height of the random undulation ABOVE the base (dz)
+        gt_depth = 1 # -ve z component of gt (how far gt goes into floor)
+
+        init_z = 0.7 + gt_base_elev # initial elevation of the robot (height=0.7 normally)
 
         # height map dimensions
         hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
         hm_mj_dim = (gt_mj_dim[0] / (gt_img_dim[0] / hm_img_dim[0]), 
                                gt_mj_dim[1] / (gt_img_dim[1] / hm_img_dim[1]))  # mj hfield sub-section
-
-        # hfield config
-        hf_centre_pos = (0, 0, 0)
-        hf_max_elev = 2
-        hf_depth = 1
-
-        # extra hfield config
-        hf_base_dz = 0.055
-        hf_base_elev = 0.2
-        init_z = 0.7 + hf_base_elev
 
         class grass:
             radius = 0.02
@@ -52,9 +50,7 @@ class AnymalCmdMjCfg():
         tree_params = get_attribute_dict(tree)
 
     class map:
-        show_map = False
-        show_waypoint = False
-        max_vel_to_wp = 1
+        max_vel_to_wp = 1.5
         wp_time_scalar = 1.5
 
     class reward:

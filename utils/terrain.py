@@ -195,10 +195,13 @@ class TerrainGen():
         # gt = self.add_hole_mound(gt, (300, 250), 7, -0.12)
         # gt = self.add_hole_mound(gt, (3, 265), 7, -0.15)
         # gt = self.add_hole_mound(gt, (330, 265), 7, 0.15)
-        # gt = self.add_wall(gt, 370, 220, 10, 40, 0.5)
+        gt = self.add_wall(gt, 175, 125, 10, 40, 0.5)
         
         # gt = self.add_wall(gt, 200, 200, 10, 100, 0.9)
         return gt
+    
+    def gen_empty(self, dim):
+        return np.zeros((dim[1], dim[0]))
 
     ###################### LOCAL TERRAIN ######################
 

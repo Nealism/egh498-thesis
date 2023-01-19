@@ -36,7 +36,7 @@ class Env(EnvBaseMJ):
 
         self.view_rank = self.env_cfg.view_rank
         self.args = args
-        self.render = args.render and self.rank == self.view_rank
+        self.render = args.render and self.rank == self.view_rank 
         self.PATH = PATH
         self.writer = writer
         self.master = True 
@@ -76,8 +76,8 @@ class Env(EnvBaseMJ):
         ##### TERRAIN #####
 
         # set up base xml files for this rank/process (scene, tree, terrain etc.)
-        if self.args.tree_type or self.args.add_terrain:
-            self.set_up_xmls()
+        # if self.args.tree_type or self.args.add_terrain:
+        self.set_up_xmls()
         # load mujoco model and data (robot itself, trees, terrains etc.)
         self.first_time = True
         self.load_robot()
@@ -129,14 +129,18 @@ class Env(EnvBaseMJ):
         self.terrains = []
         self.terrain_generator = TerrainGen()
         # generate and load ground truth image
-        gt_arr = self.terrain_generator.gen_test(self.terr_cfg.hf_max_elev, 
-                                                 self.terr_cfg.hf_base_elev,
-                                                 self.terr_cfg.gt_img_dim,
-                                                 self.terr_cfg.hf_base_dz)
+        if self.args.add_terrain:
+            gt_arr = self.terrain_generator.gen_test(self.terr_cfg.gt_max_elev, 
+                                                    self.terr_cfg.gt_base_elev,
+                                                    self.terr_cfg.gt_img_dim,
+                                                    self.terr_cfg.gt_rand_dz)
+        else:
+            gt_arr = self.terrain_generator.gen_empty(self.terr_cfg.gt_img_dim)
+
         gt_path = self.get_parent_dir(self.model_path)
         gt_name = f"ground_truth_{str(self.rank)}"
-        gt_position = self.terr_cfg.hf_centre_pos
-        gt_size = (*self.terr_cfg.gt_mj_dim, self.terr_cfg.hf_max_elev, self.terr_cfg.hf_depth)
+        gt_position = self.terr_cfg.gt_centre_pos
+        gt_size = (*self.terr_cfg.gt_mj_dim, self.terr_cfg.gt_max_elev, self.terr_cfg.gt_depth)
 
         self.ground_truth = Hfield(gt_arr, gt_path, gt_name, gt_position, gt_size) 
         self.terrains.append(self.ground_truth)
@@ -162,8 +166,7 @@ class Env(EnvBaseMJ):
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
         img_helpers.draw_bounding_box(img_copy, box_centre, *self.terr_cfg.hm_img_dim) 
-        if self.map_cfg.show_waypoint: 
-            img_helpers.draw_dot(img_copy, self.wp_pos_im)
+        img_helpers.draw_dot(img_copy, self.wp_pos_im)
         img_helpers.display_img(img_copy)
     
     def populate_terrain_xml(self, file_path):
@@ -232,8 +235,7 @@ class Env(EnvBaseMJ):
 
         # set both its mj position AND image position
         self.wp_pos_mj = (x, y)
-        if self.args.add_terrain:
-            self.wp_pos_im = self.ground_truth.rob_to_img_pos(self.wp_pos_mj)
+        self.wp_pos_im = self.ground_truth.rob_to_img_pos(self.wp_pos_mj)
 
         # set time at which waypoint was placed
         self.last_wp_time = self.data.time
@@ -267,8 +269,8 @@ class Env(EnvBaseMJ):
                 self.generate_tree(**self.terr_cfg.tree_params)
 
         # load in terrains
+        self.load_terrains()
         if not self.args.replay and self.args.add_terrain:
-            self.load_terrains()
             terrain_path = self.get_parent_dir(self.model_path) + f"terrain_{str(self.rank)}.xml"
             if self.first_time:
                 self.populate_terrain_xml(terrain_path)
@@ -292,9 +294,7 @@ class Env(EnvBaseMJ):
             else:
                 # Offscreen might help getting images?
                 self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data, 'offscreen')
-        else:
-            print("Can't view mujoco on the HPC.")
-        
+
     def get_log_things(self):
         # Things we want to log each training step (print and add to tensorboard)
         return_dict = {"Kp": self.Kp, "Success": self.success, "Cur": self.args.cur}
@@ -371,8 +371,7 @@ class Env(EnvBaseMJ):
         self.get_trajectory(self.expert_target)
 
         # reset way point
-        if self.can_gen_waypoint():
-            self.gen_waypoint()
+        self.gen_waypoint()
 
         self.command_ranges = np.array(self.env_cfg.cmd_ranges)
         self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
@@ -384,9 +383,8 @@ class Env(EnvBaseMJ):
         return hlp_obs_vec 
 
     def step(self, cmds, replay_state=None):
-        if self.args.add_terrain:
-            if self.rank == self.view_rank and self.render and self.map_cfg.show_map:
-                self.show_map()
+        if self.rank == self.view_rank and self.args.show_map and not self.args.training_on_hpc:
+            self.show_map()
 
         if self.can_gen_waypoint():
                 self.gen_waypoint()
