@@ -89,9 +89,6 @@ class Hfield(Terrain):
         Converts a position in mujoco (x1, y1) to a position in the hfield image (x2, y2)
 
         NOTE: Assumes hfield is centred at pos == (0, 0, 0) in mujoco
-
-        Params:
-            pos - mujoco position (x1, y1)
         """
         x1, y1 = pos[0], pos[1]
         x1_rad, y1_rad = self.size[0], self.size[1]
@@ -101,6 +98,22 @@ class Hfield(Terrain):
         # +y mj == -y im (up-screen in mujoco is downscreen in image)
         y = int((-1 * y1 + y1_rad) * (y2_rad // y1_rad))
         return (x, y)
+    
+    def rob_to_arr_pos(self, pos):
+        """
+        Converts a position in mujoco (x1, y1) to a position in the hfield array (x2, y2)
+
+        NOTE: Assumes hfield is centred at pos == (0, 0, 0) in mujoco
+        """
+        x1, y1 = pos[0], pos[1]
+        x1_rad, y1_rad = self.size[0], self.size[1]
+        x2_rad, y2_rad = self.image_dim[0] // 2, self.image_dim[1] // 2
+        # +x mj == +x im 
+        x = int((x1 + x1_rad) * (x2_rad // x1_rad))
+        # +y mj == -y im (up-screen in mujoco is downscreen in image)
+        y = int((y1 + y1_rad) * (y2_rad // y1_rad))
+        return (x, y)
+
 
     def compute_sub_section(self, x, y, X, Y):
         """
@@ -115,7 +128,7 @@ class Hfield(Terrain):
             sub_section array
         """
         # (x, y) position in image
-        im_x, im_y = self.rob_to_img_pos((x, y))
+        im_x, im_y = self.rob_to_arr_pos((x, y))
         (min_x, min_y), (max_x, max_y) = img_helpers.top_left_bot_right(im_x, im_y, X, Y)
         # check sub-section is in range of the base arr
         if (max_x + 1 > self.image_dim[0]
@@ -141,7 +154,7 @@ NOTE: Terrain objects DO NOT require their terrain arrays to be generated this w
 if they wish, this just provides some already-configured ones.
 """
 class TerrainGen():
-    def uniform_rand_terrain(self, zl, zh, dim):
+    def gen_uniform_rand(self, zl, zh, dim):
         """
         Generates a uniformly random terrain array between height zl and zh
 
@@ -154,7 +167,14 @@ class TerrainGen():
             return None
         gt = np.random.uniform(low=zl, high=zh, size=(dim[1], dim[0]))
         return gt
-    
+
+    def gen_empty(self, dim):
+        """
+        Empty terrain array (useful to generate so maps still shows when don't have any terrain loaded)
+        """
+        arr = np.zeros((dim[1], dim[0]))
+        return arr
+
     def add_hole_mound(self, base_arr, pos, radius, max_min):
         """
         Adds a hole/mound to the given terrain array. 
@@ -184,26 +204,29 @@ class TerrainGen():
         return base_arr
 
     def add_wall(self, base_arr, x0, y0, xwid, ywid, height):
+        """
+        Adds a wall to the given terrain array 
+        """
         xl, xh = x0 - xwid // 2, x0 + xwid // 2
         yl, yh = y0 - ywid // 2, y0 + ywid // 2
         base_arr[yl:yh, xl:xh] = height
         return base_arr
 
     def gen_test(self, mj_max_elev, mj_base_elev, dim, mj_rand_dz):
+        """
+        Test bed to generate the terrain arrays in
+        """
         im_base_elev = (1 / mj_max_elev) * mj_base_elev
         gt = self.uniform_rand_terrain(im_base_elev, im_base_elev+mj_rand_dz, (dim[1], dim[0]))
-        # gt = self.add_hole_mound(gt, (330, 250), 30, 0.12)
-        # gt = self.add_hole_mound(gt, (300, 250), 7, -0.12)
-        # gt = self.add_hole_mound(gt, (3, 265), 7, -0.15)
-        # gt = self.add_hole_mound(gt, (330, 265), 7, 0.15)
-        # gt = self.add_wall(gt, 175, 125, 10, 40, 0.5)
-        # gt = self.add_wall(gt, 200, 200, 10, 100, 0.9)
+        gt = self.add_hole_mound(gt, (200, 200), 80, 0.5)
         return gt
-    
-    def gen_empty(self, dim):
-        return np.zeros((dim[1], dim[0]))
 
-    ###################### LOCAL TERRAIN ######################
+    """
+    Below this, can define any functions you want to be applied element-wise 
+    to the array. 
+
+    eg: hump is a lambda function used by add_hole_mound (above)
+    """
 
     def hump(self, scalar, x0, y0, z0, radius):
         """
@@ -211,37 +234,42 @@ class TerrainGen():
             z = scalar * ((x - x0)^2 + (y - y0)^2) + z0
         for all elements in an NxM matrix that lie within the given radius
 
+        Params:
+            x0, y0 - (x,y)/(col, row) the hump is to centred at
+            z0 - base height of hump
+            radius - ""
+
         NOTE: all elements outside the radius are given value 0
         """
         return (lambda row, col: 
                 scalar*((col - x0)**2 + (row - y0)**2) + z0 
                 if (col - x0)**2 + (row - y0)**2 < radius**2 
                 else 0)
-    
-    ###################### WHOLE TERRAIN ######################
 
-    def gen_curve(self, xl, xh, yl, yh, fn):
-        """
-        fn is applied element-wise to generate a 2D numpy array that can serve as the basis of an 
-        environment terrain
-        NOTE: xl, xh, yl, yh define the x and y ranges (dimensions of the array)
-        """
-        x = np.linspace(xl, xh, xh-xl+1)
-        y = np.linspace(yl, yh, yh-xl+1)
-        x, y = np.meshgrid(x, y)
-        fn = np.vectorize(fn)
-        z = fn(x, y)
-        # TODO : add plotting option
-        return z
     
-    def saddle_func(self, x, y):
-        return np.square(x) - np.square(y)
+    # --------------------------------------------------
+    # NOTE: DEPRECATED
+    #       Instead, use lambda functions like in hump (above)
+    # --------------------------------------------------
 
-    def hump_func(self, x_0, y_0, x, y, scalar):
-        z = scalar*(np.square(x - x_0) + np.square(y - y_0))
-        return z
+    # def gen_curve(self, xl, xh, yl, yh, fn):
+    #     """
+    #     fn is applied element-wise to generate a 2D numpy array that can serve as the basis of an 
+    #     environment terrain
+    #     NOTE: xl, xh, yl, yh define the x and y ranges (dimensions of the array)
+    #     """
+    #     x = np.linspace(xl, xh, xh-xl+1)
+    #     y = np.linspace(yl, yh, yh-xl+1)
+    #     x, y = np.meshgrid(x, y)
+    #     fn = np.vectorize(fn)
+    #     z = fn(x, y)
+    #     # TODO : add plotting option
+    #     return z
     
-    def gaussian(self, x, y, sigma=1):
-        z = 25*(1/(2*np.pi*sigma**2)) * np.exp(-1*((0.1*x**2 + 0.1*y**2)/(2*sigma**2)))
-        return z
+    # def saddle_func(self, x, y):
+    #     return np.square(x) - np.square(y)
+
+    # def gaussian(self, x, y, sigma=1):
+    #     z = 25*(1/(2*np.pi*sigma**2)) * np.exp(-1*((0.1*x**2 + 0.1*y**2)/(2*sigma**2)))
+    #     return z
     

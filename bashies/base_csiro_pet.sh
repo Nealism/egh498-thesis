@@ -4,7 +4,7 @@ sbatch <<EOT
 #SBATCH --job-name=$2
 #SBATCH --time=$4
 #SBATCH --mem=512g
-#SBATCH --ntasks-per-node=64
+#SBATCH --ntasks-per-node=32
 #SBATCH --nodes=1
 ulimit -s 10240
 module load openmpi/4.1.2-ofed51-simple python/3.11.0

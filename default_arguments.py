@@ -31,7 +31,7 @@ def get_defaults():
     parser.add_argument('--control_type', default="torque")
     parser.add_argument('--emitter', default="")
     parser.add_argument('--folder', default="")
-    parser.add_argument('--reward', default="")
+    parser.add_argument('--reward', type=int, default=1)
     parser.add_argument('--exp', default="test")
     parser.add_argument('--goal', default="end_effector")
     parser.add_argument('--tree_type', default="")
@@ -40,6 +40,8 @@ def get_defaults():
     parser.add_argument('--jitter_scalar', type=float, default=0.0)
     parser.add_argument('--max_joint_vel', type=float, default=2.0)
     parser.add_argument('--difficulty', type=int, default=1)
+    parser.add_argument('--cmd_ranges', type=str, default="(1, 1, 1.5)")
+    parser.add_argument('--one_wp_per_ep', default=False, action="store_true")
 
     # ========================================================================
     # PyBullet biped environment - TODO: move to config and cleanup
@@ -96,7 +98,7 @@ def get_defaults():
     parser.add_argument('--add_terrain', default=False, action="store_true")
     parser.add_argument('--initial_terrain_difficulty', type=float, default=0.01)
     parser.add_argument('--final_terrain_difficulty', type=float, default=0.5)
-    parser.add_argument('--rand_dz_mult', type=float, default=0.015)
+    parser.add_argument('--rand_dz_mult', type=float, default=0.01)
 
     # ========================================================================
     # Map

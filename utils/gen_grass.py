@@ -118,7 +118,8 @@ def create_branch(pos, rot, radius, branch_id, branch_seg_lengths, damping, stif
         prev_seg = seg
     return branch, joints, contacts
 
-def generate_tree(base_radius, base_half_height, base_damping, base_stiffness, pos=[0,0,0], rot=[1,0,0,0], num=10, segs_per_branch=4, spread=[[0.4, 0.8],[-0.4, 0.4]], z_height=0.0):
+def generate_patches(patches=([0,0,0], [[0.4,0.8],[-0.4,0.4]]), radius=0.02, height=0.015, damping=50, 
+                    stiffness=500, rot=[1,0,0,0], num=10, segs_per_branch=4, z_height=0.0):
 
     #Generate the xml for the tree
     xml = etree.Element("mujocoinclude")
@@ -126,52 +127,55 @@ def generate_tree(base_radius, base_half_height, base_damping, base_stiffness, p
     root_seg = etree.Element("body", name="root", pos="0 0 0", quat="1 0 0 0")
     worldbody.append(root_seg)
 
-    # root_pos = np.array([np.random.uniform(0.2, 0.5),np.random.uniform(-0.5, 0.5), 0.2])
-    # #Root branch is always upright
-    # root_seg = tree_segment(base_radius, base_half_height, base_damping, base_stiffness, 
-    #                         None, 0, 0, root_pos, TRUNK_ROTATION, spacing, NEW_BRANCH_BASE_CHANCE, root_pos, root=True)
+    # Mujoco quaternions are w,x,y,z
+    all_joints = []
+    all_contacts = []
+    # rot = Rotation.random().as_quat()
+    rot = rot
+    for pos, spread in patches:
+        for j in range(1,num):
+            root_pos = np.array([np.random.uniform(spread[0][0], spread[0][1]),np.random.uniform(spread[1][0], spread[1][1]), z_height])
+            root_pos += np.array(pos)
+            branch_seg_lengths = [height/segs_per_branch]*segs_per_branch
+            branch, joints, contacts = create_branch(pos=root_pos, rot=rot, radius=radius, branch_id=str(pos)+"0"+str(j), branch_seg_lengths=branch_seg_lengths, damping=damping, stiffness=stiffness)
+            all_joints.extend(joints)
+            all_contacts.extend(contacts)
+            worldbody.append(branch.xml)
 
-    # root_seg = tree_segment(base_radius, base_half_height, base_damping, base_stiffness, branch_id="00", pos_id=0, pos=root_pos, rot=TRUNK_ROTATION, root=True)
+    all_segs = []
 
-    # root_pos = np.array([np.random.uniform(0.2, 0.5),np.random.uniform(-0.5, 0.5), 0.5])
-    # branch1 = tree_segment(base_radius, base_half_height, base_damping, base_stiffness, parent=root_seg, branch_id="01", pos_id=0, pos=root_pos, rot=TRUNK_ROTATION, root=True)
-    # root_seg.xml.append(branch1.xml)
+    xml.append(worldbody)
+    xml.append(actuator(all_joints).generate_xml())                 
+    xml.append(contact(all_contacts).generate_xml())                 
+        
+    return xml, all_segs
 
-    # root_pos = np.array([np.random.uniform(0.2, 0.5),np.random.uniform(-0.5, 0.5), 0.5])
+def generate_tree(base_radius, base_half_height, base_damping, base_stiffness, pos=[0,0,0], spread=[[0.4, 0.8],[-0.4, 0.4]], 
+                    rot=[1,0,0,0], num=10, segs_per_branch=4, z_height=0.0):
 
-    # difficulty = density, stiffness, damping
+    #Generate the xml for the tree
+    xml = etree.Element("mujocoinclude")
+    worldbody = etree.Element("worldbody") 
+    root_seg = etree.Element("body", name="root", pos="0 0 0", quat="1 0 0 0")
+    worldbody.append(root_seg)
 
-    # pos = root_pos
-    # rot = np.random.uniform(0, 2*np.pi, 4)
-    # rot = rot / np.linalg.norm(rot)
     # Mujoco quaternions are w,x,y,z
     all_joints = []
     all_contacts = []
     # rot = Rotation.random().as_quat()
     rot = rot
     for j in range(1,num):
-        # root_pos = np.array([np.random.uniform(0.2, 0.5),np.random.uniform(-0.5, 0.5), 0.5])
-        # root_pos = np.array([np.random.uniform(1.5, 4.0),np.random.uniform(-0.5, 0.5), -0.5*(base_half_height / segs_per_branch)])
-        # root_pos = np.array([np.random.uniform(1.5, 4.0),np.random.uniform(-0.5, 0.5), base_half_height*2])
-        # root_pos = np.array([np.random.uniform(0.3, 0.6),np.random.uniform(-0.4, 0.4), base_half_height*2])
-        # root_pos = np.array([np.random.uniform(0.2, 0.6),np.random.uniform(-0.4, 0.4), 1.2])
         root_pos = np.array([np.random.uniform(spread[0][0], spread[0][1]),np.random.uniform(spread[1][0], spread[1][1]), z_height])
         root_pos += np.array(pos)
-        # print(root_pos); exit()
-        # radius = np.random.uniform(0.005, 0.02)
         radius = base_radius
-        # branch_seg_lengths = [0.2, 0.3, 0.5]
         branch_seg_lengths = [base_half_height/segs_per_branch]*segs_per_branch
-        # print(branch_seg_lengths); exit()
-        # branch_seg_lengths = [0.2, 0.1, 0.1, 0.1]
-
-        branch, joints, contacts = create_branch(pos=root_pos, rot=rot, radius=radius, branch_id="0"+str(j), branch_seg_lengths=branch_seg_lengths, damping=base_damping, stiffness=base_stiffness)
+        # branch, joints, contacts = create_branch(pos=root_pos, rot=rot, radius=radius, branch_id="0"+str(j), branch_seg_lengths=branch_seg_lengths, damping=base_damping, stiffness=base_stiffness)
+        branch, joints, contacts = create_branch(pos=root_pos, rot=rot, radius=radius, branch_id=str(pos)+"0"+str(j), branch_seg_lengths=branch_seg_lengths, damping=base_damping, stiffness=base_stiffness)
         all_joints.extend(joints)
         all_contacts.extend(contacts)
         # root_seg.xml.append(branch.xml)
         worldbody.append(branch.xml)
 
- 
     all_segs = []
 
 

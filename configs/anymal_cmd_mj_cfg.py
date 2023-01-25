@@ -14,34 +14,41 @@ class AnymalCmdMjCfg():
     
     class terrain:
         #### GROUND TRUTH CONFIG ####
-        gt_img_dim = (250, 250) # image dimensions - (x, y) in pixels
+        gt_img_dim = (400, 400) # image dimensions - (x, y) in pixels
         gt_mj_dim = (15, 15) # mj hfield dimensions - (x_rad, y_rad) in metres
 
         gt_centre_pos = (0, 0, 0) # position in mj gt centred at
         gt_max_elev = 2 # max elevation of ground truth
-        gt_base_elev = 0.1 * gt_max_elev  # base elevation of ground truth's surface 
+        gt_base_elev = 0.4 * gt_max_elev  # base elevation of ground truth's surface 
 
         # NOTE: set later because it depends on a CL arg (rand_dz_mult)
-        gt_rand_dz = None # max height of the random undulation ABOVE the gt's base height (max random dz)
+        gt_rand_dz_mult = None
+        # max height of the random undulation ABOVE the gt's base height (max random dz)
+        gt_rand_dz = None
         gt_depth = 1 # -ve z component of gt (how far gt goes into floor)
 
-        init_z = 0.7 + gt_base_elev # initial elevation of the robot (height=0.7 normally)
+        # init_z = 0.7 + gt_base_elev # initial elevation of the robot (height=0.7 normally)
+        robot_init_z = 0.7
+        # init_z = robot_init_z + gt_base_elev
+        init_z = robot_init_z + gt_max_elev
 
         # height map dimensions
         hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
         hm_mj_dim = (gt_mj_dim[0] / (gt_img_dim[0] / hm_img_dim[0]), 
                                gt_mj_dim[1] / (gt_img_dim[1] / hm_img_dim[1]))  # mj hfield sub-section
+        
+        num_grass_patches = 9
 
         class grass:
             radius = 0.02
             height = 0.4
             damping = 1
             stiffness = 1.5
-            pos = [0, 0, None] # z component set later as it depends on gt_base_elev
             rot = [1, 0, 0, 0]
-            num = 100
+            # spread = [[1.0, 7.0], [-1, 1]]
+            # pos = (0, 0, 0.8)
+            num = 38
             segs_per_branch = 4
-            spread = [[1.0, 7.0], [-1, 1]]
             z_height = -0.05
 
         class tree:
@@ -53,7 +60,7 @@ class AnymalCmdMjCfg():
 
     class map:
         # represents a 'best case' vel. of the bot towards the waypoint
-        max_vel_to_wp = 0.8
+        max_vel_to_wp = 1.5
         # multiply expected time to wp by some scalar to give it some leeway
         wp_time_scalar = 1.5
 

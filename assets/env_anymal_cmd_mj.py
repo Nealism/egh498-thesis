@@ -43,8 +43,8 @@ class Env(EnvBaseMJ):
         self.viewer = None
 
         # set CL-dependent config vars
-        self.terr_cfg.gt_rand_dz = self.args.rand_dz_mult * self.terr_cfg.gt_max_elev
-        self.terr_cfg.grass.pos[2] = self.terr_cfg.gt_base_elev
+        if self.args.rand_dz_mult:
+            self.terr_cfg.gt_rand_dz = self.args.rand_dz_mult * self.terr_cfg.gt_max_elev
 
         self.simStep = self.env_cfg.simStep
         self.timeStep = self.env_cfg.timeStep
@@ -111,12 +111,13 @@ class Env(EnvBaseMJ):
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 
         ##### ROBOT #####
+
         self.motor_names = self.robot_cfg.motor_names
         # left front, right front, left back, right back
         self.initial_joints = self.robot_cfg.init_joints
         self.right_swing = self.robot_cfg.right_swing
         self.left_swing = self.robot_cfg.left_swing
-        self.initial_z = self.terr_cfg.init_z
+        self.initial_z = self.terr_cfg.init_z if self.args.add_terrain else self.terr_cfg.robot_init_z
 
         # States that we want to restore, for resuming training after running a test
         # self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
@@ -171,7 +172,10 @@ class Env(EnvBaseMJ):
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
         img_helpers.draw_bounding_box(img_copy, box_centre, *self.terr_cfg.hm_img_dim) 
-        img_helpers.draw_dot(img_copy, self.wp_pos_im)
+        # way point (red dot)
+        img_helpers.draw_dot(img_copy, self.wp_pos_im, color=img_helpers.RED) 
+        # robot position (green dot)
+        img_helpers.draw_dot(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), color=img_helpers.GREEN)
         img_helpers.display_img(img_copy)
     
     def populate_terrain_xml(self, file_path):
@@ -264,12 +268,28 @@ class Env(EnvBaseMJ):
         # return estimate of time for robot to reach wp
         # NOTE: multiply by scalar to account for the assumptions made (see above)
         return self.map_cfg.wp_time_scalar * (abs_dist / self.max_vel_to_wp)
-
+    
+    def gen_patches(self, num, x_rad, y_rad):
+        """
+        Generate an array of grass patch positions for the mj environment
+        """
+        dim = self.terr_cfg.gt_mj_dim
+        # xl, xh, yl, yh = -dim[0], dim[0], -dim[1], dim[1]
+        xl, xh, yl, yh = -1, 1, -1, 1
+        patches = []
+        for _ in range(num):
+            pos = (np.random.uniform(xl, xh), np.random.uniform(yl, yh), self.terr_cfg.gt_base_elev)
+            spread = [[pos[0] - x_rad, pos[0] + x_rad], [pos[1] - y_rad, pos[1] + y_rad]]
+            patches.append((pos, spread))
+        return patches
+    
     def load_robot(self):
         # load in grass/trees
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
-                self.generate_tree(**self.terr_cfg.grass_params)
+                patches = self.gen_patches(self.terr_cfg.num_grass_patches, 1.5, 1.5)
+                self.generate_patches(patches, **self.terr_cfg.grass_params)
+                # self.generate_tree(**self.terr_cfg.grass_params)
             elif self.args.tree_type == "tree":
                 self.generate_tree(**self.terr_cfg.tree_params)
 
@@ -281,6 +301,7 @@ class Env(EnvBaseMJ):
                 self.populate_terrain_xml(terrain_path)
             else:
                 self.reconfig_terrain_xml(terrain_path, self.ground_truth)
+        
 
         self.model = mujoco.MjModel.from_xml_path(self.model_path)
         self.data = mujoco.MjData(self.model)
@@ -380,6 +401,8 @@ class Env(EnvBaseMJ):
         # reset way point
         self.gen_waypoint()
 
+        if self.args.cmd_ranges:
+            self.env_cfg.cmd_ranges = eval(str(self.args.cmd_ranges))
         self.command_ranges = np.array(self.env_cfg.cmd_ranges)
         self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
         self.time_at_speed = 0
@@ -393,8 +416,8 @@ class Env(EnvBaseMJ):
         if self.rank == self.view_rank and self.args.show_map and not self.args.training_on_hpc:
             self.show_map()
 
-        if self.can_gen_waypoint():
-                self.gen_waypoint()
+        if not self.args.one_wp_per_ep and self.can_gen_waypoint():
+            self.gen_waypoint()
         
         self.commands = list(cmds)
         actions = self.low_lev_pol.step(torch.tensor(np.array(self.get_llp_obs()).astype(np.float32)), stochastic=False)[0]
@@ -435,7 +458,14 @@ class Env(EnvBaseMJ):
         self.get_observation()
 
         self.save_sim_state()
-        reward, done = self.get_reward_1()
+        if self.args.reward == 1:
+            reward, done = self.get_reward_1()
+        elif self.args.reward == 2:
+            reward, done = self.get_reward_2()
+        elif self.args.reward == 3:
+            reward, done = self.get_reward_3()
+        elif self.args.reward == 4:
+            reward, done = self.get_reward_4()
         self.prev_actions = self.actions
         self.total_return += reward
         self.steps += 1
@@ -447,7 +477,7 @@ class Env(EnvBaseMJ):
         """
         Returns the obs. vector that is fed to the high-level policy (52-d)
         """
-        return (self.imu + self.commands + self.joints + list(self.wp_pos_mj) +
+        return (self.imu + self.commands + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) +
                 self.joint_vel + self.joint_force)
     
     def get_llp_obs(self):
@@ -491,21 +521,28 @@ class Env(EnvBaseMJ):
         return reward, done
     
     def get_reward_1(self):
-        done = False
-        if (self.pos[2] < self.rew_cfg.done.min_z or 
-           abs(self.pitch) > self.rew_cfg.done.max_pitch or 
-           abs(self.roll) > self.rew_cfg.done.max_roll):
-            done = True
+        done = self.is_done()
 
-        # robot-pos vs. wp position - sum of squared diff (trying to minimise, hence negative)
-        goal = np.sum(np.array(np.square(self.pos[:2] - np.array(self.wp_pos_mj))))
-        reward = -1.0*goal
+        goal = 1.5 * self.reward_goal()
+        reward = goal
+
         self.ep_reward_dict["Reward/goal"] += reward
         return reward, done
     
     def get_reward_2(self):
-        pass
-    
+        done = self.is_done()
+
+        goal = 1.5 * self.reward_exp_goal()
+        reward = goal
+
+        self.ep_reward_dict["Reward/goal"] += reward
+        return reward, done
+
+    def is_done(self):
+        return (self.pos[2] < self.rew_cfg.done.min_z or 
+            abs(self.pitch) > self.rew_cfg.done.max_pitch or 
+            abs(self.roll) > self.rew_cfg.done.max_roll)
+
     def get_observation(self):
         # Keep an eye on these to make sure they are getting what you think)
         self.pos = self.data.body(self.base_link).xpos.copy()
