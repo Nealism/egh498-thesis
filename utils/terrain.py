@@ -217,8 +217,7 @@ class TerrainGen():
         Test bed to generate the terrain arrays in
         """
         im_base_elev = (1 / mj_max_elev) * mj_base_elev
-        gt = self.uniform_rand_terrain(im_base_elev, im_base_elev+mj_rand_dz, (dim[1], dim[0]))
-        gt = self.add_hole_mound(gt, (200, 200), 80, 0.5)
+        gt = self.gen_uniform_rand(im_base_elev, im_base_elev+mj_rand_dz, (dim[1], dim[0]))
         return gt
 
     """

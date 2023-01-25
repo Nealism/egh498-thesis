@@ -38,7 +38,7 @@ def run(args):
     Env, args = default_arguments.get_env(args)
     env = Env(PATH=PATH, args=args)
 
-    just_llp = False
+    just_llp = True
     if not just_llp:
         pol = torch.load(PATH + "/model.pt")
 

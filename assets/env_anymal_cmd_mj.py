@@ -42,10 +42,15 @@ class Env(EnvBaseMJ):
         self.master = True 
         self.viewer = None
 
-        # set CL-dependent config vars
+        # CLI arg dependent config value
         if self.args.rand_dz_mult:
             self.terr_cfg.gt_rand_dz = self.args.rand_dz_mult * self.terr_cfg.gt_max_elev
-
+        
+        # CLI arg dependent config value
+        self.terr_cfg.init_z = self.terr_cfg.robot_init_z
+        if self.args.add_terrain:
+            self.terr_cfg.init_z += self.terr_cfg.gt_base_elev
+        
         self.simStep = self.env_cfg.simStep
         self.timeStep = self.env_cfg.timeStep
         self.Kp = self.env_cfg.Kp
@@ -487,7 +492,7 @@ class Env(EnvBaseMJ):
         return (self.imu + self.commands + self.joints + 
                 self.joint_vel + self.joint_force + 
                 [contact for contact in self.contacts.values()])
-
+        
     def get_reward(self):
         done = False
         if (self.pos[2] < self.rew_cfg.done.min_z or 
@@ -523,21 +528,12 @@ class Env(EnvBaseMJ):
     def get_reward_1(self):
         done = self.is_done()
 
-        goal = 1.5 * self.reward_goal()
+        goal = np.exp(-5 * np.sum(self.pos[:2] - np.array(self.wp_pos_mj))**2)
         reward = goal
 
         self.ep_reward_dict["Reward/goal"] += reward
         return reward, done
     
-    def get_reward_2(self):
-        done = self.is_done()
-
-        goal = 1.5 * self.reward_exp_goal()
-        reward = goal
-
-        self.ep_reward_dict["Reward/goal"] += reward
-        return reward, done
-
     def is_done(self):
         return (self.pos[2] < self.rew_cfg.done.min_z or 
             abs(self.pitch) > self.rew_cfg.done.max_pitch or 

@@ -14,7 +14,7 @@ class AnymalCmdMjCfg():
     
     class terrain:
         #### GROUND TRUTH CONFIG ####
-        gt_img_dim = (400, 400) # image dimensions - (x, y) in pixels
+        gt_img_dim = (500, 500) # image dimensions - (x, y) in pixels
         gt_mj_dim = (15, 15) # mj hfield dimensions - (x_rad, y_rad) in metres
 
         gt_centre_pos = (0, 0, 0) # position in mj gt centred at
@@ -27,10 +27,8 @@ class AnymalCmdMjCfg():
         gt_rand_dz = None
         gt_depth = 1 # -ve z component of gt (how far gt goes into floor)
 
-        # init_z = 0.7 + gt_base_elev # initial elevation of the robot (height=0.7 normally)
         robot_init_z = 0.7
-        # init_z = robot_init_z + gt_base_elev
-        init_z = robot_init_z + gt_max_elev
+        init_z = None
 
         # height map dimensions
         hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
