@@ -271,4 +271,3 @@ class TerrainGen():
     # def gaussian(self, x, y, sigma=1):
     #     z = 25*(1/(2*np.pi*sigma**2)) * np.exp(-1*((0.1*x**2 + 0.1*y**2)/(2*sigma**2)))
     #     return z
-    

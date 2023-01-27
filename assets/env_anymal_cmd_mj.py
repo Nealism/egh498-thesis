@@ -177,10 +177,10 @@ class Env(EnvBaseMJ):
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
         img_helpers.draw_bounding_box(img_copy, box_centre, *self.terr_cfg.hm_img_dim) 
-        # way point (red dot)
-        img_helpers.draw_dot(img_copy, self.wp_pos_im, color=img_helpers.RED) 
-        # robot position (green dot)
-        img_helpers.draw_dot(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), color=img_helpers.GREEN)
+        # way point (green dot)
+        img_helpers.draw_dot(img_copy, self.wp_pos_im, color=img_helpers.GREEN) 
+        # robot position (red dot)
+        img_helpers.draw_dot(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), color=img_helpers.RED)
         img_helpers.display_img(img_copy)
     
     def populate_terrain_xml(self, file_path):
@@ -492,7 +492,7 @@ class Env(EnvBaseMJ):
         return (self.imu + self.commands + self.joints + 
                 self.joint_vel + self.joint_force + 
                 [contact for contact in self.contacts.values()])
-        
+    
     def get_reward(self):
         done = False
         if (self.pos[2] < self.rew_cfg.done.min_z or 
@@ -539,6 +539,19 @@ class Env(EnvBaseMJ):
             abs(self.pitch) > self.rew_cfg.done.max_pitch or 
             abs(self.roll) > self.rew_cfg.done.max_roll)
 
+    def yaw_diff(self):
+        """
+        Returns the absolute difference in angle of the robot's yaw and the way point (from robot's pos)
+        """
+        wp_ang = math.atan2((self.wp_pos_mj[1] - self.pos[1]), (self.wp_pos_mj[0] - self.pos[0]))
+        diff = abs(self.yaw - wp_ang)
+        if diff > (2 * math.pi):
+            diff = diff - (2 * math.pi)
+        if diff > math.pi:
+            return 2*math.pi - diff
+        else:
+            return diff
+
     def get_observation(self):
         # Keep an eye on these to make sure they are getting what you think)
         self.pos = self.data.body(self.base_link).xpos.copy()
@@ -547,6 +560,8 @@ class Env(EnvBaseMJ):
 
         rot = Rotation(self.orn)
         self.roll, self.pitch, self.yaw = rot.as_euler('xyz', degrees=False)
+        if self.wp_pos_mj:
+            print(self.yaw_diff())
 
         self.imu = [self.roll, self.pitch] + list(self.data.sensordata) 
         self.vx, self.vy, self.vz = self.data.sensordata[3:6]

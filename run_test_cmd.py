@@ -45,7 +45,7 @@ def run(args):
     obs = env.reset()
     while True:
         if just_llp:
-            cmds = [0.5, 0.0, 0.0]
+            cmds = [0.0, 0.0, 0.8]
         else:
             cmds = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
         obs, _, done, _ = env.step(cmds)

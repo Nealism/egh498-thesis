@@ -15,25 +15,32 @@ class AnymalCmdMjCfg():
     class terrain:
         #### GROUND TRUTH CONFIG ####
         gt_img_dim = (500, 500) # image dimensions - (x, y) in pixels
-        gt_mj_dim = (15, 15) # mj hfield dimensions - (x_rad, y_rad) in metres
+        gt_mj_dim = (25, 25) # mj hfield dimensions - (x_rad, y_rad) in metres
 
         gt_centre_pos = (0, 0, 0) # position in mj gt centred at
         gt_max_elev = 2 # max elevation of ground truth
         gt_base_elev = 0.4 * gt_max_elev  # base elevation of ground truth's surface 
+        gt_depth = 1 # -ve z component of gt (how far gt goes into floor)
 
-        # NOTE: set later because it depends on a CL arg (rand_dz_mult)
+        # NOTE: both of these set later because it depends on a CL arg (rand_dz_mult)
+
+        # proportion of max elev taken up by random undulation
         gt_rand_dz_mult = None
         # max height of the random undulation ABOVE the gt's base height (max random dz)
         gt_rand_dz = None
-        gt_depth = 1 # -ve z component of gt (how far gt goes into floor)
 
+        # height of robot
         robot_init_z = 0.7
-        init_z = None
+        # height robot is loaded at NOTE: depending on terrain, this is added to later
+        init_z = robot_init_z
 
         # height map dimensions
-        hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
-        hm_mj_dim = (gt_mj_dim[0] / (gt_img_dim[0] / hm_img_dim[0]), 
-                               gt_mj_dim[1] / (gt_img_dim[1] / hm_img_dim[1]))  # mj hfield sub-section
+        hm_mj_dim = (8, 8)
+        hm_img_dim = (hm_mj_dim[0] * (gt_img_dim[0] // gt_mj_dim[0]), hm_mj_dim[1] * (gt_img_dim[1] // gt_mj_dim[1]))
+
+        # hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
+        # hm_mj_dim = (gt_mj_dim[0] / (gt_img_dim[0] / hm_img_dim[0]), 
+        #                        gt_mj_dim[1] / (gt_img_dim[1] / hm_img_dim[1]))  # mj hfield sub-section
         
         num_grass_patches = 9
 
@@ -60,7 +67,7 @@ class AnymalCmdMjCfg():
         # represents a 'best case' vel. of the bot towards the waypoint
         max_vel_to_wp = 1.5
         # multiply expected time to wp by some scalar to give it some leeway
-        wp_time_scalar = 1.5
+        wp_time_scalar = 3.0
 
     class reward:
         class goal:

@@ -18,7 +18,11 @@ def run(args):
     now = comm.bcast(now.strftime("%Y_%m_%d_%H_%M_%S"), root=0)  
 
     SAVE_PATH = "/scratch1/" + home.split("/")[-1] + "/results/"
-    PATH = SAVE_PATH + args.env + "/" + args.exp + "/" + now + "/"
+
+    if args.folder:
+        PATH = SAVE_PATH + args.env + "/" + args.exp + "/" + args.folder + "/"
+    else:
+        PATH = SAVE_PATH + args.env + "/" + args.exp + "/" + now + "/"
 
     if rank == 0:
         writer = tensorboardX.SummaryWriter(log_dir=PATH)
