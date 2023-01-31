@@ -101,8 +101,10 @@ class Env(EnvBaseMJ):
         ##### ENV #####
 
         self.low_lev_pol = torch.load(self.LLP_PATH)
-        self.reward_fn = getattr(self, f'get_reward_{self.args.reward_fn}')
-        self.obs_fn = getattr(self, f'get_hlp_obs_{self.args.obs_fn}')
+        # self.reward_fn = getattr(self, f'get_reward_{self.args.reward_fn}')
+        # self.obs_fn = getattr(self, f'get_hlp_obs_{self.args.obs_fn}')
+        self.reward_fn_name = f'get_reward_{self.args.reward_fn}'
+        self.obs_fn_name = f'get_hlp_obs_{self.args.obs_fn}'
 
         self.ob_size = self.env_cfg.ob_sizes[self.args.obs_fn-1]
         self.ac_size = self.env_cfg.ac_size
@@ -423,11 +425,10 @@ class Env(EnvBaseMJ):
         self.goal = []
 
         self.prev_actions = self.joints
-        hlp_obs_vec = self.obs_fn()
+        hlp_obs_vec = getattr(self, self.obs_fn_name)()
         return hlp_obs_vec 
 
     def step(self, cmds, replay_state=None):
-        print(cmds)
         if self.rank == self.view_rank and self.args.show_map and not self.args.training_on_hpc:
             self.show_map()
 
@@ -435,10 +436,9 @@ class Env(EnvBaseMJ):
             self.gen_waypoint()
         
         if self.args.clip:
-            scaling_factor = 0.5
-            self.commands = list(torch.clip(torch.tensor(cmds) * scaling_factor, -1.0, 1.0))
+            self.commands = list(torch.clip(torch.tensor(cmds) * self.args.cmd_scaling, -1.0, 1.0))
         else:
-            self.commands = list(self.commands)
+            self.commands = list(cmds)
         actions = self.low_lev_pol.step(torch.tensor(np.array(self.get_llp_obs()).astype(np.float32)), stochastic=False)[0]
         self.actions = list(np.array(self.initial_joints) + np.array(actions))
 
@@ -477,8 +477,8 @@ class Env(EnvBaseMJ):
         self.get_observation()
         self.save_sim_state()
 
-        reward, done = self.reward_fn()
-        hlp_obs_vec = self.obs_fn()
+        reward, done = getattr(self, self.reward_fn_name)()
+        hlp_obs_vec = getattr(self, self.obs_fn_name)()
 
         self.prev_actions = self.actions
         self.total_return += reward
@@ -510,7 +510,7 @@ class Env(EnvBaseMJ):
         -----        
         Include yaw diff
         """
-        return (self.imu + self.commands + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) + self.yaw_diff() +
+        return (self.imu + self.commands + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) + [float(self.yaw_diff())] +
                 self.joint_vel + self.joint_force)
 
     def get_llp_obs(self):
@@ -582,8 +582,8 @@ class Env(EnvBaseMJ):
         diff = np.sum(np.abs(self.pos[:2] - np.array(self.wp_pos_mj)))
         goal = np.exp(-0.05 * diff**2)
         yaw_diff = np.exp(-0.7 * self.yaw_diff()**2)
-        reward = 3*goal
-        if goal > 0.5:
+        reward = 5*goal
+        if reward > 0.8:
             reward += yaw_diff
         
         self.ep_reward_dict["Reward/goal"] += reward

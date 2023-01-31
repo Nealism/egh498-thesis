@@ -40,7 +40,7 @@ def get_defaults():
     parser.add_argument('--jitter_scalar', type=float, default=0.0)
     parser.add_argument('--max_joint_vel', type=float, default=2.0)
     parser.add_argument('--difficulty', type=int, default=1)
-    parser.add_argument('--cmd_ranges', type=str, default="(1, 1, 1.5)")
+    parser.add_argument('--cmd_ranges', type=str, default="(1, 1, 1)")
     parser.add_argument('--one_wp_per_ep', default=False, action="store_true")
 
     # ========================================================================
@@ -93,6 +93,7 @@ def get_defaults():
     parser.add_argument('--clip', default=False, action="store_true")
     parser.add_argument('--reward_fn', type=int, default=1)
     parser.add_argument('--obs_fn', type=int, default=1)
+    parser.add_argument('--cmd_scaling', type=float, default=1.0)
 
     # ========================================================================
     # Terrain
@@ -117,7 +118,7 @@ def get_defaults():
     # ========================================================================
     # Way point
     # ========================================================================
-    parser.add_argument("--wp_time_scalar", default=1.5)
+    parser.add_argument("--wp_time_scalar", type=float, default=1.5)
 
     # knowns, unknowns = parser.parse_known_args()
     args = parser.parse_args()

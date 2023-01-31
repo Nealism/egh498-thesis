@@ -2,8 +2,8 @@
 sbatch <<EOT
 #!/bin/bash
 #SBATCH --job-name=$2
-#SBATCH --output=$2.out
-#SBATCH --error=$2.err
+#SBATCH --output=o/$2.out
+#SBATCH --error=e/$2.err
 #SBATCH --time=$4
 #SBATCH --mem=512g
 #SBATCH --ntasks-per-node=32
