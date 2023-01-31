@@ -1,8 +1,22 @@
 from utils.utils import get_attribute_dict
 
+"""
+NOTE NOTE NOTE
+
+-some config values are set to None
+-this is where we instead pass a CLI arg for the given value
+-if NOT training on hpc:
+     -dw about this, just override the None's with your own values
+-if ARE training on hpc: 
+    -if want to load multiple jobs at once, and 
+     want to change certain values between jobs, have to do through command line args
+    -jobs take time to start, so changes on a 'later' queued job may actually be adopted by
+    'earlier' queued one (if you use config files). CLI args fix this
+"""
+
 class AnymalCmdMjCfg():
     class env:
-        ob_size = 52
+        ob_sizes = [52, 49, 53] # ob_sizes[i] == len of ith obs vector (ie: output len of get_hlp_obs_{i+1})
         ac_size = 3 # (Vx, Vy, Vz) - output of hlp
         joints_size = 12  # robot joint positions - output of llp
         cmd_ranges = [1, 1, 1.5]
@@ -22,26 +36,21 @@ class AnymalCmdMjCfg():
         gt_base_elev = 0.4 * gt_max_elev  # base elevation of ground truth's surface 
         gt_depth = 1 # -ve z component of gt (how far gt goes into floor)
 
-        # NOTE: both of these set later because it depends on a CL arg (rand_dz_mult)
-
         # proportion of max elev taken up by random undulation
         gt_rand_dz_mult = None
         # max height of the random undulation ABOVE the gt's base height (max random dz)
         gt_rand_dz = None
-
+        
         # height of robot
         robot_init_z = 0.7
-        # height robot is loaded at NOTE: depending on terrain, this is added to later
+        # height robot is loaded at
         init_z = robot_init_z
 
         # height map dimensions
-        hm_mj_dim = (8, 8)
-        hm_img_dim = (hm_mj_dim[0] * (gt_img_dim[0] // gt_mj_dim[0]), hm_mj_dim[1] * (gt_img_dim[1] // gt_mj_dim[1]))
-
-        # hm_img_dim = (gt_img_dim[0] // 5, gt_img_dim[1] // 5) # image sub-section
-        # hm_mj_dim = (gt_mj_dim[0] / (gt_img_dim[0] / hm_img_dim[0]), 
-        #                        gt_mj_dim[1] / (gt_img_dim[1] / hm_img_dim[1]))  # mj hfield sub-section
+        hm_mj_dim = None
+        hm_img_dim = None
         
+
         num_grass_patches = 9
 
         class grass:
@@ -67,7 +76,7 @@ class AnymalCmdMjCfg():
         # represents a 'best case' vel. of the bot towards the waypoint
         max_vel_to_wp = 1.5
         # multiply expected time to wp by some scalar to give it some leeway
-        wp_time_scalar = 3.0
+        wp_time_scalar = None
 
     class reward:
         class goal:

@@ -38,14 +38,14 @@ def run(args):
     Env, args = default_arguments.get_env(args)
     env = Env(PATH=PATH, args=args)
 
-    just_llp = True
+    just_llp = False
     if not just_llp:
         pol = torch.load(PATH + "/model.pt")
 
     obs = env.reset()
     while True:
         if just_llp:
-            cmds = [0.0, 0.0, 0.8]
+            cmds = [1.0, 0, 0]
         else:
             cmds = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
         obs, _, done, _ = env.step(cmds)

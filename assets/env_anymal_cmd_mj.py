@@ -42,15 +42,22 @@ class Env(EnvBaseMJ):
         self.master = True 
         self.viewer = None
 
-        # CLI arg dependent config value
+        ##### LOADING CONFIG VALUES THROUGH CLI ARGS (HPC-ONLY, SEE CFG) #####
+
         if self.args.rand_dz_mult:
             self.terr_cfg.gt_rand_dz = self.args.rand_dz_mult * self.terr_cfg.gt_max_elev
+        self.map_cfg.wp_time_scalar = self.args.wp_time_scalar
         
-        # CLI arg dependent config value
         self.terr_cfg.init_z = self.terr_cfg.robot_init_z
         if self.args.add_terrain:
             self.terr_cfg.init_z += self.terr_cfg.gt_base_elev
         
+        self.terr_cfg.hm_mj_dim = (self.args.hm_size, self.args.hm_size)
+        self.terr_cfg.hm_img_dim = (self.terr_cfg.hm_mj_dim[0] * (self.terr_cfg.gt_img_dim[0] // self.terr_cfg.gt_mj_dim[0]), 
+                                    self.terr_cfg.hm_mj_dim[1] * (self.terr_cfg.gt_img_dim[1] // self.terr_cfg.gt_mj_dim[1])) 
+        
+        ##### ENV PARAMS #####
+
         self.simStep = self.env_cfg.simStep
         self.timeStep = self.env_cfg.timeStep
         self.Kp = self.env_cfg.Kp
@@ -94,8 +101,10 @@ class Env(EnvBaseMJ):
         ##### ENV #####
 
         self.low_lev_pol = torch.load(self.LLP_PATH)
+        self.reward_fn = getattr(self, f'get_reward_{self.args.reward_fn}')
+        self.obs_fn = getattr(self, f'get_hlp_obs_{self.args.obs_fn}')
 
-        self.ob_size = self.env_cfg.ob_size
+        self.ob_size = self.env_cfg.ob_sizes[self.args.obs_fn-1]
         self.ac_size = self.env_cfg.ac_size
         self.joints_size = self.env_cfg.joints_size
         self.im_size = [1] + list(self.cfg.terrain.hm_img_dim)
@@ -414,17 +423,22 @@ class Env(EnvBaseMJ):
         self.goal = []
 
         self.prev_actions = self.joints
-        hlp_obs_vec = self.get_hlp_obs()
+        hlp_obs_vec = self.obs_fn()
         return hlp_obs_vec 
 
     def step(self, cmds, replay_state=None):
+        print(cmds)
         if self.rank == self.view_rank and self.args.show_map and not self.args.training_on_hpc:
             self.show_map()
 
         if not self.args.one_wp_per_ep and self.can_gen_waypoint():
             self.gen_waypoint()
         
-        self.commands = list(cmds)
+        if self.args.clip:
+            scaling_factor = 0.5
+            self.commands = list(torch.clip(torch.tensor(cmds) * scaling_factor, -1.0, 1.0))
+        else:
+            self.commands = list(self.commands)
         actions = self.low_lev_pol.step(torch.tensor(np.array(self.get_llp_obs()).astype(np.float32)), stochastic=False)[0]
         self.actions = list(np.array(self.initial_joints) + np.array(actions))
 
@@ -461,30 +475,44 @@ class Env(EnvBaseMJ):
             self.viewer.render()
 
         self.get_observation()
-
         self.save_sim_state()
-        if self.args.reward == 1:
-            reward, done = self.get_reward_1()
-        elif self.args.reward == 2:
-            reward, done = self.get_reward_2()
-        elif self.args.reward == 3:
-            reward, done = self.get_reward_3()
-        elif self.args.reward == 4:
-            reward, done = self.get_reward_4()
+
+        reward, done = self.reward_fn()
+        hlp_obs_vec = self.obs_fn()
+
         self.prev_actions = self.actions
         self.total_return += reward
         self.steps += 1
-
-        hlp_obs_vec = self.get_hlp_obs()
+        
         return np.array(hlp_obs_vec), reward, done, None
     
-    def get_hlp_obs(self):
+    def get_hlp_obs_1(self):
         """
         Returns the obs. vector that is fed to the high-level policy (52-d)
+        -----        
+        Default
         """
         return (self.imu + self.commands + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) +
                 self.joint_vel + self.joint_force)
-    
+
+    def get_hlp_obs_2(self):
+        """
+        Returns the obs. vector that is fed to the high-level policy (49-d)
+        -----
+        No commands
+        """
+        return (self.imu + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) +
+                self.joint_vel + self.joint_force)
+
+    def get_hlp_obs_3(self):
+        """
+        Returns the obs. vector that is fed to the high-level policy (53-d)
+        -----        
+        Include yaw diff
+        """
+        return (self.imu + self.commands + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) + self.yaw_diff() +
+                self.joint_vel + self.joint_force)
+
     def get_llp_obs(self):
         """
         Returns the obs. vector that is fed to the low-level policy (54-d)
@@ -528,12 +556,39 @@ class Env(EnvBaseMJ):
     def get_reward_1(self):
         done = self.is_done()
 
-        goal = np.exp(-5 * np.sum(self.pos[:2] - np.array(self.wp_pos_mj))**2)
+        diff = np.sum(np.abs(self.pos[:2] - np.array(self.wp_pos_mj)))
+        goal = np.exp(-0.05 * diff**2)
+
+        reward = goal
+
+        self.ep_reward_dict["Reward/goal"] += reward
+        return reward, done
+
+    def get_reward_2(self):
+        done = self.is_done()
+
+        diff = np.sum(np.abs(self.pos[:2] - np.array(self.wp_pos_mj)))
+        goal = np.exp(-0.02 * diff**2)
+
         reward = goal
 
         self.ep_reward_dict["Reward/goal"] += reward
         return reward, done
     
+    def get_reward_3(self):
+        # incorporates yaw_diff
+        done = self.is_done()
+
+        diff = np.sum(np.abs(self.pos[:2] - np.array(self.wp_pos_mj)))
+        goal = np.exp(-0.05 * diff**2)
+        yaw_diff = np.exp(-0.7 * self.yaw_diff()**2)
+        reward = 3*goal
+        if goal > 0.5:
+            reward += yaw_diff
+        
+        self.ep_reward_dict["Reward/goal"] += reward
+        return reward, done
+
     def is_done(self):
         return (self.pos[2] < self.rew_cfg.done.min_z or 
             abs(self.pitch) > self.rew_cfg.done.max_pitch or 
@@ -560,8 +615,6 @@ class Env(EnvBaseMJ):
 
         rot = Rotation(self.orn)
         self.roll, self.pitch, self.yaw = rot.as_euler('xyz', degrees=False)
-        if self.wp_pos_mj:
-            print(self.yaw_diff())
 
         self.imu = [self.roll, self.pitch] + list(self.data.sensordata) 
         self.vx, self.vy, self.vz = self.data.sensordata[3:6]
