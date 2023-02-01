@@ -118,7 +118,7 @@ def get_defaults():
     # ========================================================================
     # Way point
     # ========================================================================
-    parser.add_argument("--wp_time_scalar", type=float, default=1.5)
+    parser.add_argument("--wp_time_scalar", type=float, default=2.5)
 
     # knowns, unknowns = parser.parse_known_args()
     args = parser.parse_args()
