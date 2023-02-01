@@ -467,7 +467,7 @@ class Env(EnvBaseMJ):
         """
         Returns the obs. vector that is fed to the high-level policy (52-d)
         -----        
-        Default
+        Default AND wp dist 
         """
         return (self.imu + self.commands + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) +
                 self.joint_vel + self.joint_force)
@@ -476,7 +476,7 @@ class Env(EnvBaseMJ):
         """
         Returns the obs. vector that is fed to the high-level policy (49-d)
         -----
-        No commands
+        Default WITHOUT commands
         """
         return (self.imu + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) +
                 self.joint_vel + self.joint_force)
@@ -485,25 +485,16 @@ class Env(EnvBaseMJ):
         """
         Returns the obs. vector that is fed to the high-level policy (53-d)
         -----        
-        Include yaw diff
+        Default AND heading error AND wp dist
         """
-        return (self.imu + self.commands + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) + [float(self.yaw_diff())] +
+        return (self.imu + self.commands + self.wp_pos_robot + [self.heading_error, self.dist_to_wp] + self.joints +
                 self.joint_vel + self.joint_force)
 
     def get_hlp_obs_4(self):
         """
         Returns the obs. vector that is fed to the high-level policy (53-d)
         -----        
-        include brendan's heading error
-        """
-        return (self.imu + self.commands + self.wp_pos_robot + [self.heading_error, self.dist_to_wp] + self.joints +
-                self.joint_vel + self.joint_force)
-
-    def get_hlp_obs_5(self):
-        """
-        Returns the obs. vector that is fed to the high-level policy (53-d)
-        -----        
-        Include yaw diff
+        Heading error AND wp dist
         """
         return [self.heading_error, self.dist_to_wp] 
 
@@ -548,6 +539,7 @@ class Env(EnvBaseMJ):
         return reward, done
     
     def get_reward_1(self):
+        # old wp dist
         done = self.is_done()
 
         diff = np.sum(np.abs(self.pos[:2] - np.array(self.wp_pos_mj)))
@@ -559,6 +551,7 @@ class Env(EnvBaseMJ):
         return reward, done
 
     def get_reward_2(self):
+        # old wp dist, lower coefficient
         done = self.is_done()
 
         diff = np.sum(np.abs(self.pos[:2] - np.array(self.wp_pos_mj)))
@@ -570,21 +563,7 @@ class Env(EnvBaseMJ):
         return reward, done
     
     def get_reward_3(self):
-        # incorporates yaw_diff
-        done = self.is_done()
-
-        diff = np.sum(np.abs(self.pos[:2] - np.array(self.wp_pos_mj)))
-        goal = np.exp(-0.05 * diff**2)
-        yaw_diff = np.exp(-0.7 * self.yaw_diff()**2)
-        reward = 5*goal
-        if reward > 0.8:
-            reward += yaw_diff
-        
-        self.ep_reward_dict["Reward/goal"] += reward
-        return reward, done
-
-    def get_reward_4(self):
-        # incorporates yaw_diff
+        # new wp dist
         done = self.is_done()
         
         # Want to make sure we are facing the right way before moving towards the waypoint
@@ -605,19 +584,6 @@ class Env(EnvBaseMJ):
         return (self.pos[2] < self.rew_cfg.done.min_z or 
             abs(self.pitch) > self.rew_cfg.done.max_pitch or 
             abs(self.roll) > self.rew_cfg.done.max_roll)
-
-    def yaw_diff(self):
-        """
-        Returns the absolute difference in angle of the robot's yaw and the way point (from robot's pos)
-        """
-        wp_ang = math.atan2((self.wp_pos_mj[1] - self.pos[1]), (self.wp_pos_mj[0] - self.pos[0]))
-        diff = abs(self.yaw - wp_ang)
-        if diff > (2 * math.pi):
-            diff = diff - (2 * math.pi)
-        if diff > math.pi:
-            return 2*math.pi - diff
-        else:
-            return diff
 
     def get_observation(self):
         # Keep an eye on these to make sure they are getting what you think)
@@ -693,3 +659,16 @@ class Env(EnvBaseMJ):
         else:
             angle_error = target_angle - angle
         return angle_error, target_angle
+
+    # def yaw_diff(self):
+    #     """
+    #     Returns the absolute difference in angle of the robot's yaw and the way point (from robot's pos)
+    #     """
+    #     wp_ang = math.atan2((self.wp_pos_mj[1] - self.pos[1]), (self.wp_pos_mj[0] - self.pos[0]))
+    #     diff = abs(self.yaw - wp_ang)
+    #     if diff > (2 * math.pi):
+    #         diff = diff - (2 * math.pi)
+    #     if diff > math.pi:
+    #         return 2*math.pi - diff
+    #     else:
+    #         return diff
