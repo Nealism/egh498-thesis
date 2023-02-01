@@ -11,6 +11,7 @@ from pyquaternion import Quaternion
 import os
 from lxml import etree
 import math
+import time
 
 from .env_base_mj import EnvBaseMJ
 from utils.terrain import Hfield, TerrainGen
@@ -122,7 +123,7 @@ class Env(EnvBaseMJ):
 
         self.steps = 0
 
-        self.reward_names = ["Reward/goal"]
+        self.reward_names = ["Reward/goal", "Reward/heading"]
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 
@@ -191,7 +192,9 @@ class Env(EnvBaseMJ):
         # way point (green dot)
         img_helpers.draw_dot(img_copy, self.wp_pos_im, color=img_helpers.GREEN) 
         # robot position (red dot)
-        img_helpers.draw_dot(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), color=img_helpers.RED)
+        # img_helpers.draw_dot(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), color=img_helpers.RED)
+        img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.yaw, color=img_helpers.RED)
+        img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.target_angle, color=img_helpers.WHITE)
         img_helpers.display_img(img_copy)
     
     def populate_terrain_xml(self, file_path):
@@ -373,13 +376,6 @@ class Env(EnvBaseMJ):
                 self.best_return = self.total_return
         self.total_return = 0
         self.paused = True
-
-        if self.args.cur and self.Kp > 0 and self.check_for_success():
-            self.Kp = 0.75*self.Kp
-            if self.Kp < 5:
-                self.Kp = 0
-                self.args.cur = False
-            self.success = deque([0.0], maxlen=5)
         
         if model_path is not None:
             self.model_path = model_path 
@@ -393,12 +389,7 @@ class Env(EnvBaseMJ):
         if restore_state is not None:
             self.set_position(pos=restore_state[0], orn=restore_state[1], joints=restore_state[2])
         else:
-            # Rotate the base of the robot to simulate being on the back of a titan
-            rot_range = 0.2
-            # rot_range = 0.0
-            self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), 0], degrees=False)
-            # self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), np.pi], degrees=False)
-            self.orn = self.rot.as_quat()
+            self.orn = [0,0,0,1]
             self.pos = [0,0,self.initial_z]
             self.set_position(pos=self.pos, orn=self.orn, joints=self.initial_joints)
 
@@ -407,15 +398,11 @@ class Env(EnvBaseMJ):
 
         # Step the simulation once to get the initial state
         mujoco.mj_forward(self.model, self.data)
-        self.get_observation()
 
-        # Maybe randomise which legs swing first?
-        self.current_swing = "right"
-        self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
-        self.get_trajectory(self.expert_target)
-
-        # reset way point
+        # reset way point 
         self.gen_waypoint()
+
+        self.get_observation()
 
         if self.args.cmd_ranges:
             self.env_cfg.cmd_ranges = eval(str(self.args.cmd_ranges))
@@ -428,51 +415,41 @@ class Env(EnvBaseMJ):
         hlp_obs_vec = getattr(self, self.obs_fn_name)()
         return hlp_obs_vec 
 
-    def step(self, cmds, replay_state=None):
+    def step(self, cmds=None, replay_state=None):
         if self.rank == self.view_rank and self.args.show_map and not self.args.training_on_hpc:
             self.show_map()
 
         if not self.args.one_wp_per_ep and self.can_gen_waypoint():
             self.gen_waypoint()
+
+        # # ========================================================
+        # # This could be used as an expert for curriculum learning:
+        # # ========================================================
+        # cmds = [0,0,0]
+        # if abs(self.heading_error) < 0.5:
+        #     cmds[0] = self.dist_to_wp
+        # cmds[2] = self.heading_error
+
+        if cmds is None:
+            cmds = [0,0,0]
+
+        self.commands = [np.clip(cmd*self.args.cmd_scaling*limit, -limit, limit) for cmd, limit in zip(cmds, self.robot_cfg.cmd_limits)]
+
+        # Run LLP faster than HLP
+        for _ in range(int(np.rint(self.env_cfg.timeStepHLP/self.env_cfg.timeStepLLP))):    
+            self.get_observation()
+            actions = self.low_lev_pol.step(torch.tensor(np.array(self.get_llp_obs()).astype(np.float32)), stochastic=False)[0]
+            self.actions = list(np.array(self.initial_joints) + np.array(actions))
+
+            # This might do something weird with mujoco contacts, and other things in the sim.
+            for _ in range(int(np.rint(self.env_cfg.timeStepLLP/self.simStep))):                            
+                self.data.ctrl[:self.joints_size] = self.action_multiplier*np.array(self.actions)
+
+                mujoco.mj_step(self.model, self.data)
         
-        if self.args.clip:
-            self.commands = list(torch.clip(torch.tensor(cmds) * self.args.cmd_scaling, -1.0, 1.0))
-        else:
-            self.commands = list(cmds)
-        actions = self.low_lev_pol.step(torch.tensor(np.array(self.get_llp_obs()).astype(np.float32)), stochastic=False)[0]
-        self.actions = list(np.array(self.initial_joints) + np.array(actions))
-
-        if self.paused:
-            self.target_vx = 0.0
-            expert = self.initial_joints    
-        else:
-            self.target_vx = 1.0
-            if self.steps % self.traj_size == 0:
-                self.current_swing = "right" if self.current_swing == "left" else "left"
-                self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
-                self.get_trajectory(self.expert_target)
-            expert = self.expert_traj[self.traj_i]
-            if self.traj_i < self.traj_size - 1:
-                self.traj_i += 1
-
-        # This might do something weird with mujoco contacts, and other things in the sim.
-        for _ in range(int(np.rint(self.timeStep/self.simStep))):
-
-            if replay_state is not None:
-                self.set_position(pos=replay_state[0], orn=replay_state[1])
-            else:            
-                if self.args.cur:
-                    if self.args.just_expert:
-                        self.data.ctrl[:self.joints_size] = (self.Kp / self.initial_Kp)*np.array(expert)
-                    else:
-                        self.data.ctrl[:self.joints_size] = self.action_multiplier*np.array(self.actions) + (self.Kp / self.initial_Kp) * np.array(expert)
-                else:
-                    self.data.ctrl[:self.joints_size] = self.action_multiplier*np.array(self.actions)
-                            
-            mujoco.mj_step(self.model, self.data)
-        
-        if self.render:
-            self.viewer.render()
+            if self.render:
+                # time.sleep(0.1)
+                self.viewer.render()
 
         self.get_observation()
         self.save_sim_state()
@@ -512,6 +489,23 @@ class Env(EnvBaseMJ):
         """
         return (self.imu + self.commands + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) + [float(self.yaw_diff())] +
                 self.joint_vel + self.joint_force)
+
+    def get_hlp_obs_4(self):
+        """
+        Returns the obs. vector that is fed to the high-level policy (53-d)
+        -----        
+        Include yaw diff
+        """
+        return (self.imu + self.commands + self.wp_pos_robot + [self.heading_error, self.dist_to_wp] + self.joints +
+                self.joint_vel + self.joint_force)
+
+    def get_hlp_obs_5(self):
+        """
+        Returns the obs. vector that is fed to the high-level policy (53-d)
+        -----        
+        Include yaw diff
+        """
+        return [self.heading_error, self.dist_to_wp] 
 
     def get_llp_obs(self):
         """
@@ -589,6 +583,24 @@ class Env(EnvBaseMJ):
         self.ep_reward_dict["Reward/goal"] += reward
         return reward, done
 
+    def get_reward_4(self):
+        # incorporates yaw_diff
+        done = self.is_done()
+        
+        # Want to make sure we are facing the right way before moving towards the waypoint
+        if abs(self.heading_error) < 0.5:
+            goal = np.exp(-0.05*self.dist_to_wp**2)
+        else:
+            goal = 0
+        
+        heading = np.exp(-5*self.heading_error**2)
+
+        reward = 1.0 * goal + 0.5 * heading
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/heading"] += heading
+        return reward, done
+
     def is_done(self):
         return (self.pos[2] < self.rew_cfg.done.min_z or 
             abs(self.pitch) > self.rew_cfg.done.max_pitch or 
@@ -640,6 +652,10 @@ class Env(EnvBaseMJ):
                     # self.contacts[self.feet.index(geom_name2)] = 1
                     self.contacts[geom_name2] = 1
 
+        self.wp_pos_robot = self.world_to_robot(self.yaw, self.pos, self.wp_pos_mj)
+        self.heading_error, self.target_angle = self.calc_angle_error(self.wp_pos_mj, self.pos, self.yaw)
+        self.dist_to_wp = math.sqrt(self.wp_pos_robot[0]**2 + self.wp_pos_robot[1]**2)
+
         if self.steps > 20 and np.array(self.contacts).all():
             # For some reason all feet are in contact on reset even when not touching the ground
             self.paused = False
@@ -661,3 +677,19 @@ class Env(EnvBaseMJ):
                 points.append(point)
             self.expert_traj.append(points)
         self.traj_i = 0    
+
+    def world_to_robot(self, robot_yaw, robot, world):
+        x,y = world[0] - robot[0], world[1] - robot[1]
+        rot_mat = np.array([[np.cos(robot_yaw), np.sin(robot_yaw)],
+                             [-np.sin(robot_yaw), np.cos(robot_yaw)]])
+        return list(np.dot(rot_mat, np.array([x, y])))
+
+    def calc_angle_error(self, world, robot, angle):
+        target_angle = np.arctan2(world[1] - robot[1], world[0] - robot[0])
+        if ( target_angle < 0 and angle > 0 ):
+            angle_error = ( 2*np.pi + target_angle ) - angle
+        elif ( target_angle > 0 and angle < 0 ):
+            angle_error = target_angle - ( 2*np.pi + angle )
+        else:
+            angle_error = target_angle - angle
+        return angle_error, target_angle
