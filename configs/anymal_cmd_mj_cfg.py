@@ -16,7 +16,9 @@ NOTE NOTE NOTE
 
 class AnymalCmdMjCfg():
     class env:
-        ob_sizes = [52, 49, 53] # ob_sizes[i] == len of ith obs vector (ie: output len of get_hlp_obs_{i+1})
+        timeStepLLP = 1/100 # LLP time step
+        timeStepHLP = 1/20  # HLP runs slower than LLP
+        ob_sizes = [52, 49, 53, 54, 2] # ob_sizes[i] == len of ith obs vector (ie: output len of get_hlp_obs_{i+1})
         ac_size = 3 # (Vx, Vy, Vz) - output of hlp
         joints_size = 12  # robot joint positions - output of llp
         cmd_ranges = [1, 1, 1.5]
@@ -92,6 +94,7 @@ class AnymalCmdMjCfg():
     class robot:
         torque_act_mult = 20
         pos_act_mult = 0.2
+        cmd_limits = [1.0, 1.0, 1.5]
         init_joints = [-0.2,0.6,-1.0, 0.2,0.6,-1.0, -0.2,-0.6,1.0, 0.2,-0.6,1.0]
         right_swing = [-0.2,0.0,-0.8, 0.2,1.0,-1.0, -0.2,-0.4,1.0, 0.2,-1.0,0.0]
         left_swing = [-0.2,1.0,-1.0, 0.2,0.0,-0.8, -0.2,-1.0,0.0, 0.2,-0.4,1.0]

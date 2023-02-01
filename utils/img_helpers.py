@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 # colours
 WHITE = (255, 255, 255)
@@ -19,6 +20,13 @@ def top_left_bot_right(x, y, X, Y):
     max_x = x + X // 2 + 1 if X % 2 == 1 else x + X // 2
     max_y = y + Y // 2 + 1 if Y % 2 == 1 else y + Y // 2
     return (min_x, min_y), (max_x - 1, max_y - 1)
+
+def draw_arrow(img, pos, angle, color=RED, length=20):
+    end_x = pos[0] + int(np.rint(length * np.cos(-angle)))
+    end_y = pos[1] + int(np.rint(length * np.sin(-angle)))
+    end = (end_x, end_y)
+    thickness = 2
+    cv2.arrowedLine(img, pos, end, color, thickness)
 
 def draw_bounding_box(img, pos, X, Y, colour=WHITE):
     """
