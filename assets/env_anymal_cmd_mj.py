@@ -494,7 +494,7 @@ class Env(EnvBaseMJ):
         """
         Returns the obs. vector that is fed to the high-level policy (53-d)
         -----        
-        Include yaw diff
+        include brendan's heading error
         """
         return (self.imu + self.commands + self.wp_pos_robot + [self.heading_error, self.dist_to_wp] + self.joints +
                 self.joint_vel + self.joint_force)
