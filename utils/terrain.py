@@ -165,8 +165,12 @@ class TerrainGen():
         if len(dim) != 2:
             print("Dimensions of ground truth must be of form: (x, y)")
             return None
-        gt = np.random.uniform(low=zl, high=zh, size=(dim[1], dim[0]))
-        return gt
+        arr = np.random.uniform(low=zl, high=zh, size=(dim[1], dim[0]))
+        return arr
+    
+    def gen_flat(self, dim, base_z):
+        arr = np.full((dim[1], dim[0]), base_z)
+        return arr
 
     def gen_empty(self, dim):
         """
@@ -231,11 +235,14 @@ class TerrainGen():
         Patches have:
             -x and y widths within the given ranges AND;
             -dz heights within the given range
+        
+        NOTE:
+            if want deterministic widths and dz, just pass (a,) instead of (a,b)
         """
         for _ in range(n):
-            dz = np.random.uniform(low=dz_range[0], high=dz_range[1])
-            xwid = np.random.uniform(low=xwid_range[0], high=xwid_range[1]+1)
-            ywid = np.random.uniform(low=ywid_range[0], high=ywid_range[1]+1)
+            dz = np.random.uniform(low=dz_range[0], high=dz_range[1]) if len(dz_range) > 1 else dz_range[0]
+            xwid = np.random.uniform(low=xwid_range[0], high=xwid_range[1]+1) if len(xwid_range) > 1 else xwid_range[1]
+            ywid = np.random.uniform(low=ywid_range[0], high=ywid_range[1]+1) if len(ywid_range) > 1 else ywid_range[1]
             x = int(np.random.uniform(low=xwid // 2, high=base_arr.shape[1] - xwid // 2))
             y = int(np.random.uniform(low=ywid // 2, high=base_arr.shape[0] - ywid // 2))
             pos = (x,y)
@@ -248,9 +255,8 @@ class TerrainGen():
         Test bed to generate the terrain arrays in
         """
         im_base_elev = (1 / mj_max_elev) * mj_base_elev
-        gt = self.gen_uniform_rand(im_base_elev, im_base_elev+mj_rand_dz, (dim[1], dim[0]))
-        # gt = self.add_local_undul(gt, (250, 250), 50, 50, im_base_elev+mj_rand_dz, 1.5*mj_rand_dz)
-        gt = self.add_local_undul_patches(gt, 10, [10, 50], [10, 50], im_base_elev+mj_rand_dz, (mj_rand_dz, 2*mj_rand_dz))
+        gt = self.gen_flat(dim, im_base_elev)
+        gt = self.add_local_undul_patches(gt, 10, [50, 100], [50, 100], im_base_elev, (0.5*mj_rand_dz, 3.0*mj_rand_dz))
         return gt
 
     """
