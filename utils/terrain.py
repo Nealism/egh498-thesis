@@ -203,14 +203,45 @@ class TerrainGen():
         base_arr+=arr
         return base_arr
 
-    def add_wall(self, base_arr, x0, y0, xwid, ywid, height):
+    def add_wall(self, base_arr, pos, xwid, ywid, height):
         """
         Adds a wall to the given terrain array 
         """
+        x0, y0 = pos[0], pos[1]
         xl, xh = x0 - xwid // 2, x0 + xwid // 2
         yl, yh = y0 - ywid // 2, y0 + ywid // 2
         base_arr[yl:yh, xl:xh] = height
         return base_arr
+    
+    def add_local_undul(self, base_arr, pos, xwid, ywid, base_z, dz):
+        """
+        Adds local undulation of given dz, centred at given pos
+        """
+        x0, y0 = pos[0], pos[1]
+        xl, xh = int(x0 - xwid // 2), int(x0 + xwid // 2)
+        yl, yh = int(y0 - ywid // 2), int(y0 + ywid // 2)
+        
+        base_undul = np.random.uniform(low=base_z, high=base_z+dz, size=base_arr.shape)
+        base_arr[yl:yh, xl:xh] = base_undul[yl:yh, xl:xh]
+        return base_arr
+    
+    def add_local_undul_patches(self, base_arr, n, xwid_range, ywid_range, base_z, dz_range):
+        """
+        Adds n patches of local undulation to the given terrain array.
+        Patches have:
+            -x and y widths within the given ranges AND;
+            -dz heights within the given range
+        """
+        for _ in range(n):
+            dz = np.random.uniform(low=dz_range[0], high=dz_range[1])
+            xwid = np.random.uniform(low=xwid_range[0], high=xwid_range[1]+1)
+            ywid = np.random.uniform(low=ywid_range[0], high=ywid_range[1]+1)
+            x = int(np.random.uniform(low=xwid // 2, high=base_arr.shape[1] - xwid // 2))
+            y = int(np.random.uniform(low=ywid // 2, high=base_arr.shape[0] - ywid // 2))
+            pos = (x,y)
+            self.add_local_undul(base_arr, pos, xwid, ywid, base_z, dz)
+        return base_arr
+
 
     def gen_test(self, mj_max_elev, mj_base_elev, dim, mj_rand_dz):
         """
@@ -218,6 +249,8 @@ class TerrainGen():
         """
         im_base_elev = (1 / mj_max_elev) * mj_base_elev
         gt = self.gen_uniform_rand(im_base_elev, im_base_elev+mj_rand_dz, (dim[1], dim[0]))
+        # gt = self.add_local_undul(gt, (250, 250), 50, 50, im_base_elev+mj_rand_dz, 1.5*mj_rand_dz)
+        gt = self.add_local_undul_patches(gt, 10, [10, 50], [10, 50], im_base_elev+mj_rand_dz, (mj_rand_dz, 2*mj_rand_dz))
         return gt
 
     """

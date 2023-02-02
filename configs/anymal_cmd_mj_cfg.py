@@ -18,7 +18,7 @@ class AnymalCmdMjCfg():
     class env:
         timeStepLLP = 1/100 # LLP time step
         timeStepHLP = 1/20  # HLP runs slower than LLP
-        ob_sizes = [52, 49, 53, 54, 2] # ob_sizes[i] == len of ith obs vector (ie: output len of get_hlp_obs_{i+1})
+        ob_sizes = [52, 49, 54] # ob_sizes[i] == len of ith obs vector (ie: output len of get_hlp_obs_{i+1})
         ac_size = 3 # (Vx, Vy, Vz) - output of hlp
         joints_size = 12  # robot joint positions - output of llp
         cmd_ranges = [1, 1, 1.5]
@@ -31,7 +31,7 @@ class AnymalCmdMjCfg():
     class terrain:
         #### GROUND TRUTH CONFIG ####
         gt_img_dim = (500, 500) # image dimensions - (x, y) in pixels
-        gt_mj_dim = (25, 25) # mj hfield dimensions - (x_rad, y_rad) in metres
+        gt_mj_dim = (10, 10) # mj hfield dimensions - (x_rad, y_rad) in metres
 
         gt_centre_pos = (0, 0, 0) # position in mj gt centred at
         gt_max_elev = 2 # max elevation of ground truth

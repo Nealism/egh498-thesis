@@ -483,7 +483,7 @@ class Env(EnvBaseMJ):
 
     def get_hlp_obs_3(self):
         """
-        Returns the obs. vector that is fed to the high-level policy (53-d)
+        Returns the obs. vector that is fed to the high-level policy (52-d)
         -----        
         Default AND heading error AND wp dist
         """

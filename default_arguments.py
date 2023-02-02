@@ -90,7 +90,6 @@ def get_defaults():
     parser.add_argument('--epochs', type=int, default=8000)
     parser.add_argument('--cpu', type=int, default=1)
     parser.add_argument('--episodes', type=int, default=100)
-    parser.add_argument('--clip', default=False, action="store_true")
     parser.add_argument('--reward_fn', type=int, default=1)
     parser.add_argument('--obs_fn', type=int, default=1)
     parser.add_argument('--cmd_scaling', type=float, default=1.0)
