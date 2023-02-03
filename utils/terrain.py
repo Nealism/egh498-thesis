@@ -250,13 +250,19 @@ class TerrainGen():
         return base_arr
 
 
-    def gen_test(self, mj_max_elev, mj_base_elev, dim, mj_rand_dz):
+    def gen_test(self, mj_max_elev, mj_base_elev, dim, mj_rand_dz, num_patches):
         """
         Test bed to generate the terrain arrays in
         """
         im_base_elev = (1 / mj_max_elev) * mj_base_elev
-        gt = self.gen_flat(dim, im_base_elev)
-        gt = self.add_local_undul_patches(gt, 10, [50, 100], [50, 100], im_base_elev, (0.5*mj_rand_dz, 3.0*mj_rand_dz))
+        
+        # terrain has discrete patches of undulation
+        if num_patches:
+            gt = self.gen_flat(dim, im_base_elev)
+            gt = self.add_local_undul_patches(gt, num_patches, [20, 70], [20, 70], im_base_elev, (mj_rand_dz, 1.3*mj_rand_dz))
+        # whole terrain is undulated
+        else:
+            gt = self.gen_uniform_rand(im_base_elev, im_base_elev + mj_rand_dz, dim)
         return gt
 
     """

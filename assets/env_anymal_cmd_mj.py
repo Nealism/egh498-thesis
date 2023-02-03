@@ -156,7 +156,8 @@ class Env(EnvBaseMJ):
             gt_arr = self.terrain_generator.gen_test(self.terr_cfg.gt_max_elev, 
                                                     self.terr_cfg.gt_base_elev,
                                                     self.terr_cfg.gt_img_dim,
-                                                    self.terr_cfg.gt_rand_dz)
+                                                    self.terr_cfg.gt_rand_dz,
+                                                    self.args.undul_patches)
         else:
             gt_arr = self.terrain_generator.gen_empty(self.terr_cfg.gt_img_dim)
 
@@ -192,9 +193,9 @@ class Env(EnvBaseMJ):
         # way point (green dot)
         img_helpers.draw_dot(img_copy, self.wp_pos_im, color=img_helpers.GREEN) 
         # robot position (red dot)
-        # img_helpers.draw_dot(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), color=img_helpers.RED)
-        img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.yaw, color=img_helpers.RED)
-        img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.target_angle, color=img_helpers.WHITE)
+        img_helpers.draw_dot(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), color=img_helpers.RED)
+        # img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.yaw, color=img_helpers.RED)
+        # img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.target_angle, color=img_helpers.WHITE)
         img_helpers.display_img(img_copy)
     
     def populate_terrain_xml(self, file_path):
@@ -321,7 +322,6 @@ class Env(EnvBaseMJ):
             else:
                 self.reconfig_terrain_xml(terrain_path, self.ground_truth)
         
-
         self.model = mujoco.MjModel.from_xml_path(self.model_path)
         self.data = mujoco.MjData(self.model)
 
@@ -332,15 +332,12 @@ class Env(EnvBaseMJ):
             self.model.hfield_data = self.ground_truth.terr_arr.flatten()
 
         # Mujoco_viewer doesn't work on the hpc, shouldn't render there anyway
+        if self.viewer:
+            self.viewer.close()
         if not self.args.training_on_hpc:
             if self.render:
                 # new viewer every episode s.t. correct env appears every time
-                if self.viewer:
-                    self.viewer.close()
                 self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)
-            else:
-                # Offscreen might help getting images?
-                self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data, 'offscreen')
 
     def get_log_things(self):
         # Things we want to log each training step (print and add to tensorboard)

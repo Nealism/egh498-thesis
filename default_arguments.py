@@ -102,6 +102,7 @@ def get_defaults():
     parser.add_argument('--initial_terrain_difficulty', type=float, default=0.01)
     parser.add_argument('--final_terrain_difficulty', type=float, default=0.5)
     parser.add_argument('--rand_dz_mult', type=float, default=0.01)
+    parser.add_argument('--undul_patches', type=int, default=0)
 
     # ========================================================================
     # Map

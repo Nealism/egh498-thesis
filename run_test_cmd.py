@@ -37,6 +37,7 @@ def run(args):
     PATH = path_home + latest_folder
     Env, args = default_arguments.get_env(args)
     env = Env(PATH=PATH, args=args)
+    perception = args.use_perception
 
     just_llp = False
     if not just_llp:
@@ -47,7 +48,11 @@ def run(args):
         if just_llp:
             cmds = [1.0, 0, 0]
         else:
-            cmds = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
+            if perception:
+                im = env.get_image()
+                cmds = pol.step(torch.tensor(obs, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            else:
+                cmds = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
         obs, _, done, _ = env.step(cmds)
         if done or env.steps > args.max_ep_len:
             obs = env.reset()
