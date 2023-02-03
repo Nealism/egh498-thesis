@@ -19,7 +19,6 @@ def run(args):
         path_home = "/scratch1/" + home.split("/")[-1]
 
     path_home += "/results/" + args.env + "/" + args.exp + "/"
-    # path_home += "/results/" + args.env + "/" + "exp/" +  args.exp + "/"
 
     if args.folder == "":
         # Get latest experiment (eg: latest model inside test folder)

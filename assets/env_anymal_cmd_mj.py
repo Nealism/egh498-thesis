@@ -56,7 +56,6 @@ class Env(EnvBaseMJ):
         self.terr_cfg.hm_mj_dim = (self.args.hm_size, self.args.hm_size)
         self.terr_cfg.hm_img_dim = (self.terr_cfg.hm_mj_dim[0] * (self.terr_cfg.gt_img_dim[0] // self.terr_cfg.gt_mj_dim[0]), 
                                     self.terr_cfg.hm_mj_dim[1] * (self.terr_cfg.gt_img_dim[1] // self.terr_cfg.gt_mj_dim[1])) 
-        
         ##### ENV PARAMS #####
 
         self.simStep = self.env_cfg.simStep
@@ -289,26 +288,27 @@ class Env(EnvBaseMJ):
         # NOTE: multiply by scalar to account for the assumptions made (see above)
         return self.map_cfg.wp_time_scalar * (abs_dist / self.max_vel_to_wp)
     
-    def gen_patches(self, num, x_rad, y_rad):
+    def gen_patch_positions(self, num, x_rad, y_rad):
         """
         Generate an array of grass patch positions for the mj environment
         """
         dim = self.terr_cfg.gt_mj_dim
-        # xl, xh, yl, yh = -dim[0], dim[0], -dim[1], dim[1]
-        xl, xh, yl, yh = -1, 1, -1, 1
+        border = 7.5
+        xl, xh = -dim[0] + border, dim[0] - border
+        yl, yh = -dim[1] + border, dim[1] - border
         patches = []
         for _ in range(num):
             pos = (np.random.uniform(xl, xh), np.random.uniform(yl, yh), self.terr_cfg.gt_base_elev)
-            spread = [[pos[0] - x_rad, pos[0] + x_rad], [pos[1] - y_rad, pos[1] + y_rad]]
-            patches.append((pos, spread))
+            spread = [[pos[0] - x_rad, pos[0] + x_rad], [pos[1] - y_rad, pos[1] + y_rad], pos[2]]
+            patches.append(spread)
         return patches
     
     def load_robot(self):
         # load in grass/trees
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
-                patches = self.gen_patches(self.terr_cfg.num_grass_patches, 1.5, 1.5)
-                self.generate_patches(patches, **self.terr_cfg.grass_params)
+                patches = self.gen_patch_positions(self.terr_cfg.num_grass_patches, 0.75, 0.75)
+                self.gen_grass_patches(patches, **self.terr_cfg.grass_params)
                 # self.generate_tree(**self.terr_cfg.grass_params)
             elif self.args.tree_type == "tree":
                 self.generate_tree(**self.terr_cfg.tree_params)

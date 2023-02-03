@@ -118,8 +118,8 @@ def create_branch(pos, rot, radius, branch_id, branch_seg_lengths, damping, stif
         prev_seg = seg
     return branch, joints, contacts
 
-def generate_patches(patches=([0,0,0], [[0.4,0.8],[-0.4,0.4]]), radius=0.02, height=0.015, damping=50, 
-                    stiffness=500, rot=[1,0,0,0], num=10, segs_per_branch=4, z_height=0.0):
+def gen_grass_patches(patches=([0,0,0], [[0.4,0.8],[-0.4,0.4]]), radius=0.02, height=0.015, damping=50, 
+                    stiffness=500, rot=[1,0,0,0], num=10, segs_per_branch=4):
 
     #Generate the xml for the tree
     xml = etree.Element("mujocoinclude")
@@ -132,12 +132,11 @@ def generate_patches(patches=([0,0,0], [[0.4,0.8],[-0.4,0.4]]), radius=0.02, hei
     all_contacts = []
     # rot = Rotation.random().as_quat()
     rot = rot
-    for pos, spread in patches:
+    for spread in patches:
         for j in range(1,num):
-            root_pos = np.array([np.random.uniform(spread[0][0], spread[0][1]),np.random.uniform(spread[1][0], spread[1][1]), z_height])
-            root_pos += np.array(pos)
+            root_pos = np.array([np.random.uniform(spread[0][0], spread[0][1]),np.random.uniform(spread[1][0], spread[1][1]), spread[2]])
             branch_seg_lengths = [height/segs_per_branch]*segs_per_branch
-            branch, joints, contacts = create_branch(pos=root_pos, rot=rot, radius=radius, branch_id=str(pos)+"0"+str(j), branch_seg_lengths=branch_seg_lengths, damping=damping, stiffness=stiffness)
+            branch, joints, contacts = create_branch(pos=root_pos, rot=rot, radius=radius, branch_id=str(root_pos)+"0"+str(j), branch_seg_lengths=branch_seg_lengths, damping=damping, stiffness=stiffness)
             all_joints.extend(joints)
             all_contacts.extend(contacts)
             worldbody.append(branch.xml)

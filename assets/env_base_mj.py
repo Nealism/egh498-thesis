@@ -165,8 +165,8 @@ class EnvBaseMJ(EnvBase):
         # Update the model path
         self.model_path = model_path
     
-    def generate_patches(self, patches, **kwargs):
-        xml, self.tree = gen_grass.generate_patches(patches=patches, **kwargs)
+    def gen_grass_patches(self, patches, **kwargs):
+        xml, self.tree = gen_grass.gen_grass_patches(patches=patches, **kwargs)
         tree_path = os.path.join(self.xml_assets_dir, "tree_" + str(self.rank) + ".xml")
         etree.ElementTree(xml).write(tree_path, pretty_print=True)
     

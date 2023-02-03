@@ -136,7 +136,8 @@ class Hfield(Terrain):
             or min_x < 0 
             or min_y < 0):
             print("Sub-section out of range")
-            return None
+            return np.zeros((Y, X))
+            # return None
 
         # (x, y) == (col, row)
         return self.terr_arr[min_y:max_y+1, min_x:max_x+1]
@@ -243,8 +244,9 @@ class TerrainGen():
             dz = np.random.uniform(low=dz_range[0], high=dz_range[1]) if len(dz_range) > 1 else dz_range[0]
             xwid = np.random.uniform(low=xwid_range[0], high=xwid_range[1]+1) if len(xwid_range) > 1 else xwid_range[1]
             ywid = np.random.uniform(low=ywid_range[0], high=ywid_range[1]+1) if len(ywid_range) > 1 else ywid_range[1]
-            x = int(np.random.uniform(low=xwid // 2, high=base_arr.shape[1] - xwid // 2))
-            y = int(np.random.uniform(low=ywid // 2, high=base_arr.shape[0] - ywid // 2))
+            border = base_arr.shape[1] // 10
+            x = int(np.random.uniform(low=xwid // 2 + border, high=base_arr.shape[1] - xwid // 2 - border))
+            y = int(np.random.uniform(low=ywid // 2 + border, high=base_arr.shape[0] - ywid // 2 - border))
             pos = (x,y)
             self.add_local_undul(base_arr, pos, xwid, ywid, base_z, dz)
         return base_arr
@@ -259,7 +261,9 @@ class TerrainGen():
         # terrain has discrete patches of undulation
         if num_patches:
             gt = self.gen_flat(dim, im_base_elev)
-            gt = self.add_local_undul_patches(gt, num_patches, [20, 70], [20, 70], im_base_elev, (mj_rand_dz, 1.3*mj_rand_dz))
+            patch_ranges = [[gt.shape[1] // 20, gt.shape[1] // 8], [gt.shape[0] // 20, gt.shape[0] // 8]]
+            gt = self.add_local_undul_patches(gt, num_patches, patch_ranges[0] , patch_ranges[1], 
+                                              im_base_elev, (mj_rand_dz, 1.3*mj_rand_dz))
         # whole terrain is undulated
         else:
             gt = self.gen_uniform_rand(im_base_elev, im_base_elev + mj_rand_dz, dim)

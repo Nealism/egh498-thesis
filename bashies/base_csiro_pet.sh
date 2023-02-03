@@ -5,7 +5,7 @@ sbatch <<EOT
 #SBATCH --output=o/$2.out
 #SBATCH --error=e/$2.err
 #SBATCH --time=$4
-#SBATCH --mem=512g
+#SBATCH --mem=32g
 #SBATCH --ntasks-per-node=32
 #SBATCH --nodes=1
 ulimit -s 10240
