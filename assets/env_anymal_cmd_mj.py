@@ -149,23 +149,24 @@ class Env(EnvBaseMJ):
         self.terrains = []
         self.terrain_generator = TerrainGen()
 
-        
-        # generate and load ground truth image
-        if self.args.add_terrain:
-            gt_arr = self.terrain_generator.gen_test(self.terr_cfg.gt_max_elev, 
-                                                    self.terr_cfg.gt_base_elev,
-                                                    self.terr_cfg.gt_img_dim,
-                                                    self.terr_cfg.gt_rand_dz,
-                                                    self.args.undul_patches)
-        else:
-            gt_arr = self.terrain_generator.gen_empty(self.terr_cfg.gt_img_dim)
-
+        gt_arr = self.terrain_generator.gen_empty(self.terr_cfg.gt_img_dim)
         gt_path = self.get_parent_dir(self.model_path)
         gt_name = f"ground_truth_{str(self.rank)}"
         gt_position = self.terr_cfg.gt_centre_pos
         gt_size = (*self.terr_cfg.gt_mj_dim, self.terr_cfg.gt_max_elev, self.terr_cfg.gt_depth)
 
         self.ground_truth = Hfield(gt_arr, gt_path, gt_name, gt_position, gt_size) 
+
+        # generate and load ground truth image
+        if self.args.add_terrain:
+            gt_arr = self.terrain_generator.gen_test(self.terr_cfg.gt_img_dim,
+                                                    self.terr_cfg.gt_max_elev,
+                                                    self.terr_cfg.gt_base_elev,
+                                                    self.terr_cfg.gt_rand_dz,
+                                                    self.ground_truth.rob_to_arr_pos((0,0)),
+                                                    self.args.undul_patches)
+            self.ground_truth.terr_arr = gt_arr
+
         self.terrains.append(self.ground_truth)
 
         #generate and load any others below this

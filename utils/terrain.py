@@ -94,9 +94,9 @@ class Hfield(Terrain):
         x1_rad, y1_rad = self.size[0], self.size[1]
         x2_rad, y2_rad = self.image_dim[0] // 2, self.image_dim[1] // 2
         # +x mj == +x im 
-        x = int((x1 + x1_rad) * (x2_rad // x1_rad))
+        x = int((x1 + x1_rad) * (x2_rad / x1_rad))
         # +y mj == -y im (up-screen in mujoco is downscreen in image)
-        y = int((-1 * y1 + y1_rad) * (y2_rad // y1_rad))
+        y = int((-1 * y1 + y1_rad) * (y2_rad / y1_rad))
         return (x, y)
     
     def rob_to_arr_pos(self, pos):
@@ -109,9 +109,9 @@ class Hfield(Terrain):
         x1_rad, y1_rad = self.size[0], self.size[1]
         x2_rad, y2_rad = self.image_dim[0] // 2, self.image_dim[1] // 2
         # +x mj == +x im 
-        x = int((x1 + x1_rad) * (x2_rad // x1_rad))
-        # +y mj == -y im (up-screen in mujoco is downscreen in image)
-        y = int((y1 + y1_rad) * (y2_rad // y1_rad))
+        x = int((x1 + x1_rad) * (x2_rad / x1_rad))
+        # +y mj == y im (up-screen in mujoco is downscreen in image)
+        y = int((y1 + y1_rad) * (y2_rad / y1_rad))
         return (x, y)
 
 
@@ -135,7 +135,7 @@ class Hfield(Terrain):
             or max_y + 1 > self.image_dim[1]
             or min_x < 0 
             or min_y < 0):
-            print("Sub-section out of range")
+            # print("Sub-section out of range")
             return np.zeros((Y, X))
             # return None
 
@@ -244,15 +244,20 @@ class TerrainGen():
             dz = np.random.uniform(low=dz_range[0], high=dz_range[1]) if len(dz_range) > 1 else dz_range[0]
             xwid = np.random.uniform(low=xwid_range[0], high=xwid_range[1]+1) if len(xwid_range) > 1 else xwid_range[1]
             ywid = np.random.uniform(low=ywid_range[0], high=ywid_range[1]+1) if len(ywid_range) > 1 else ywid_range[1]
-            border = base_arr.shape[1] // 10
+            border = base_arr.shape[1] // 5
             x = int(np.random.uniform(low=xwid // 2 + border, high=base_arr.shape[1] - xwid // 2 - border))
             y = int(np.random.uniform(low=ywid // 2 + border, high=base_arr.shape[0] - ywid // 2 - border))
             pos = (x,y)
             self.add_local_undul(base_arr, pos, xwid, ywid, base_z, dz)
         return base_arr
+    
+    def add_flat(self, base_arr, pos, xwid, ywid, base_height):
+        """
+        Adds a flat section of terrain 
+        """
+        return self.add_wall(base_arr, pos, xwid, ywid, base_height)
 
-
-    def gen_test(self, mj_max_elev, mj_base_elev, dim, mj_rand_dz, num_patches):
+    def gen_test(self, dim, mj_max_elev, mj_base_elev, mj_rand_dz, robot_im_pos_init, num_patches):
         """
         Test bed to generate the terrain arrays in
         """
@@ -261,9 +266,10 @@ class TerrainGen():
         # terrain has discrete patches of undulation
         if num_patches:
             gt = self.gen_flat(dim, im_base_elev)
-            patch_ranges = [[gt.shape[1] // 20, gt.shape[1] // 8], [gt.shape[0] // 20, gt.shape[0] // 8]]
+            patch_ranges = [[gt.shape[1] // 25, gt.shape[1] // 15], [gt.shape[0] // 25, gt.shape[0] // 15]]
             gt = self.add_local_undul_patches(gt, num_patches, patch_ranges[0] , patch_ranges[1], 
                                               im_base_elev, (mj_rand_dz, 1.3*mj_rand_dz))
+            gt = self.add_flat(gt, robot_im_pos_init, 5, 5, im_base_elev)
         # whole terrain is undulated
         else:
             gt = self.gen_uniform_rand(im_base_elev, im_base_elev + mj_rand_dz, dim)
