@@ -268,6 +268,8 @@ class TerrainGen():
             gt = self.add_local_undul_patches(gt, num_patches, patch_ranges[0] , patch_ranges[1], 
                                               im_base_elev, (mj_rand_dz, 1.3*mj_rand_dz))
             gt = self.add_flat(gt, robot_im_pos_init, 5, 5, im_base_elev)
+            # gt = self.add_wall(gt, (300,250), 20, 50, 1.0)
+            return gt
         # whole terrain is undulated
         else:
             gt = self.gen_uniform_rand(im_base_elev, im_base_elev + mj_rand_dz, dim)

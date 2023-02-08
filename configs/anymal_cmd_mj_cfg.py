@@ -30,7 +30,7 @@ class AnymalCmdMjCfg():
     
     class terrain:
         #### GROUND TRUTH CONFIG ####
-        gt_img_dim = (100, 100) # image dimensions - (x, y) in pixels
+        gt_img_dim = (500, 500) # image dimensions - (x, y) in pixels
         gt_mj_dim = (20, 20) # mj hfield dimensions - (x_rad, y_rad) in metres
 
         gt_centre_pos = (0, 0, 0) # position in mj gt centred at

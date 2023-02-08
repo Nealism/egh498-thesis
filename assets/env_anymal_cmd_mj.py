@@ -427,6 +427,7 @@ class Env(EnvBaseMJ):
         return hlp_obs_vec 
 
     def step(self, cmds=None, replay_state=None):
+        self.get_image()
         if self.rank == self.view_rank and self.args.show_map and not self.args.training_on_hpc:
             self.show_map()
 
