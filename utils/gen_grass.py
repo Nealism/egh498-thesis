@@ -118,7 +118,7 @@ def create_branch(pos, rot, radius, branch_id, branch_seg_lengths, damping, stif
         prev_seg = seg
     return branch, joints, contacts
 
-def gen_grass_patches(patches=([0,0,0], [[0.4,0.8],[-0.4,0.4]]), radius=0.02, height=0.015, damping=50, 
+def gen_grass_patches(patches=[0.5, 0.5, 0.8], radius=0.02, height=0.015, damping=50, 
                     stiffness=500, rot=[1,0,0,0], num=10, segs_per_branch=4):
 
     #Generate the xml for the tree

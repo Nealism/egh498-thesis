@@ -20,8 +20,6 @@ class Terrain():
 
         # terrain array (numpy array)
         self.terr_arr = terr_arr         
-        # terrain image (PNG)
-        self.terr_img = self.load_terr_img() 
         # (X, Y) image dimensions in pixels
         self.image_dim = (self.terr_arr.shape[1], self.terr_arr.shape[0]) # (X, Y) == (col, row)
 
@@ -32,7 +30,7 @@ class Terrain():
         im = self.terr_arr * 255
         cv2.imwrite(self.img_path, im)
         img = cv2.imread(self.img_path)
-        return img
+        self.terr_img = img
     
     def add_to_xml(self):
         raise NotImplementedError 

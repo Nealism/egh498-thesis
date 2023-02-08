@@ -166,6 +166,8 @@ class Env(EnvBaseMJ):
                                                     self.ground_truth.rob_to_arr_pos((0,0)),
                                                     self.args.undul_patches)
             self.ground_truth.terr_arr = gt_arr
+        
+        self.ground_truth.load_terr_img() 
 
         self.terrains.append(self.ground_truth)
 
@@ -294,7 +296,7 @@ class Env(EnvBaseMJ):
         Generate an array of grass patch positions for the mj environment
         """
         dim = self.terr_cfg.gt_mj_dim
-        border = 7.5
+        border = 2
         xl, xh = -dim[0] + border, dim[0] - border
         yl, yh = -dim[1] + border, dim[1] - border
         patches = []
@@ -304,18 +306,29 @@ class Env(EnvBaseMJ):
             patches.append(spread)
         return patches
     
+    def add_grass_heights(self, patches):
+        """
+        Add grass heights to the height map image/array
+        """
+        for xs, ys, _ in patches:
+            new_xs, new_ys = self.ground_truth.rob_to_arr_pos(xs), self.ground_truth.rob_to_arr_pos(ys)
+            self.ground_truth.terr_arr[new_ys[0]:new_ys[1], new_xs[0]:new_xs[1]] = 0.5
+            # reload opencv image based on terrain change
+        self.ground_truth.load_terr_img()
+            
     def load_robot(self):
+        # load in terrains
+        self.load_terrains()
         # load in grass/trees
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
                 patches = self.gen_patch_positions(self.terr_cfg.num_grass_patches, 0.75, 0.75)
                 self.gen_grass_patches(patches, **self.terr_cfg.grass_params)
+                self.add_grass_heights(patches)
                 # self.generate_tree(**self.terr_cfg.grass_params)
             elif self.args.tree_type == "tree":
                 self.generate_tree(**self.terr_cfg.tree_params)
 
-        # load in terrains
-        self.load_terrains()
         if not self.args.replay and self.args.add_terrain:
             terrain_path = self.get_parent_dir(self.model_path) + f"terrain_{str(self.rank)}.xml"
             if self.first_time:
@@ -476,7 +489,7 @@ class Env(EnvBaseMJ):
         -----
         Default WITHOUT commands
         """
-        return (self.imu + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) +
+        return (self.imu + self.commands + self.wp_pos_robot + [self.dist_to_wp] + self.joints +
                 self.joint_vel + self.joint_force)
 
     def get_hlp_obs_3(self):
@@ -549,17 +562,16 @@ class Env(EnvBaseMJ):
         return reward, done
 
     def get_reward_2(self):
-        # old wp dist, lower coefficient
+        # new wp dist
         done = self.is_done()
+        
+        goal = np.exp(-0.05*self.dist_to_wp**2)
+        
+        reward = 1.0 * goal
 
-        diff = np.sum(np.abs(self.pos[:2] - np.array(self.wp_pos_mj)))
-        goal = np.exp(-0.02 * diff**2)
-
-        reward = goal
-
-        self.ep_reward_dict["Reward/goal"] += reward
+        self.ep_reward_dict["Reward/goal"] += goal
         return reward, done
-    
+
     def get_reward_3(self):
         # new wp dist
         done = self.is_done()
