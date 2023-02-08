@@ -20,8 +20,35 @@ class Terrain():
 
         # terrain array (numpy array)
         self.terr_arr = terr_arr         
+        # height map - loaded later
+        self.height_map = None
+
         # (X, Y) image dimensions in pixels
         self.image_dim = (self.terr_arr.shape[1], self.terr_arr.shape[0]) # (X, Y) == (col, row)
+    
+    def invert_terr_arr(self):
+        """
+        NOTE NOTE NOTE NOTE NOTE
+
+        Mujoco hfields are loaded with (0,0) at the bottom left (like cartesian coords)
+
+        Arrays have (0,0) (row, col) at top left (as in a matrix)
+
+        The result of this is that +ve y direction mujoco = -ve y direction image
+
+        This method reflects/inverts the terrain array over its x axis
+
+        eg: We use this reflected/inverted array for the height map in training the ANYmal
+        """
+        return np.flip(self.terr_arr, 0)
+    
+    def load_height_map(self):
+        """
+        Loads both the inverted terrain array (what we use as the height map, see invert_terr_arr())
+        and its corresponding image (used to display a map of the terrain)
+        """
+        self.terr_img = self.load_terr_img()
+        self.height_map = self.invert_terr_arr()
 
     def load_terr_img(self):
         """ 
@@ -30,7 +57,7 @@ class Terrain():
         im = self.terr_arr * 255
         cv2.imwrite(self.img_path, im)
         img = cv2.imread(self.img_path)
-        self.terr_img = img
+        return img
     
     def add_to_xml(self):
         raise NotImplementedError 
