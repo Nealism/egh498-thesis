@@ -292,11 +292,11 @@ class TerrainGen():
         # terrain has discrete patches of undulation
         if num_patches:
             gt = self.gen_flat(dim, im_base_elev)
-            # patch_ranges = [[gt.shape[1] // 25, gt.shape[1] // 15], [gt.shape[0] // 25, gt.shape[0] // 15]]
-            # gt = self.add_local_undul_patches(gt, num_patches, patch_ranges[0] , patch_ranges[1], 
-            #                                   im_base_elev, (mj_rand_dz, 1.3*mj_rand_dz))
-            # gt = self.add_flat(gt, robot_im_pos_init, 5, 5, im_base_elev)
-            gt = self.add_wall(gt, (60,60), 5, 5, 1.0)
+            patch_ranges = [[gt.shape[1] // 25, gt.shape[1] // 15], [gt.shape[0] // 25, gt.shape[0] // 15]]
+            gt = self.add_local_undul_patches(gt, num_patches, patch_ranges[0] , patch_ranges[1], 
+                                              im_base_elev, (mj_rand_dz, 1.3*mj_rand_dz))
+            gt = self.add_flat(gt, robot_im_pos_init, 5, 5, im_base_elev)
+            # gt = self.add_wall(gt, (60,60), 5, 5, 1.0)
             return gt
         # whole terrain is undulated
         else:

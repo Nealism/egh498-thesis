@@ -181,7 +181,7 @@ class Env(EnvBaseMJ):
         where (N, M) == self.terr_cfg.hm_img_dim
         """
         subsection = self.ground_truth.compute_sub_section(self.pos[0], self.pos[1], *self.terr_cfg.hm_img_dim)
-        return np.reshape(subsection, self.im_size)
+        return np.reshape(subsection, self.im_size).copy()
 
     def show_map(self):
         """
