@@ -45,7 +45,7 @@ def run(args):
     obs = env.reset()
     while True:
         if just_llp:
-            cmds = [1.0, 0, 0]
+            cmds = [1.0, -1.0, 0]
         else:
             if perception:
                 im = env.get_image()

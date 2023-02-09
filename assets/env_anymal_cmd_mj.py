@@ -167,7 +167,7 @@ class Env(EnvBaseMJ):
                                                     self.args.undul_patches)
             self.ground_truth.terr_arr = gt_arr
         
-        self.ground_truth.load_terr_img() 
+        self.ground_truth.load_hm_and_hm_img()
 
         self.terrains.append(self.ground_truth)
 
@@ -189,7 +189,7 @@ class Env(EnvBaseMJ):
         Also draws a bounding box around the robot's sub-section (image
         the policy is fed)
         """
-        img_copy = self.ground_truth.terr_img.copy()
+        img_copy = self.ground_truth.height_map_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
         img_helpers.draw_bounding_box(img_copy, box_centre, *self.terr_cfg.hm_img_dim) 
         # way point (green dot)
@@ -308,23 +308,23 @@ class Env(EnvBaseMJ):
     
     def add_grass_heights(self, patches):
         """
-        Add grass heights to the height map image/array
+        Add grass heights to the height map array
         """
-        for xs, ys, _ in patches:
-            new_xs, new_ys = self.ground_truth.rob_to_arr_pos(xs), self.ground_truth.rob_to_arr_pos(ys)
-            self.ground_truth.terr_arr[new_ys[0]:new_ys[1], new_xs[0]:new_xs[1]] = 0.5
+        for (xl,xh), (yl,yh), _ in patches:
+            (new_xl, new_yl), (new_xh, new_yh) = self.ground_truth.rob_to_arr_pos((xl, yl)), self.ground_truth.rob_to_arr_pos((xh, yh))
+            self.ground_truth.terr_arr[new_yl:new_yh, new_xl:new_xh] = 1.5
             # reload opencv image based on terrain change
-        self.ground_truth.load_terr_img()
+        self.ground_truth.load_hm_and_hm_img()
             
     def load_robot(self):
         # load in terrains
         self.load_terrains()
         # load in grass/trees
+        patches = None
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
                 patches = self.gen_patch_positions(self.terr_cfg.num_grass_patches, 0.75, 0.75)
                 self.gen_grass_patches(patches, **self.terr_cfg.grass_params)
-                self.add_grass_heights(patches)
                 # self.generate_tree(**self.terr_cfg.grass_params)
             elif self.args.tree_type == "tree":
                 self.generate_tree(**self.terr_cfg.tree_params)
@@ -344,6 +344,10 @@ class Env(EnvBaseMJ):
         #       and loading it
         if self.args.add_terrain:
             self.model.hfield_data = self.ground_truth.terr_arr.flatten()
+        
+        # only add grass heights to our copy of the terrain array (don't want it loaded into mj)
+        if patches:
+            self.add_grass_heights(patches)
 
         # Mujoco_viewer doesn't work on the hpc, shouldn't render there anyway
         if self.viewer:
@@ -427,7 +431,6 @@ class Env(EnvBaseMJ):
         return hlp_obs_vec 
 
     def step(self, cmds=None, replay_state=None):
-        self.get_image()
         if self.rank == self.view_rank and self.args.show_map and not self.args.training_on_hpc:
             self.show_map()
 

@@ -52,11 +52,11 @@ class AnymalCmdMjCfg():
         hm_mj_dim = None
         hm_img_dim = None
 
-        num_grass_patches = 5
+        num_grass_patches = 2
 
         class grass:
             radius = 0.02
-            height = 0.4
+            height = 2.0
             damping = 1
             stiffness = 1.5
             rot = [1, 0, 0, 0]

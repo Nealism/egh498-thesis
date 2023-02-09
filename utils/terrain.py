@@ -22,6 +22,8 @@ class Terrain():
         self.terr_arr = terr_arr         
         # height map - loaded later
         self.height_map = None
+        # image version of the height map - loaded later
+        self.height_map_img = None
 
         # (X, Y) image dimensions in pixels
         self.image_dim = (self.terr_arr.shape[1], self.terr_arr.shape[0]) # (X, Y) == (col, row)
@@ -42,23 +44,24 @@ class Terrain():
         """
         return np.flip(self.terr_arr, 0)
     
-    def load_height_map(self):
+    def load_hm_and_hm_img(self):
         """
         Loads both the inverted terrain array (what we use as the height map, see invert_terr_arr())
         and its corresponding image (used to display a map of the terrain)
         """
-        self.terr_img = self.load_terr_img()
+        
         self.height_map = self.invert_terr_arr()
+        self.load_hm_img()
 
-    def load_terr_img(self):
+    def load_hm_img(self):
         """ 
         Saves the terrain image to its path and returns it
         """ 
-        im = self.terr_arr * 255
+        im = self.height_map * 255
         cv2.imwrite(self.img_path, im)
         img = cv2.imread(self.img_path)
-        return img
-    
+        self.height_map_img = img    
+
     def add_to_xml(self):
         raise NotImplementedError 
     
@@ -133,9 +136,7 @@ class Hfield(Terrain):
         x1, y1 = pos[0], pos[1]
         x1_rad, y1_rad = self.size[0], self.size[1]
         x2_rad, y2_rad = self.image_dim[0] // 2, self.image_dim[1] // 2
-        # +x mj == +x im 
         x = int((x1 + x1_rad) * (x2_rad / x1_rad))
-        # +y mj == y im (up-screen in mujoco is downscreen in image)
         y = int((y1 + y1_rad) * (y2_rad / y1_rad))
         return (x, y)
 
@@ -165,7 +166,7 @@ class Hfield(Terrain):
             # return None
 
         # (x, y) == (col, row)
-        return self.terr_arr[min_y:max_y+1, min_x:max_x+1]
+        return self.height_map[min_y:max_y+1, min_x:max_x+1]
 
 """
 Class to represent a mesh in mujoco
@@ -291,11 +292,11 @@ class TerrainGen():
         # terrain has discrete patches of undulation
         if num_patches:
             gt = self.gen_flat(dim, im_base_elev)
-            patch_ranges = [[gt.shape[1] // 25, gt.shape[1] // 15], [gt.shape[0] // 25, gt.shape[0] // 15]]
-            gt = self.add_local_undul_patches(gt, num_patches, patch_ranges[0] , patch_ranges[1], 
-                                              im_base_elev, (mj_rand_dz, 1.3*mj_rand_dz))
-            gt = self.add_flat(gt, robot_im_pos_init, 5, 5, im_base_elev)
-            # gt = self.add_wall(gt, (300,250), 20, 50, 1.0)
+            # patch_ranges = [[gt.shape[1] // 25, gt.shape[1] // 15], [gt.shape[0] // 25, gt.shape[0] // 15]]
+            # gt = self.add_local_undul_patches(gt, num_patches, patch_ranges[0] , patch_ranges[1], 
+            #                                   im_base_elev, (mj_rand_dz, 1.3*mj_rand_dz))
+            # gt = self.add_flat(gt, robot_im_pos_init, 5, 5, im_base_elev)
+            gt = self.add_wall(gt, (60,60), 5, 5, 1.0)
             return gt
         # whole terrain is undulated
         else:
