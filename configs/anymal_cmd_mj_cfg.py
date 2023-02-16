@@ -18,7 +18,7 @@ class AnymalCmdMjCfg():
     class env:
         timeStepLLP = 1/100 # LLP time step
         timeStepHLP = 1/20  # HLP runs slower than LLP
-        ob_sizes = [52, 53, 54] # ob_sizes[i] == len of ith obs vector (ie: output len of get_hlp_obs_{i+1})
+        ob_sizes = [54] # ob_sizes[i] == len of ith obs vector (ie: output len of get_hlp_obs_{i+1})
         ac_size = 3 # (Vx, Vy, Vz) - output of hlp
         joints_size = 12  # robot joint positions - output of llp
         cmd_ranges = [1, 1, 1.5]

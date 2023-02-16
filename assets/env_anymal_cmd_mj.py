@@ -48,6 +48,7 @@ class Env(EnvBaseMJ):
         if self.args.rand_dz_mult:
             self.terr_cfg.gt_rand_dz = self.args.rand_dz_mult * self.terr_cfg.gt_max_elev
         self.map_cfg.wp_time_scalar = self.args.wp_time_scalar
+        print(self.terr_cfg.gt_rand_dz)
         
         self.terr_cfg.init_z = self.terr_cfg.robot_init_z
         if self.args.add_terrain:
