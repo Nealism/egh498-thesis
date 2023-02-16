@@ -484,8 +484,6 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 if use_perception:
                     im = env.get_image()
                 env.restore_env_state(save_state)
-        
-        
 
         # Perform PPO update!
         update(epoch)

@@ -38,7 +38,6 @@ class CNN(nn.Module):
         x = torch.tanh(self.fc(x))
         return x
 
-
 def count_vars(module):
     return sum([np.prod(p.shape) for p in module.parameters()])
 
