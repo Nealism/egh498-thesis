@@ -13,5 +13,5 @@ declare -a Arguments=(
             
 export SBATCH_ACCOUNT=OD-219033
 for (( i=0; i<${#Arguments[@]}; i++ )); do 
-  sbatch ./base_csiro_pet.sh "run.py" ${Experiments[$i]} "${Arguments[$i]}" "24:00:00"
+  sbatch ./base_csiro_pet.sh "run.py" ${Experiments[$i]} "${Arguments[$i]}" "2:00:00"
 done

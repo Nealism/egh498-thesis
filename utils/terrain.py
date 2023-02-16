@@ -5,12 +5,11 @@ from lxml import etree
 from utils import img_helpers
 
 """
-Class to represent any terrains loaded. Terrains are represented as N x M numpy arrays, 
-where each (i, j) element encodes a height.
+Class to represent terrains loaded in simulation environment (primarily designed for mujoco).
 
-The terrain is also saved in PNG format (useful for certain sim envs eg. mujoco)
+Terrains are represented as NxM numpy arrays, where each (i, j) element encodes a height.
 
-NOTE: Both the original array AND the PNG format are stored
+Both the base array AND a PNG version is stored (PNG useful for displaying maps of the terrain)
 """
 class Terrain():
     def __init__(self, terr_arr, path, name):
@@ -18,12 +17,12 @@ class Terrain():
         self.img_name = self.name + ".png"
         self.img_path = path + self.img_name
 
-        # terrain array (numpy array)
+        # terrain array
         self.terr_arr = terr_arr         
-        # height map - loaded later
-        self.height_map = None
-        # image version of the height map - loaded later
-        self.height_map_img = None
+        # terrain array flippe over x axis (see invert_terr_arr())
+        self.flipped_terr_arr = None
+        # PNG image of the terrain (either flipped or default) - loaded later
+        self.terr_img = None
 
         # (X, Y) image dimensions in pixels
         self.image_dim = (self.terr_arr.shape[1], self.terr_arr.shape[0]) # (X, Y) == (col, row)
@@ -32,11 +31,11 @@ class Terrain():
         """
         NOTE NOTE NOTE NOTE NOTE
 
-        Mujoco hfields are loaded with (0,0) at the bottom left (like cartesian coords)
+        Some sim terrains (eg: Mujoco Hfields and Meshes) are loaded with (0,0) at the bottom left (like cartesian coords)
 
         Arrays have (0,0) (row, col) at top left (as in a matrix)
 
-        The result of this is that +ve y direction mujoco = -ve y direction image
+        The result of this is that +ve y direction sim = -ve y direction image
 
         This method reflects/inverts the terrain array over its x axis
 
@@ -44,23 +43,22 @@ class Terrain():
         """
         return np.flip(self.terr_arr, 0)
     
-    def load_hm_and_hm_img(self):
-        """
-        Loads both the inverted terrain array (what we use as the height map, see invert_terr_arr())
-        and its corresponding image (used to display a map of the terrain)
-        """
-        
-        self.height_map = self.invert_terr_arr()
-        self.load_hm_img()
-
-    def load_hm_img(self):
+    def load_img(self, flip=True):
         """ 
         Saves the terrain image to its path and returns it
+
+        Params:
+            flip -> iff true, we load the FLIPPED terrain array as the image (see invert_terr_arr()), 
+                    else, we load the normal terrain array
         """ 
-        im = self.height_map * 255
+        if flip:
+            self.flipped_terr_arr = self.invert_terr_arr()
+            im = self.flipped_terr_arr * 255
+        else:
+            im = self.terr_arr * 255
         cv2.imwrite(self.img_path, im)
         img = cv2.imread(self.img_path)
-        self.height_map_img = img    
+        self.terr_img = img    
 
     def add_to_xml(self):
         raise NotImplementedError 
@@ -140,7 +138,6 @@ class Hfield(Terrain):
         y = int((y1 + y1_rad) * (y2_rad / y1_rad))
         return (x, y)
 
-
     def compute_sub_section(self, x, y, X, Y):
         """
         Compute the X x Y subsection of the hfield array around the robot, who is centred
@@ -166,7 +163,7 @@ class Hfield(Terrain):
             # return None
 
         # (x, y) == (col, row)
-        return self.height_map[min_y:max_y+1, min_x:max_x+1]
+        return self.flipped_terr_arr[min_y:max_y+1, min_x:max_x+1]
 
 """
 Class to represent a mesh in mujoco
@@ -206,6 +203,32 @@ class TerrainGen():
         arr = np.zeros((dim[1], dim[0]))
         return arr
 
+    def gen_patch_positions(self, base_dim, n, xwid_range, ywid_range):
+        """
+        Returns a list of positions to generate certain terrain objects at
+        
+        Specifically, this is a list of tuples, each of the form: (pos, xwid, ywid) where:
+            pos - position object centred at
+            xwid, ywid - width of terrain object in x and y directions
+        """
+        patches = []        
+        for _ in range(n):
+            xwid = np.random.uniform(low=xwid_range[0], high=xwid_range[1]+1) if len(xwid_range) > 1 else xwid_range[1]
+            ywid = np.random.uniform(low=ywid_range[0], high=ywid_range[1]+1) if len(ywid_range) > 1 else ywid_range[1]
+            border = base_dim[1] // 5
+            x = int(np.random.uniform(low=xwid // 2 + border, high=base_dim[1] - xwid // 2 - border))
+            y = int(np.random.uniform(low=ywid // 2 + border, high=base_dim[0] - ywid // 2 - border))
+            pos = ((x,y), xwid, ywid)
+            patches.append(pos)
+            
+        return patches
+
+    def add_flat(self, base_arr, pos, xwid, ywid, base_height, dz):
+        """
+        Adds a flat section of terrain 
+        """
+        return self.add_wall(base_arr, pos, xwid, ywid, base_height, dz)
+
     def add_hole_mound(self, base_arr, pos, radius, max_min):
         """
         Adds a hole/mound to the given terrain array. 
@@ -234,14 +257,14 @@ class TerrainGen():
         base_arr+=arr
         return base_arr
 
-    def add_wall(self, base_arr, pos, xwid, ywid, height):
+    def add_wall(self, base_arr, pos, xwid, ywid, base_height, dz):
         """
         Adds a wall to the given terrain array 
         """
         x0, y0 = pos[0], pos[1]
-        xl, xh = x0 - xwid // 2, x0 + xwid // 2
-        yl, yh = y0 - ywid // 2, y0 + ywid // 2
-        base_arr[yl:yh, xl:xh] = height
+        xl, xh = int(x0 - xwid // 2), int(x0 + xwid // 2)
+        yl, yh = int(y0 - ywid // 2), int(y0 + ywid // 2)
+        base_arr[yl:yh, xl:xh] = base_height + dz
         return base_arr
     
     def add_local_undul(self, base_arr, pos, xwid, ywid, base_z, dz):
@@ -256,47 +279,34 @@ class TerrainGen():
         base_arr[yl:yh, xl:xh] = base_undul[yl:yh, xl:xh]
         return base_arr
     
-    def add_local_undul_patches(self, base_arr, n, xwid_range, ywid_range, base_z, dz_range):
+    def add_terr_patches(self, fn, base_arr, n, xwid_range, ywid_range, base_z, dz_range):
         """
-        Adds n patches of local undulation to the given terrain array.
-        Patches have:
-            -x and y widths within the given ranges AND;
-            -dz heights within the given range
-        
-        NOTE:
-            if want deterministic widths and dz, just pass (a,) instead of (a,b)
+        Adds n randomly generated patches of a specific type of terrain.
+
+        This specific type is given by the terrain gen function fn
         """
-        for _ in range(n):
+        patches = self.gen_patch_positions(base_arr.shape, n, xwid_range, ywid_range)
+        for pos, xwid, ywid in patches:
             dz = np.random.uniform(low=dz_range[0], high=dz_range[1]) if len(dz_range) > 1 else dz_range[0]
-            xwid = np.random.uniform(low=xwid_range[0], high=xwid_range[1]+1) if len(xwid_range) > 1 else xwid_range[1]
-            ywid = np.random.uniform(low=ywid_range[0], high=ywid_range[1]+1) if len(ywid_range) > 1 else ywid_range[1]
-            border = base_arr.shape[1] // 5
-            x = int(np.random.uniform(low=xwid // 2 + border, high=base_arr.shape[1] - xwid // 2 - border))
-            y = int(np.random.uniform(low=ywid // 2 + border, high=base_arr.shape[0] - ywid // 2 - border))
-            pos = (x,y)
-            self.add_local_undul(base_arr, pos, xwid, ywid, base_z, dz)
+            fn(base_arr, pos, xwid, ywid, base_z, dz)
         return base_arr
     
-    def add_flat(self, base_arr, pos, xwid, ywid, base_height):
-        """
-        Adds a flat section of terrain 
-        """
-        return self.add_wall(base_arr, pos, xwid, ywid, base_height)
-
     def gen_test(self, dim, mj_max_elev, mj_base_elev, mj_rand_dz, robot_im_pos_init, num_patches):
         """
-        Test bed to generate the terrain arrays in
+        Test bed to generate a terrain array in
+
+            dim -> dimensions of terrain array
+            mj_max_elev
         """
         im_base_elev = (1 / mj_max_elev) * mj_base_elev
         
         # terrain has discrete patches of undulation
         if num_patches:
             gt = self.gen_flat(dim, im_base_elev)
-            patch_ranges = [[gt.shape[1] // 25, gt.shape[1] // 15], [gt.shape[0] // 25, gt.shape[0] // 15]]
-            gt = self.add_local_undul_patches(gt, num_patches, patch_ranges[0] , patch_ranges[1], 
-                                              im_base_elev, (mj_rand_dz, 1.3*mj_rand_dz))
-            gt = self.add_flat(gt, robot_im_pos_init, 5, 5, im_base_elev)
-            # gt = self.add_wall(gt, (60,60), 5, 5, 1.0)
+            patch_ranges = [[4, 8], [4, 8]]
+            gt = self.add_terr_patches(self.add_local_undul, gt, num_patches, patch_ranges[0] , patch_ranges[1], 
+                                              im_base_elev, (1,))
+            gt = self.add_flat(gt, robot_im_pos_init, 5, 5, im_base_elev, 0)
             return gt
         # whole terrain is undulated
         else:
@@ -327,30 +337,3 @@ class TerrainGen():
                 scalar*((col - x0)**2 + (row - y0)**2) + z0 
                 if (col - x0)**2 + (row - y0)**2 < radius**2 
                 else 0)
-
-    
-    # --------------------------------------------------
-    # NOTE: DEPRECATED
-    #       Instead, use lambda functions like in hump (above)
-    # --------------------------------------------------
-
-    # def gen_curve(self, xl, xh, yl, yh, fn):
-    #     """
-    #     fn is applied element-wise to generate a 2D numpy array that can serve as the basis of an 
-    #     environment terrain
-    #     NOTE: xl, xh, yl, yh define the x and y ranges (dimensions of the array)
-    #     """
-    #     x = np.linspace(xl, xh, xh-xl+1)
-    #     y = np.linspace(yl, yh, yh-xl+1)
-    #     x, y = np.meshgrid(x, y)
-    #     fn = np.vectorize(fn)
-    #     z = fn(x, y)
-    #     # TODO : add plotting option
-    #     return z
-    
-    # def saddle_func(self, x, y):
-    #     return np.square(x) - np.square(y)
-
-    # def gaussian(self, x, y, sigma=1):
-    #     z = 25*(1/(2*np.pi*sigma**2)) * np.exp(-1*((0.1*x**2 + 0.1*y**2)/(2*sigma**2)))
-    #     return z

@@ -167,7 +167,7 @@ class Env(EnvBaseMJ):
                                                     self.args.undul_patches)
             self.ground_truth.terr_arr = gt_arr
         
-        self.ground_truth.load_hm_and_hm_img()
+        self.ground_truth.load_img(flip=True)
 
         self.terrains.append(self.ground_truth)
 
@@ -189,15 +189,15 @@ class Env(EnvBaseMJ):
         Also draws a bounding box around the robot's sub-section (image
         the policy is fed)
         """
-        img_copy = self.ground_truth.height_map_img.copy()
+        img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
         img_helpers.draw_bounding_box(img_copy, box_centre, *self.terr_cfg.hm_img_dim) 
         # way point (green dot)
         img_helpers.draw_dot(img_copy, self.wp_pos_im, color=img_helpers.GREEN) 
-        # robot position (red dot)
-        img_helpers.draw_dot(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), color=img_helpers.RED)
-        # img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.yaw, color=img_helpers.RED)
-        # img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.target_angle, color=img_helpers.WHITE)
+        # arrow showing direction of robot
+        img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.yaw, color=img_helpers.RED)
+        # arrow showing direction of way point
+        img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.target_angle, color=img_helpers.WHITE)
         img_helpers.display_img(img_copy)
     
     def populate_terrain_xml(self, file_path):
@@ -296,7 +296,7 @@ class Env(EnvBaseMJ):
         Generate an array of grass patch positions for the mj environment
         """
         dim = self.terr_cfg.gt_mj_dim
-        border = 2
+        border = 7.5
         xl, xh = -dim[0] + border, dim[0] - border
         yl, yh = -dim[1] + border, dim[1] - border
         patches = []
@@ -314,7 +314,7 @@ class Env(EnvBaseMJ):
             (new_xl, new_yl), (new_xh, new_yh) = self.ground_truth.rob_to_arr_pos((xl, yl)), self.ground_truth.rob_to_arr_pos((xh, yh))
             self.ground_truth.terr_arr[new_yl:new_yh, new_xl:new_xh] = 1.5
             # reload opencv image based on terrain change
-        self.ground_truth.load_hm_and_hm_img()
+        self.ground_truth.load_img()
             
     def load_robot(self):
         # load in terrains
@@ -325,7 +325,6 @@ class Env(EnvBaseMJ):
             if self.args.tree_type == "grass":
                 patches = self.gen_patch_positions(self.terr_cfg.num_grass_patches, 0.75, 0.75)
                 self.gen_grass_patches(patches, **self.terr_cfg.grass_params)
-                # self.generate_tree(**self.terr_cfg.grass_params)
             elif self.args.tree_type == "tree":
                 self.generate_tree(**self.terr_cfg.tree_params)
 
@@ -482,36 +481,10 @@ class Env(EnvBaseMJ):
         """
         Returns the obs. vector that is fed to the high-level policy (52-d)
         -----        
-        Default AND wp dist 
-        """
-        return (self.imu + self.commands + self.joints + list(self.pos[:2] - np.array(self.wp_pos_mj)) +
-                self.joint_vel + self.joint_force)
-
-    def get_hlp_obs_2(self):
-        """
-        Returns the obs. vector that is fed to the high-level policy (49-d)
-        -----
-        Default WITHOUT commands
-        """
-        return (self.imu + self.commands + self.wp_pos_robot + [self.dist_to_wp] + self.joints +
-                self.joint_vel + self.joint_force)
-
-    def get_hlp_obs_3(self):
-        """
-        Returns the obs. vector that is fed to the high-level policy (52-d)
-        -----        
         Default AND heading error AND wp dist
         """
         return (self.imu + self.commands + self.wp_pos_robot + [self.heading_error, self.dist_to_wp] + self.joints +
                 self.joint_vel + self.joint_force)
-
-    def get_hlp_obs_4(self):
-        """
-        Returns the obs. vector that is fed to the high-level policy (53-d)
-        -----        
-        Heading error AND wp dist
-        """
-        return [self.heading_error, self.dist_to_wp] 
 
     def get_llp_obs(self):
         """
@@ -521,62 +494,10 @@ class Env(EnvBaseMJ):
                 self.joint_vel + self.joint_force + 
                 [contact for contact in self.contacts.values()])
     
-    def get_reward(self):
-        done = False
-        if (self.pos[2] < self.rew_cfg.done.min_z or 
-           abs(self.pitch) > self.rew_cfg.done.max_pitch or 
-           abs(self.roll) > self.rew_cfg.done.max_roll):
-            done = True
-        
-        goal = 1.0*np.exp(-5.0*np.sum(np.array(self.commands[:2]) - np.array([self.vx, self.vy]) )**2)            
-        goal += 0.5*np.exp(-2.5*np.sum(np.array(self.commands[2]) - np.array(self.yaw_vel) )**2)     
-        self.goal.append(goal)
-
-        joints = np.exp(-0.5*np.sum((np.array(self.joints) - np.array(self.initial_joints))**2))
-        orn = np.exp(-10.0 * np.sum((np.array([self.roll, self.pitch]) - np.zeros(2))**2))
-        
-        # Contacts should match pair-wise. both front's should be off the ground, both backs shouldn't
-        contacts = 0.25*(self.contacts["left_front"] - self.contacts["right_back"])**2 
-        contacts += 0.25*(self.contacts["right_front"] - self.contacts["left_back"])**2 
-        contacts += 0.25*((1 - self.contacts["left_front"]) - self.contacts["right_front"])**2 
-        contacts += 0.25*((1 - self.contacts["left_back"]) - self.contacts["right_back"])**2 
-
-        # reward = 1.5*goal + 0.5*joints + 0.25*orn - 0.25*contacts
-        reward = 1.5*goal + 0.5*joints + 0.1*orn - 0.25*contacts
-        
-        # old
-        # reward = 1.5*goal + 0.1*joints + 0.1*orn - 0.1*contacts
-
-        self.ep_reward_dict["Reward/goal"] += goal
-        self.ep_reward_dict["Reward/joints"] += joints
-        self.ep_reward_dict["Reward/orn"] += orn
-        self.ep_reward_dict["Reward/contacts"] += contacts
-        return reward, done
-    
     def get_reward_1(self):
-        # old wp dist
-        done = self.is_done()
-
-        diff = np.sum(np.abs(self.pos[:2] - np.array(self.wp_pos_mj)))
-        goal = np.exp(-0.05 * diff**2)
-
-        reward = goal
-
-        self.ep_reward_dict["Reward/goal"] += reward
-        return reward, done
-
-    def get_reward_2(self):
-        # new wp dist
-        done = self.is_done()
-        
-        goal = np.exp(-0.05*self.dist_to_wp**2)
-        
-        reward = 1.0 * goal
-
-        self.ep_reward_dict["Reward/goal"] += goal
-        return reward, done
-
-    def get_reward_3(self):
+        """
+        Reward function 1
+        """
         # new wp dist
         done = self.is_done()
         
@@ -673,16 +594,3 @@ class Env(EnvBaseMJ):
         else:
             angle_error = target_angle - angle
         return angle_error, target_angle
-
-    # def yaw_diff(self):
-    #     """
-    #     Returns the absolute difference in angle of the robot's yaw and the way point (from robot's pos)
-    #     """
-    #     wp_ang = math.atan2((self.wp_pos_mj[1] - self.pos[1]), (self.wp_pos_mj[0] - self.pos[0]))
-    #     diff = abs(self.yaw - wp_ang)
-    #     if diff > (2 * math.pi):
-    #         diff = diff - (2 * math.pi)
-    #     if diff > math.pi:
-    #         return 2*math.pi - diff
-    #     else:
-    #         return diff

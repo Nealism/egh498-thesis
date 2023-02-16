@@ -31,7 +31,7 @@ class AnymalCmdMjCfg():
     class terrain:
         #### GROUND TRUTH CONFIG ####
         gt_img_dim = (100, 100) # image dimensions - (x, y) in pixels
-        gt_mj_dim = (20, 20) # mj hfield dimensions - (x_rad, y_rad) in metres
+        gt_mj_dim = (15, 15) # mj hfield dimensions - (x_rad, y_rad) in metres
 
         gt_centre_pos = (0, 0, 0) # position in mj gt centred at
         gt_max_elev = 2 # max elevation of ground truth
@@ -52,13 +52,13 @@ class AnymalCmdMjCfg():
         hm_mj_dim = None
         hm_img_dim = None
 
-        num_grass_patches = 2
+        num_grass_patches = 10
 
         class grass:
             radius = 0.02
-            height = 2.0
+            height = 0.5
             damping = 1
-            stiffness = 1.5
+            stiffness = 0.75
             rot = [1, 0, 0, 0]
             # spread = [[1.0, 7.0], [-1, 1]]
             # pos = (0, 0, 0.8)
