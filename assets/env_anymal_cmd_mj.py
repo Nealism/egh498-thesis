@@ -48,7 +48,6 @@ class Env(EnvBaseMJ):
         if self.args.rand_dz_mult:
             self.terr_cfg.gt_rand_dz = self.args.rand_dz_mult * self.terr_cfg.gt_max_elev
         self.map_cfg.wp_time_scalar = self.args.wp_time_scalar
-        print(self.terr_cfg.gt_rand_dz)
         
         self.terr_cfg.init_z = self.terr_cfg.robot_init_z
         if self.args.add_terrain:
@@ -193,7 +192,7 @@ class Env(EnvBaseMJ):
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
         img_helpers.draw_bounding_box(img_copy, box_centre, *self.terr_cfg.hm_img_dim) 
-        # way point (green dot)
+        # way point (green do1)
         img_helpers.draw_dot(img_copy, self.wp_pos_im, color=img_helpers.GREEN) 
         # arrow showing direction of robot
         img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.yaw, color=img_helpers.RED)

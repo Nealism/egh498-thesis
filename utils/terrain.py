@@ -291,6 +291,14 @@ class TerrainGen():
             fn(base_arr, pos, xwid, ywid, base_z, dz)
         return base_arr
     
+    def create_square(self):
+        terr = self.gen_flat((100,100), 0.4)
+        terr = self.add_wall(terr, (30,30), 10, 10, 0.4, 0.5)
+        terr = self.add_wall(terr, (20,30), 10, 10, 0.4, 0.5)
+        terr = self.add_wall(terr, (30,20), 10, 10, 0.4, 0.5)
+        terr = self.add_wall(terr, (20,20), 10, 10, 0.4, 0.5)
+        return terr
+    
     def gen_test(self, dim, mj_max_elev, mj_base_elev, mj_rand_dz, robot_im_pos_init, num_patches):
         """
         Test bed to generate a terrain array in
