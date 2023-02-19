@@ -164,7 +164,12 @@ class EnvBaseMJ(EnvBase):
 
         # Update the model path
         self.model_path = model_path
-
+    
+    def gen_grass_patches(self, patches, **kwargs):
+        xml, self.tree = gen_grass.gen_grass_patches(patches=patches, **kwargs)
+        tree_path = os.path.join(self.xml_assets_dir, "tree_" + str(self.rank) + ".xml")
+        etree.ElementTree(xml).write(tree_path, pretty_print=True)
+    
     def generate_tree(self, radius=0.02, height=0.015, damping=50, stiffness=500, pos=[0,0,0], rot=[1,0,0,0], num=10, segs_per_branch=4, spread=[[0.4,0.8],[-0.4,0.4]], z_height=0.0):
         #Tree generation is handled in xml_gen.
         #This function writes that to the mujoco xml file and handles multiple threads.

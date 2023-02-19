@@ -52,6 +52,20 @@ This is a repo of environments from various simulations including MuJoCo and PyB
 `--cur`
 - Add a tree or grass (Currently MuJoCo only, soon IsaacSim):</br>
 `--tree_type grass or tree`
+##### Terrain addition #####
+NOTE: only implemented for anymal_cmd_mj environment at the moment
+- add terrain </br>
+`--add_terrain`
+- configure max height of random undulation, as a proportion of sim's max height (eg: 0.2 ==> 0.2 * {max height in sim}).</br>
+`--rand_dz_mult {proportion}`
+- number of patches of random terrain undulation to generate (if 0, makes whole terrain undulated).</br>
+`--undul_patches {num}`
+##### Other #####
+NOTE: only implemented for anymal_cmd_mj environment at the moment
+- shows a real-time map of the current terrain as well as the robot's position inside it.</br>
+`--show_map`
+- if applicable, configures the size of the local, egocentric height map around the robot (eg. 8 ==> 8mx8m square around robot</br>
+`--hm_size {size}`
 
 See `default_arguments.py` for full list </br>
 

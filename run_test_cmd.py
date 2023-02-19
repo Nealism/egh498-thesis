@@ -1,15 +1,17 @@
-import torch
-import os
+"""
+Have dedicated test runner for anymal_cmd_mj because of it's unique structure
+"""
 import numpy as np
-import glob
-import time
-from pathlib import Path
+import torch
+from assets.env_anymal_cmd_mj import Env
 import default_arguments
-from utils.plotter import Plotter
+from pathlib import Path
+import time
+import glob
 
 home = str(Path.home())
 
-def run(args): 
+def run(args):
 
     if args.hpc:
         path_home = "/hpc-scratch/" + home.split("/")[-1]
@@ -32,20 +34,27 @@ def run(args):
         latest_folder = args.folder
 
     PATH = path_home + latest_folder
-    
-    Env, args = default_arguments.get_env(args)   
-    args.render = True
-    args.record_sim = False
+    Env, args = default_arguments.get_env(args)
     env = Env(PATH=PATH, args=args)
+    perception = args.use_perception
 
-    pol = torch.load(PATH + "/model.pt")
+    just_llp = True
+    if not just_llp:
+        pol = torch.load(PATH + "/model.pt")
+
     obs = env.reset()
     while True:
-        action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
-        obs, _, done, _ = env.step(action)
+        if just_llp:
+            cmds = [1.0, 0, 0]
+        else:
+            if perception:
+                im = env.get_image()
+                cmds = pol.step(torch.tensor(obs, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            else:
+                cmds = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
+        obs, _, done, _ = env.step(cmds)
         if done or env.steps > args.max_ep_len:
             obs = env.reset()
-
-if __name__== "__main__":
-    args = default_arguments.get_defaults() 
+if __name__ == "__main__":
+    args = default_arguments.get_defaults()
     run(args)

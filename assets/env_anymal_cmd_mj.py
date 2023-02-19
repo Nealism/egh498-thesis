@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import mujoco
 from gym import spaces
 from collections import deque
@@ -8,31 +9,20 @@ from scipy.spatial.transform import Rotation
 import mujoco_viewer
 from pyquaternion import Quaternion
 import os
+from lxml import etree
+import math
+import time
 
 from .env_base_mj import EnvBaseMJ
 from utils.terrain import Hfield, TerrainGen
 from utils import img_helpers
 from utils.xml_helper import indent_xml
-from lxml import etree
-import math
 from configs.anymal_cmd_mj_cfg import AnymalCmdMjCfg
 
 class Env(EnvBaseMJ):
     # Timestep for mujoco is set in the .xml, and shows up under self.model.opt.timestep
     # Default is 0.002, changing this might affect the contact model. 
-    simStep = 1/500
-    timeStep = 1/100
-    rank = comm.Get_rank()
-    Kp = 400
-    initial_Kp = Kp
     def __init__(self, PATH=None, args=None, writer=None):
-
-        self.view_rank = 0
-        self.args = args
-        self.render = args.render and self.rank == self.view_rank
-        self.PATH = PATH
-        self.writer = writer
-        self.master = True 
 
         ### CONFIGS ###
 
@@ -43,12 +33,43 @@ class Env(EnvBaseMJ):
         self.rew_cfg = self.cfg.reward
         self.robot_cfg = self.cfg.robot
 
-        super().__init__(PATH)
+        self.rank = comm.Get_rank()
+        
+        self.view_rank = self.env_cfg.view_rank
+        self.args = args
+        self.render = args.render and self.rank == self.view_rank 
+        self.PATH = PATH
+        self.writer = writer
+        self.master = True 
+        self.viewer = None
+
+        ##### LOADING CONFIG VALUES THROUGH CLI ARGS (HPC-ONLY, SEE CFG) #####
+
+        if self.args.rand_dz_mult:
+            self.terr_cfg.gt_rand_dz = self.args.rand_dz_mult * self.terr_cfg.gt_max_elev
+        self.map_cfg.wp_time_scalar = self.args.wp_time_scalar
+        
+        self.terr_cfg.init_z = self.terr_cfg.robot_init_z
+        if self.args.add_terrain:
+            self.terr_cfg.init_z += self.terr_cfg.gt_base_elev
+        
+        self.terr_cfg.hm_mj_dim = (self.args.hm_size, self.args.hm_size)
+        self.terr_cfg.hm_img_dim = (self.terr_cfg.hm_mj_dim[0] * (self.terr_cfg.gt_img_dim[0] // self.terr_cfg.gt_mj_dim[0]), 
+                                    self.terr_cfg.hm_mj_dim[1] * (self.terr_cfg.gt_img_dim[1] // self.terr_cfg.gt_mj_dim[1])) 
+        ##### ENV PARAMS #####
+
+        self.simStep = self.env_cfg.simStep
+        self.timeStep = self.env_cfg.timeStep
+        self.Kp = self.env_cfg.Kp
+        self.initial_Kp = self.env_cfg.initial_Kp
 
         self.robot_name = "anymal_c"
 
+        super().__init__(PATH)
+
         ##### PATHS #####
 
+        self.LLP_PATH = "./resources/cmd_model/model.pt"
         self.general_xml_path = "assets/xmls/anybotics_anymal_c/"
         self.base_terrain_xml = "base_terrain.xml"
         # Name of the base link in the xml, for setting the robot position on reset
@@ -61,49 +82,39 @@ class Env(EnvBaseMJ):
             self.action_multiplier = self.robot_cfg.pos_act_mult
         self.mesh_dir = self.general_xml_path + "assets/"
         
-        # self.action_multiplier = 0.0
-        
-        self.viewer = None
-
-        ##### WAY POINT STUFF #####
+        ##### WAY POINT #####
 
         self.wp_pos_mj = None # position in env
         self.wp_pos_im = None # position in map image
         self.last_wp_time = None # last time wp was generated
         self.max_vel_to_wp = self.map_cfg.max_vel_to_wp # max vel. expect robot to maintain moving towards wp
 
-        ##### TERRAIN STUFF #####
-        
+        ##### TERRAIN #####
+
         # set up base xml files for this rank/process (scene, tree, terrain etc.)
-        if self.args.tree_type or self.args.add_terrain:
-            self.set_up_xmls()
-
-        # load all Terrain objects into the env
-        if self.args.add_terrain:
-            self.terrains = [] #array of Terrain objects
-            self.terrain_generator = TerrainGen()
-            self.load_terrains()
-            terrain_path = self.get_parent_dir(self.model_path) + f"terrain_{str(self.rank)}.xml"
-            self.populate_terrain_xml(terrain_path) 
-
+        self.set_up_xmls()
+        # load mujoco model and data (robot itself, trees, terrains etc.)
+        self.first_time = True
         self.load_robot()
+        self.first_time = False
 
-        self.ob_size = self.env_cfg.ob_size
+        ##### ENV #####
+
+        self.low_lev_pol = torch.load(self.LLP_PATH)
+        # self.reward_fn = getattr(self, f'get_reward_{self.args.reward_fn}')
+        # self.obs_fn = getattr(self, f'get_hlp_obs_{self.args.obs_fn}')
+        self.reward_fn_name = f'get_reward_{self.args.reward_fn}'
+        self.obs_fn_name = f'get_hlp_obs_{self.args.obs_fn}'
+
+        self.ob_size = self.env_cfg.ob_sizes[self.args.obs_fn-1]
         self.ac_size = self.env_cfg.ac_size
+        self.joints_size = self.env_cfg.joints_size
         self.im_size = [1] + list(self.cfg.terrain.hm_img_dim)
 
-        self.motor_names = self.robot_cfg.motor_names
         # Needed if importing as Gym environment
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
-
-        # left front, right front, left back, right back
-        self.initial_joints = self.robot_cfg.init_joints
-        self.right_swing = self.robot_cfg.right_swing
-        self.left_swing = self.robot_cfg.left_swing
-
-        self.initial_z = self.robot_cfg.init_z
-
+        
         self.episodes = -1
         self.success = deque([0.0], maxlen=self.rew_cfg.goal.max_succ_len)
         self.sim_data = []
@@ -111,9 +122,18 @@ class Env(EnvBaseMJ):
 
         self.steps = 0
 
-        self.reward_names = ["Reward/goal", "Reward/joint", "Reward/orn", "Reward/contacts"]
+        self.reward_names = ["Reward/goal", "Reward/heading"]
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
+
+        ##### ROBOT #####
+
+        self.motor_names = self.robot_cfg.motor_names
+        # left front, right front, left back, right back
+        self.initial_joints = self.robot_cfg.init_joints
+        self.right_swing = self.robot_cfg.right_swing
+        self.left_swing = self.robot_cfg.left_swing
+        self.initial_z = self.terr_cfg.init_z if self.args.add_terrain else self.terr_cfg.robot_init_z
 
         # States that we want to restore, for resuming training after running a test
         # self.states_to_restore = ["pos", "orn", "joints", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "ep_steps", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
@@ -123,20 +143,45 @@ class Env(EnvBaseMJ):
         Generates all Terrain objects for this environment and adds them to the terrains array.
 
         NOTE: By default, always load the ground truth
-        NOTE: can optionally create other terrains 
+        NOTE: can optionally create other terrains, but note that one ground truth can
+              create a lot of terrain variability
         """
-        # generate and load ground truth image
-        gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.cfg.terrain.gt_img_dim)
+        self.terrains = []
+        self.terrain_generator = TerrainGen()
+
+        gt_arr = self.terrain_generator.gen_empty(self.terr_cfg.gt_img_dim)
         gt_path = self.get_parent_dir(self.model_path)
         gt_name = f"ground_truth_{str(self.rank)}"
-        gt_position = self.terr_cfg.hf_centre_pos
-        gt_size = (*self.terr_cfg.gt_mj_dim, self.terr_cfg.hf_elev, self.terr_cfg.hf_depth)
+        gt_position = self.terr_cfg.gt_centre_pos
+        gt_size = (*self.terr_cfg.gt_mj_dim, self.terr_cfg.gt_max_elev, self.terr_cfg.gt_depth)
 
         self.ground_truth = Hfield(gt_arr, gt_path, gt_name, gt_position, gt_size) 
+
+        # generate and load ground truth image
+        if self.args.add_terrain:
+            gt_arr = self.terrain_generator.gen_test(self.terr_cfg.gt_img_dim,
+                                                    self.terr_cfg.gt_max_elev,
+                                                    self.terr_cfg.gt_base_elev,
+                                                    self.terr_cfg.gt_rand_dz,
+                                                    self.ground_truth.rob_to_arr_pos((0,0)),
+                                                    self.args.undul_patches)
+            self.ground_truth.terr_arr = gt_arr
+        
+        self.ground_truth.load_img(flip=True)
+
         self.terrains.append(self.ground_truth)
 
         #generate and load any others below this
         ########################################
+    
+    def get_image(self):
+        """
+        Returns an egocentric height map centred at the robot. 
+        This takes the form of an NxM sub-section of the terrain array,
+        where (N, M) == self.terr_cfg.hm_img_dim
+        """
+        subsection = self.ground_truth.compute_sub_section(self.pos[0], self.pos[1], *self.terr_cfg.hm_img_dim)
+        return np.reshape(subsection, self.im_size).copy()
 
     def show_map(self):
         """
@@ -146,16 +191,19 @@ class Env(EnvBaseMJ):
         """
         img_copy = self.ground_truth.terr_img.copy()
         box_centre = self.ground_truth.rob_to_img_pos(self.pos) 
-        img_helpers.draw_bounding_box(img_copy, box_centre, *self.cfg.terrain.hm_img_dim) 
-        if self.map_cfg.show_waypoint: 
-            img_helpers.draw_dot(img_copy, self.wp_pos_im)
+        img_helpers.draw_bounding_box(img_copy, box_centre, *self.terr_cfg.hm_img_dim) 
+        # way point (green do1)
+        img_helpers.draw_dot(img_copy, self.wp_pos_im, color=img_helpers.GREEN) 
+        # arrow showing direction of robot
+        img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.yaw, color=img_helpers.RED)
+        # arrow showing direction of way point
+        img_helpers.draw_arrow(img_copy, self.ground_truth.rob_to_img_pos(self.pos[:2]), self.target_angle, color=img_helpers.WHITE)
         img_helpers.display_img(img_copy)
     
-    def populate_terrain_xml(self, file_name):
+    def populate_terrain_xml(self, file_path):
         """
         Builds up the terrain xml (for this process)  
         """
-        file_path = os.path.join(self.general_xml_path, file_name)
         xml = etree.parse(file_path)
         root = xml.getroot()
         # asset el - where all hfields and meshes live
@@ -165,9 +213,26 @@ class Env(EnvBaseMJ):
 
         # add all terrains to the xml file
         for terr in self.terrains:
-            terr.add_to_xml(asset, worldbody)
+            asset.append(terr.hfield_el)
+            worldbody.append(terr.geom_el)
         indent_xml(root)
-        xml.write(file_name)
+        xml.write(file_path)
+    
+    def reconfig_terrain_xml(self, file_path, terr_obj):
+        """
+        Reconfigure the xml for the given terrain object.
+        NOTE: if only change is PNG image (name remains same), don't need to configure
+        """
+        xml = etree.parse(file_path)
+        asset, worldbody = xml.findall('asset')[0], xml.findall('worldbody')[0]
+        hfield = [hf for hf in asset.findall('hfield') if hf.attrib['name'] == terr_obj.name][0]
+        geom = [gm for gm in worldbody.findall('geom') if gm.attrib['name'] == terr_obj.name][0]
+        asset.remove(hfield)
+        worldbody.remove(geom)
+        asset.append(terr_obj.hfield_el)
+        worldbody.append(terr_obj.geom_el)
+        indent_xml(xml.getroot())
+        xml.write(file_path)
         
     def can_gen_waypoint(self):
         """
@@ -194,8 +259,8 @@ class Env(EnvBaseMJ):
             y = point[1]
         # random 
         else:
-            x_low, y_low = self.pos[0]-self.cfg.terrain.hm_mj_dim[0], self.pos[1]-self.cfg.terrain.hm_mj_dim[1]
-            x_high, y_high = self.pos[0]+self.cfg.terrain.hm_mj_dim[0], self.pos[1]+self.cfg.terrain.hm_mj_dim[1]
+            x_low, y_low = self.pos[0]-self.terr_cfg.hm_mj_dim[0], self.pos[1]-self.terr_cfg.hm_mj_dim[1]
+            x_high, y_high = self.pos[0]+self.terr_cfg.hm_mj_dim[0], self.pos[1]+self.terr_cfg.hm_mj_dim[1]
             x = np.random.uniform(low=x_low, high=x_high)
             y = np.random.uniform(low=y_low, high=y_high)
 
@@ -225,31 +290,72 @@ class Env(EnvBaseMJ):
         # return estimate of time for robot to reach wp
         # NOTE: multiply by scalar to account for the assumptions made (see above)
         return self.map_cfg.wp_time_scalar * (abs_dist / self.max_vel_to_wp)
-
+    
+    def gen_patch_positions(self, num, x_rad, y_rad):
+        """
+        Generate an array of grass patch positions for the mj environment
+        """
+        dim = self.terr_cfg.gt_mj_dim
+        border = 7.5
+        xl, xh = -dim[0] + border, dim[0] - border
+        yl, yh = -dim[1] + border, dim[1] - border
+        patches = []
+        for _ in range(num):
+            pos = (np.random.uniform(xl, xh), np.random.uniform(yl, yh), self.terr_cfg.gt_base_elev)
+            spread = [[pos[0] - x_rad, pos[0] + x_rad], [pos[1] - y_rad, pos[1] + y_rad], pos[2]]
+            patches.append(spread)
+        return patches
+    
+    def add_grass_heights(self, patches):
+        """
+        Add grass heights to the height map array
+        """
+        for (xl,xh), (yl,yh), _ in patches:
+            (new_xl, new_yl), (new_xh, new_yh) = self.ground_truth.rob_to_arr_pos((xl, yl)), self.ground_truth.rob_to_arr_pos((xh, yh))
+            self.ground_truth.terr_arr[new_yl:new_yh, new_xl:new_xh] = 1.5
+            # reload opencv image based on terrain change
+        self.ground_truth.load_img()
+            
     def load_robot(self):
+        # load in terrains
+        self.load_terrains()
+        # load in grass/trees
+        patches = None
         if not self.args.replay and self.args.tree_type:
             if self.args.tree_type == "grass":
-                self.generate_tree(**self.terr_cfg.grass_params)
+                patches = self.gen_patch_positions(self.terr_cfg.num_grass_patches, 0.75, 0.75)
+                self.gen_grass_patches(patches, **self.terr_cfg.grass_params)
             elif self.args.tree_type == "tree":
                 self.generate_tree(**self.terr_cfg.tree_params)
 
+        if not self.args.replay and self.args.add_terrain:
+            terrain_path = self.get_parent_dir(self.model_path) + f"terrain_{str(self.rank)}.xml"
+            if self.first_time:
+                self.populate_terrain_xml(terrain_path)
+            else:
+                self.reconfig_terrain_xml(terrain_path, self.ground_truth)
+        
         self.model = mujoco.MjModel.from_xml_path(self.model_path)
         self.data = mujoco.MjData(self.model)
 
-        # Mujoco_viewer doesn't work on the hpc, shouldn't render there anyway
-        if not self.args.training_on_hpc:
-            if isinstance(self.viewer, mujoco_viewer.MujocoViewer):
-                # Replace model and data of an existing viewer
-                self.viewer.model = self.model
-                self.viewer.data = self.data
-            elif self.render:
-                self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)
-            else:
-                # Offscreen might help getting images?
-                self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data, 'offscreen')
-        else:
-            print("Can't view mujoco on the HPC.")
+        # where we load the hfield into mj
+        # NOTE: this is much faster than converting the array into a PNG
+        #       and loading it
+        if self.args.add_terrain:
+            self.model.hfield_data = self.ground_truth.terr_arr.flatten()
         
+        # only add grass heights to our copy of the terrain array (don't want it loaded into mj)
+        if patches:
+            self.add_grass_heights(patches)
+
+        # Mujoco_viewer doesn't work on the hpc, shouldn't render there anyway
+        if self.viewer:
+            self.viewer.close()
+        if not self.args.training_on_hpc:
+            if self.render:
+                # new viewer every episode s.t. correct env appears every time
+                self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)
+
     def get_log_things(self):
         # Things we want to log each training step (print and add to tensorboard)
         return_dict = {"Kp": self.Kp, "Success": self.success, "Cur": self.args.cur}
@@ -274,9 +380,6 @@ class Env(EnvBaseMJ):
                 self.reward_dict[key].append(self.ep_reward_dict[key]/self.steps)
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 
-        # reset way point
-        self.wp_pos_mj = None
-
         if self.episodes > -1:
             self.success.append(self.get_success())
             target = None
@@ -287,17 +390,12 @@ class Env(EnvBaseMJ):
                 self.best_return = self.total_return
         self.total_return = 0
         self.paused = True
-
-        if self.args.cur and self.Kp > 0 and self.check_for_success():
-            self.Kp = 0.75*self.Kp
-            if self.Kp < 5:
-                self.Kp = 0
-                self.args.cur = False
-            self.success = deque([0.0], maxlen=5)
         
         if model_path is not None:
             self.model_path = model_path 
-        if self.args.tree_type or model_path is not None:
+
+        # must reset mj model and data if loading new trees/grass/terrain every episode
+        if self.args.tree_type or self.args.add_terrain or model_path is not None:
             self.load_robot()
 
         mujoco.mj_resetData(self.model, self.data)
@@ -305,12 +403,7 @@ class Env(EnvBaseMJ):
         if restore_state is not None:
             self.set_position(pos=restore_state[0], orn=restore_state[1], joints=restore_state[2])
         else:
-            # Rotate the base of the robot to simulate being on the back of a titan
-            rot_range = 0.2
-            # rot_range = 0.0
-            self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), 0], degrees=False)
-            # self.rot = Rotation.from_euler('xyz', [np.random.uniform(-rot_range, rot_range), np.random.uniform(-rot_range, rot_range), np.pi], degrees=False)
-            self.orn = self.rot.as_quat()
+            self.orn = [0,0,0,1]
             self.pos = [0,0,self.initial_z]
             self.set_position(pos=self.pos, orn=self.orn, joints=self.initial_joints)
 
@@ -319,159 +412,113 @@ class Env(EnvBaseMJ):
 
         # Step the simulation once to get the initial state
         mujoco.mj_forward(self.model, self.data)
+
+        # reset way point 
+        self.gen_waypoint()
+
         self.get_observation()
 
-        # Maybe randomise which legs swing first?
-        self.current_swing = "right"
-        self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
-        self.get_trajectory(self.expert_target)
-
+        if self.args.cmd_ranges:
+            self.env_cfg.cmd_ranges = eval(str(self.args.cmd_ranges))
         self.command_ranges = np.array(self.env_cfg.cmd_ranges)
         self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
         self.time_at_speed = 0
         self.goal = []
 
         self.prev_actions = self.joints
-        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
-        return state
+        hlp_obs_vec = getattr(self, self.obs_fn_name)()
+        return hlp_obs_vec 
 
-    def step(self, actions=None, replay_state=None, additional_stuff=None, cmds=None):
-        """
-        TODO: make a self.args.show_map argument
-        we want to be able to show the map, bounding boxes and waypoints even if 
-        person is not using ground truth
+    def step(self, cmds=None, replay_state=None):
+        if self.rank == self.view_rank and self.args.show_map and not self.args.training_on_hpc:
+            self.show_map()
 
-        -means we need a map to show people if they haven't loaded in any terrain
-        (empty image)
-        -which in turn means we need the auto xml load thing
-        """
-        if cmds is not None:
-            self.commands = cmds
-        
-        if self.args.add_terrain:
-            if self.can_gen_waypoint():
-                self.gen_waypoint()
+        if not self.args.one_wp_per_ep and self.can_gen_waypoint():
+            self.gen_waypoint()
 
-            if self.rank == self.view_rank and self.render and self.map_cfg.show_map:
-                self.show_map()
+        # # ========================================================
+        # # This could be used as an expert for curriculum learning:
+        # # ========================================================
+        # cmds = [0,0,0]
+        # if abs(self.heading_error) < 0.5:
+        #     cmds[0] = self.dist_to_wp
+        # cmds[2] = self.heading_error
 
-        if self.paused:
-            self.target_vx = 0.0
-            expert = self.initial_joints    
-        else:
-            self.target_vx = 1.0
-            if self.steps % self.traj_size == 0:
-                self.current_swing = "right" if self.current_swing == "left" else "left"
-                self.expert_target = self.right_swing if self.current_swing == "right" else self.left_swing
-                self.get_trajectory(self.expert_target)
-            expert = self.expert_traj[self.traj_i]
-            if self.traj_i < self.traj_size - 1:
-                self.traj_i += 1
+        if cmds is None:
+            cmds = [0,0,0]
 
-        if actions is not None:
+        self.commands = [np.clip(cmd*self.args.cmd_scaling*limit, -limit, limit) for cmd, limit in zip(cmds, self.robot_cfg.cmd_limits)]
+
+        # Run LLP faster than HLP
+        for _ in range(int(np.rint(self.env_cfg.timeStepHLP/self.env_cfg.timeStepLLP))):    
+            self.get_observation()
+            actions = self.low_lev_pol.step(torch.tensor(np.array(self.get_llp_obs()).astype(np.float32)), stochastic=False)[0]
             self.actions = list(np.array(self.initial_joints) + np.array(actions))
-        else:
-            self.actions = self.initial_joints
 
-        if self.args.cur:
-            # Sample every 4 seconds
-            if self.steps > 0 and self.steps % int(4 / self.timeStep)==0:
-                self.commands = list(np.random.uniform(-self.command_ranges, self.command_ranges))
-                self.success.append(self.get_success())
-                self.time_at_speed = 0
-                self.goal = []
+            # This might do something weird with mujoco contacts, and other things in the sim.
+            for _ in range(int(np.rint(self.env_cfg.timeStepLLP/self.simStep))):                            
+                self.data.ctrl[:self.joints_size] = self.action_multiplier*np.array(self.actions)
 
-            world_to_robot_rot_mat = np.array(
-            [[np.cos(-self.yaw), -np.sin(-self.yaw), 0],
-                [np.sin(-self.yaw), np.cos(-self.yaw), 0],
-                [		0,			 0, 1]]
-            )
-
-            # Need to convert robot frame velocities and commands to world frame to apply forces
-            robot_to_world_rot_mat = np.array(
-            [[np.cos(-self.yaw), np.sin(-self.yaw), 0],
-                [-np.sin(-self.yaw), np.cos(-self.yaw), 0],
-                [		0,			 0, 1]]
-            )
-
-            vx_cmd, vy_cmd, _ = np.dot(robot_to_world_rot_mat, (self.commands[0], self.commands[1],0))
-            vx, vy, _ = np.dot(robot_to_world_rot_mat, (self.vx, self.vy, self.vz))
-            
-            forces = np.zeros(6)
-            error = np.abs(np.array(self.commands) - np.array([self.vx, self.vy, self.yaw_vel]))
-            
-            # This doesn't seem to work, instead using average goal reward
-            if (error < 0.3).all():
-                self.time_at_speed += 1
-            gain = 50
-            z_gain = 200
-            forces[0] = gain * (self.Kp / self.initial_Kp) * np.clip((vx_cmd - vx), -1, 1)
-            forces[1] = gain * (self.Kp / self.initial_Kp) * np.clip((vy_cmd - vy), -1, 1)
-            forces[2] = z_gain * (self.Kp / self.initial_Kp) * np.clip((0.5 - self.pos[2]), -1, 1)
-            forces[5] = gain * (self.Kp / self.initial_Kp) * np.clip((self.commands[2] - self.yaw_vel), -1, 1)
-            self.data.xfrc_applied = forces
-
-        # This might do something weird with mujoco contacts, and other things in the sim.
-        for _ in range(int(np.rint(self.timeStep/self.simStep))):
-
-            # self.set_position(pos=[0,0,0.5], orn=[0,0,0,1])
-
-            if replay_state is not None:
-                self.set_position(pos=replay_state[0], orn=replay_state[1])
-            else:            
-                if self.args.cur:
-                    if self.args.just_expert:
-                        self.data.ctrl[:self.ac_size] = (self.Kp / self.initial_Kp)*np.array(expert)
-                    else:
-                        self.data.ctrl[:self.ac_size] = self.action_multiplier*np.array(self.actions) + (self.Kp / self.initial_Kp) * np.array(expert)
-                else:
-                    self.data.ctrl[:self.ac_size] = self.action_multiplier*np.array(self.actions)
-                            
-            mujoco.mj_step(self.model, self.data)
+                mujoco.mj_step(self.model, self.data)
         
-        if self.render:
-            self.viewer.render()
+            if self.render:
+                # time.sleep(0.1)
+                self.viewer.render()
 
         self.get_observation()
-
         self.save_sim_state()
-        reward, done = self.get_reward()
+
+        reward, done = getattr(self, self.reward_fn_name)()
+        hlp_obs_vec = getattr(self, self.obs_fn_name)()
+
         self.prev_actions = self.actions
         self.total_return += reward
         self.steps += 1
-
-        state = self.imu + self.commands + self.joints + self.joint_vel + self.joint_force + [contact for contact in self.contacts.values()]
-        return np.array(state), reward, done, None
+        
+        return np.array(hlp_obs_vec), reward, done, None
     
-    def get_reward(self):
-        done = False
-        if self.pos[2] < 0.35 or abs(self.pitch) > 0.5 or abs(self.roll) > 0.5:
-            done = True
-        
-        goal = 1.0*np.exp(-5.0*np.sum(np.array(self.commands[:2]) - np.array([self.vx, self.vy]) )**2)            
-        goal += 0.5*np.exp(-2.5*np.sum(np.array(self.commands[2]) - np.array(self.yaw_vel) )**2)     
-        self.goal.append(goal)
+    def get_hlp_obs_1(self):
+        """
+        Returns the obs. vector that is fed to the high-level policy (52-d)
+        -----        
+        Default AND heading error AND wp dist
+        """
+        return (self.imu + self.commands + self.wp_pos_robot + [self.heading_error, self.dist_to_wp] + self.joints +
+                self.joint_vel + self.joint_force)
 
-        joints = np.exp(-0.5*np.sum((np.array(self.joints) - np.array(self.initial_joints))**2))
-        orn = np.exp(-10.0 * np.sum((np.array([self.roll, self.pitch]) - np.zeros(2))**2))
+    def get_llp_obs(self):
+        """
+        Returns the obs. vector that is fed to the low-level policy (54-d)
+        """
+        return (self.imu + self.commands + self.joints + 
+                self.joint_vel + self.joint_force + 
+                [contact for contact in self.contacts.values()])
+    
+    def get_reward_1(self):
+        """
+        Reward function 1
+        """
+        # new wp dist
+        done = self.is_done()
         
-        # Contacts should match pair-wise. both front's should be off the ground, both backs shouldn't
-        contacts = 0.25*(self.contacts["left_front"] - self.contacts["right_back"])**2 
-        contacts += 0.25*(self.contacts["right_front"] - self.contacts["left_back"])**2 
-        contacts += 0.25*((1 - self.contacts["left_front"]) - self.contacts["right_front"])**2 
-        contacts += 0.25*((1 - self.contacts["left_back"]) - self.contacts["right_back"])**2 
+        # Want to make sure we are facing the right way before moving towards the waypoint
+        if abs(self.heading_error) < 0.5:
+            goal = np.exp(-0.05*self.dist_to_wp**2)
+        else:
+            goal = 0
+        
+        heading = np.exp(-5*self.heading_error**2)
 
-        # reward = 1.5*goal + 0.5*joints + 0.25*orn - 0.25*contacts
-        reward = 1.5*goal + 0.5*joints + 0.1*orn - 0.25*contacts
-        
-        # old
-        # reward = 1.5*goal + 0.1*joints + 0.1*orn - 0.1*contacts
+        reward = 1.0 * goal + 0.5 * heading
 
         self.ep_reward_dict["Reward/goal"] += goal
-        self.ep_reward_dict["Reward/joint"] += joints
-        self.ep_reward_dict["Reward/orn"] += orn
-        self.ep_reward_dict["Reward/contacts"] += contacts
+        self.ep_reward_dict["Reward/heading"] += heading
         return reward, done
+
+    def is_done(self):
+        return (self.pos[2] < self.rew_cfg.done.min_z or 
+            abs(self.pitch) > self.rew_cfg.done.max_pitch or 
+            abs(self.roll) > self.rew_cfg.done.max_roll)
 
     def get_observation(self):
         # Keep an eye on these to make sure they are getting what you think)
@@ -488,7 +535,7 @@ class Env(EnvBaseMJ):
 
         self.joints = [self.data.joint(name).qpos[0] for name in self.motor_names]
         self.joint_vel = [self.data.joint(name).qvel[0] for name in self.motor_names]
-        self.joint_force = list(self.data.actuator_force[:self.ac_size])
+        self.joint_force = list(self.data.actuator_force[:self.joints_size])
 
         # Should be an easier way to get a specific contact?
         self.feet = ["left_front", "right_front", "left_back", "right_back"]
@@ -505,6 +552,10 @@ class Env(EnvBaseMJ):
                 elif geom_name2 in self.feet: 
                     # self.contacts[self.feet.index(geom_name2)] = 1
                     self.contacts[geom_name2] = 1
+
+        self.wp_pos_robot = self.world_to_robot(self.yaw, self.pos, self.wp_pos_mj)
+        self.heading_error, self.target_angle = self.calc_angle_error(self.wp_pos_mj, self.pos, self.yaw)
+        self.dist_to_wp = math.sqrt(self.wp_pos_robot[0]**2 + self.wp_pos_robot[1]**2)
 
         if self.steps > 20 and np.array(self.contacts).all():
             # For some reason all feet are in contact on reset even when not touching the ground
@@ -527,3 +578,19 @@ class Env(EnvBaseMJ):
                 points.append(point)
             self.expert_traj.append(points)
         self.traj_i = 0    
+
+    def world_to_robot(self, robot_yaw, robot, world):
+        x,y = world[0] - robot[0], world[1] - robot[1]
+        rot_mat = np.array([[np.cos(robot_yaw), np.sin(robot_yaw)],
+                             [-np.sin(robot_yaw), np.cos(robot_yaw)]])
+        return list(np.dot(rot_mat, np.array([x, y])))
+
+    def calc_angle_error(self, world, robot, angle):
+        target_angle = np.arctan2(world[1] - robot[1], world[0] - robot[0])
+        if ( target_angle < 0 and angle > 0 ):
+            angle_error = ( 2*np.pi + target_angle ) - angle
+        elif ( target_angle > 0 and angle < 0 ):
+            angle_error = target_angle - ( 2*np.pi + angle )
+        else:
+            angle_error = target_angle - angle
+        return angle_error, target_angle

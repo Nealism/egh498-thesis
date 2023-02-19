@@ -100,6 +100,8 @@ class Env(EnvBasePB):
         
         if self.rank == 0 and self.args.record_sim and self.episodes > 0:
             self.record_sim_state(best=self.check_for_success(), test=test)
+    
+        
         
         self.steps = 0
         initial_x, initial_y = 2, np.random.uniform(-0.5, 0.5)   

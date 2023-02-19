@@ -24,7 +24,7 @@ class EnvBase():
     def get_env_state(self):
         save_dict = {}
         for state in self.__dict__:
-            if state not in ["model", "data", "viewer", "writer"]:
+            if state not in ["model", "data", "viewer", "writer", "low_lev_pol"]:
                 save_dict[state] = self.__dict__[state]
         return deepcopy(save_dict)
 
