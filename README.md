@@ -124,11 +124,13 @@ Proximal Policy Optimisation - default
 - Mount scratch workspace, this is where results and data are typically saved (there isn't much room on the cluster for saving results). This is for temporary storage only. Need to use the datastore if need to save things for longer periods.
     - first time: `sudo mkdir -p /hpc-scratch/$USER` <br/>
     `sudo sshfs -o allow_other $USER@petrichor.hpc.csiro.au:/scratch1/$USER /hpc-scratch/$USER`
+    - if you don't have sshfs install you need to install it using: `sudo apt update && sudo apt install sshfs`
 - Create save directory to mirror what happens on the HPC, this is where results are saved locally:
     - first time: `sudo mkdir -p /scratch1/$USER/results` <br/>
     - Permissions must also be changed for the /scratch1 subdirectories by running: </br>
     `sudo chmod 777 -R /scratch1`
-- Copy code to HPC: <br/>                                       
+- Copy code to HPC: <br/> 
+- When you are copying code to the HPC you need to be in the folder where "rsync_exclude.txt" exists, i.e. you need to be in the `behaviour_rl` repository.
 `rsync -avP --exclude-from=rsync_exclude.txt source destination`
 - e.g.<br/>
 `rsync -avP --exclude-from=rsync_exclude.txt $HOME/behaviour_rl $USER@petrichor.hpc.csiro.au:$HOME`
