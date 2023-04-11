@@ -8,7 +8,7 @@ declare -a Experiments=(
 
                         )
 declare -a Arguments=(
-    "--cpu 32 --env anymal_cmd_mj --training_on_hpc --epochs 3000 --max_ep_len 512 --local_epoch_len 1024 --add_terrain --rand_dz_mult 0.40 --undul_patches 45 --use_perception --obs_fn 1 --reward_fn 1"
+    "--cpu 64 --env anymal_cmd_mj --training_on_hpc --epochs 3000 --max_ep_len 512 --local_epoch_len 1024 --add_terrain --rand_dz_mult 0.40 --undul_patches 45 --use_perception --obs_fn 1 --reward_fn 1"
 )
             
 export SBATCH_ACCOUNT=OD-219033
