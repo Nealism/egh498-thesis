@@ -92,6 +92,8 @@ def get_defaults():
     parser.add_argument('--episodes', type=int, default=100)
     parser.add_argument('--reward_fn', type=int, default=1)
     parser.add_argument('--obs_fn', type=int, default=1)
+    parser.add_argument('--reset_fn', type=int, default=1)
+    parser.add_argument('--step_fn', type=int, default=1)
     parser.add_argument('--cmd_scaling', type=float, default=1.0)
 
     # ========================================================================
@@ -153,6 +155,18 @@ def get_env(args):
         args.control_type = "position"
     elif args.env in ["titan_pb", "pumpkin_pb"]:
         from assets.env_titan_pb import Env
+        args.control_type = "velocity"
+    elif args.env in ["titan_pb_1", "pumpkin_pb"]:
+        from assets.env_titan_pb_1 import Env
+        args.control_type = "velocity"
+    elif args.env in ["titan_pb_2", "pumpkin_pb"]:
+        from assets.env_titan_pb_2 import Env
+        args.control_type = "velocity"
+    elif args.env in ["titan_pb_3", "pumpkin_pb"]:
+        from assets.env_titan_pb_3 import Env
+        args.control_type = "velocity"
+    elif args.env in ["titan_pb_4", "pumpkin_pb"]:
+        from assets.env_titan_pb_4 import Env
         args.control_type = "velocity"
     elif args.env == "titan_mj":
         from assets.env_titan_mj import Env

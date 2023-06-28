@@ -33,11 +33,13 @@ class EnvBasePB(EnvBase):
             if self.args.frameless:
                 if self.render and self.master:
                     self._p = bullet_client.BulletClient(connection_mode=p.GUI)
+                    p.resetDebugVisualizerCamera(cameraDistance=7, cameraYaw=0, cameraPitch=-30, cameraTargetPosition=[0,0,0])
                 else:
                     self._p = bullet_client.BulletClient()
             else:
                 if self.render and self.master:
                     self.physicsClientId = p.connect(p.GUI)
+                    p.resetDebugVisualizerCamera(cameraDistance=7, cameraYaw=0, cameraPitch=-70, cameraTargetPosition=[0.55,-0.35,0])
                 else:
                     self.physicsClientId = p.connect(p.DIRECT) 
 
@@ -67,8 +69,20 @@ class EnvBasePB(EnvBase):
 
         
     def load_urdf_robot(self, model_path):
-        p.loadMJCF("./assets/xmls/ground.xml")
+        objects = p.loadMJCF("./assets/xmls/ground.xml")
+        self.worldId = objects[0]
+        #self.worldId = p.loadURDF("/home/kom018/Phd_codes/Brendan/Wall_URDF/simpleplane.urdf")
         self.Id = p.loadURDF(model_path,
+                            flags=
+                                # p.URDF_USE_SELF_COLLISION | Turn off self collision, kills the titan
+                                  p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
+                                  p.URDF_GOOGLEY_UNDEFINED_COLORS )
+        
+    def load_urdf_robot2(self, model_path):
+        #objects = p.loadMJCF("./assets/xmls/ground.xml")
+        #self.worldId = objects[0]
+        #self.worldId = p.loadURDF("/home/kom018/Phd_codes/Brendan/Wall_URDF/simpleplane.urdf")
+        self.Id2 = p.loadURDF(model_path,
                             flags=
                                 # p.URDF_USE_SELF_COLLISION | Turn off self collision, kills the titan
                                   p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
@@ -84,6 +98,21 @@ class EnvBasePB(EnvBase):
         self.Id = objects[1]
 
     def set_position(self, pos=[0,0,0], orn=[0,0,0,1], joints=None, velocities=None, joint_vel=None, robot_id=None):
+        if robot_id is None:
+            robot_id = self.Id
+        pos = [pos[0], pos[1], pos[2]]
+        p.resetBasePositionAndOrientation(robot_id, pos, orn)
+        if joints is not None:
+            if joint_vel is not None:
+                for j, jv, m in zip(joints, joint_vel, self.motors):
+                    p.resetJointState(robot_id, m, targetValue=j, targetVelocity=jv)
+            else:
+                for j, m in zip(joints, self.motors):
+                    p.resetJointState(robot_id, m, targetValue=j)
+        if velocities is not None:
+            p.resetBaseVelocity(robot_id, velocities[0], velocities[1]) 
+
+    def set_position2(self, pos=[3,3,0], orn=[0,0,0,1], joints=None, velocities=None, joint_vel=None, robot_id=None):
         if robot_id is None:
             robot_id = self.Id
         pos = [pos[0], pos[1], pos[2]]
@@ -113,7 +142,7 @@ class EnvBasePB(EnvBase):
         # self._p.resetBasePositionAndOrientation(self.stadium_scene.t,[0,0,terrain_height], self._p.getQuaternionFromEuler([0,0,(1/4)*math.pi*angle]))
         self.load_terrain(pos=[0,0,terrain_height], angle=angle)
 
-    def load_terrain(self, terrain=None, pos=[7,0,0], angle=0):
+    def load_terrain(self, terrain=None, pos=[-2,0,0], angle=0):
         if terrain is not None:
             self.terrain = terrain
 
@@ -127,11 +156,14 @@ class EnvBasePB(EnvBase):
         heightfieldData = np.flip(self.terrain, 0).reshape(-1)
         flags = p.GEOM_CONCAVE_INTERNAL_EDGE
         # flags = None
+        #self.worldId=p.loadMJCF("./assets/xmls/ground.xml")
         self.terrain_collision_shape = p.createCollisionShape(shapeType = p.GEOM_HEIGHTFIELD, flags=flags, meshScale=[.05,.05,0.35], heightfieldData=heightfieldData, numHeightfieldRows=rows, numHeightfieldColumns=cols)
-        self.terrainId  = p.createMultiBody(self.worldId, self.terrain_collision_shape, basePosition=[7,0,0], baseOrientation=p.getQuaternionFromEuler([0,0,(1/4)*math.pi*angle]))
+        self.terrainId  = p.createMultiBody(self.worldId, self.terrain_collision_shape, basePosition=[0,0,0], baseOrientation=p.getQuaternionFromEuler([0,0,(1/4)*math.pi*angle]))
         
         p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,1)
 
+
+    
 
     def load_urdf_humanoid(self):
         ''' 
