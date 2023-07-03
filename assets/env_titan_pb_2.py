@@ -49,22 +49,25 @@ class Env(EnvBasePB):
 			self.ac_size = 22
 			self.ob_size = 7
 		else:
-			# self.ac_size = 4
 			self.ac_size = 2
-			self.ob_size = 28
+			if self.args.num_robots > 1:
+				self.ob_size = 11
+			else:
+				self.ob_size = 7
 		self.Kp = 400
 		self.initial_Kp = self.Kp
-		# self.a=1.5
-		self.a=3.0
+		self.a=4.0
 		self.b=0.5
 		
+		self.action_multiplier = 0.1 
+
 		# Needed if importing as Gym environment--  spaces.Discrete(self.ac_size) 
 		self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
 		self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
 		
 		self.steps = -1
 		
-		self.reward_names = ["Reward/goal", "Reward/heading", "Reward/heading_obs", "Distance to Goal Improved"]
+		self.reward_names = ["Reward/goal", "Reward/heading", "Reward/heading_obs", "Reward/neg", "Distance to Goal Improved"]
 		self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
 		self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 	
@@ -74,6 +77,8 @@ class Env(EnvBasePB):
 		self.initial_joints = [0.0] * 15 + [ 0.5, -0.5, -1.5707] + [-0.5, 0.5, -1.5707]
 		self.cur_success = deque([0.0], maxlen=5)
 		self.success = deque([0.0], maxlen=1)
+		self.ep_goal_success = 0.0
+		self.ep_success = False
 
 		if self.args.add_terrain:
 			self.terrain_difficulty = self.args.initial_terrain_difficulty
@@ -87,13 +92,15 @@ class Env(EnvBasePB):
 		self.total_steps = 0
 		self.ob_dict = {}
 		#self.done = False
-		
 
 		# States that we want to restore, for resuming training after running a test
 		self.states_to_restore = ["pos", "orn", "joints", "base_vel", "joint_vel", "args", "episodes", "steps", "total_steps"]
 
 		# Things we want to log each training step (print and add to tensorboard)
 		self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Diffficulty": self.terrain_difficulty}
+
+		self.load_robot()
+
 
 	# def load_terrains(self):
 	#     """
@@ -121,7 +128,8 @@ class Env(EnvBasePB):
 			#state_object= [random.uniform(-4,4),random.uniform(4,1),0.00]
 			robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
 			self.contact_list = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
-			robot2=self.load_urdf_robot2("./assets/urdfs/dynamic_titan.urdf")
+			if self.args.num_robots > 1:
+				robot2=self.load_urdf_robot2("./assets/urdfs/dynamic_titan.urdf")
 			#robot2=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
 			self.contact_list2 = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
 			wall_dir= "Wall_URDF/"
@@ -168,7 +176,9 @@ class Env(EnvBasePB):
 
 	def get_log_things(self):
 		# Things we want to log each training step (print and add to tensorboard)
-		return_dict = {"Episode_Success": self.ep_success, "Curriculum Success": self.cur_success, "Success":self.success, "static robot distance from trajectory": self.a-self.b, "Difficulty_increase": self.b }
+		# print("What the ", self.ep_goal_success); exit()
+
+		return_dict = {"Kp": self.Kp, "Curriculum Success": self.cur_success, "static robot distance from trajectory": self.a-self.b, "Difficulty_increase": self.b, "Goal Success": self.ep_goal_success }
 		return_dict.update(self.reward_dict)
 		return return_dict
 
@@ -178,7 +188,7 @@ class Env(EnvBasePB):
 		# dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
 		#print("success_dist",dist_to_goal)
 		# return dist_to_goal < 1.0
-		return self.total_reward > 1500
+		return self.total_reward > 700
 	
 
 	def check_for_success(self):
@@ -188,7 +198,6 @@ class Env(EnvBasePB):
 		
 		#self.load_simulator()
 		#p.resetDebugVisualizerCamera(cameraDistance=10, cameraYaw=0, cameraPitch=-40, cameraTargetPosition=[0.55,-0.35,0.2])
-		self.load_robot()
 
 		Initial_distance_to_goal=0
 		
@@ -199,14 +208,17 @@ class Env(EnvBasePB):
 				self.reward_dict[key].append(self.ep_reward_dict[key]/self.steps)
 		self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 
+		if self.episodes > -1:
 
-		# if self.episodes > -1:
-			# self.success.append(self.get_success())
-			#print(self.success)
-			# self.ep_success = self.get_success()
-			#print(self.ep_success)			
-			# self.cur_success.append(self.ep_success)
-			#print(self.cur_success)
+			self.success.append(self.get_success())
+			# print(self.success)
+			self.ep_success = self.get_success()
+			# print(self.ep_success)			
+			self.cur_success.append(self.ep_success)
+			self.ep_goal_success = np.mean(self.goal_success) if self.goal_success else 0.0
+
+		self.goal_success = []
+			# print(self.cur_success)
 		#print(self.body_xyz)
 		
 
@@ -250,7 +262,8 @@ class Env(EnvBasePB):
 
 
 		# Goal
-		state_object=[np.random.uniform(-3, 3), np.random.uniform(-3, -3.5), 0.00]
+		# state_object=[np.random.uniform(-3, 3), np.random.uniform(-3, -3.5), 0.00]
+		state_object=[np.random.uniform(-4, 4), np.random.uniform(-4, 4), 0.00]
 		wall_dir= "Wall_URDF/"
 		self.Goal = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=state_object)
 		p.setCollisionFilterGroupMask(self.Goal, -1, collisionFilterGroup=0, collisionFilterMask=0)
@@ -284,24 +297,31 @@ class Env(EnvBasePB):
 		self.steps = 0
 
 		#Robot1
-		initial_x, initial_y = np.random.uniform(-3, 3), np.random.uniform(3, 3.5) 
+		# initial_x, initial_y = np.random.uniform(-3, 3), np.random.uniform(3, 3.5) 
+		initial_x, initial_y = np.random.uniform(-4, 4), np.random.uniform(-4, 4) 
 		#initial_x, initial_y = -2, -2 
-		self.initial_yaw = np.random.uniform(-1, 1) 
+		self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
 		self.initial_orn = p.getQuaternionFromEuler([0,0,self.initial_yaw])
 		self.z_offset = 0
 
 	
 		
+		if self.args.cur and self.Kp > 0 and self.check_for_success():
+			self.Kp = 0.75*self.Kp
+			if self.Kp < 5:
+				self.Kp = 0
+			self.cur_success = deque([0.0], maxlen=5)
+
+
 		# self.a is the fixed value of unit ( how far from the line) and self.b is the step size ( Here, step size is 0.5 unit)
 		# print("static robot distance from trajectory",self.a-self.b,"and cur_success", self.cur_success)
-		if self.args.cur and self.check_for_success():
+		if self.args.num_robots > 1 and self.args.cur and self.check_for_success():
 			if self.a-self.b == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
 				self.b = self.a
 				self.cur_success = deque([0.0], maxlen=5)
 				#print("cur_success", self.cur_success)			
 			else:
-				self.b +=0.5
-				
+				self.b +=0.1			
 				
 				self.cur_success = deque([0.0], maxlen=5)
 		
@@ -341,12 +361,14 @@ class Env(EnvBasePB):
 		#print(list(self.pos))
 		postuple= tuple(self.pos)
 		allowance = 0.05 # allowance for flexibility in avoiding robot2
-		self.Initial_robot2_avoid_angle=self.robot2_avoid_angle + allowance #Set Robot 2 avoid angle in reset
+		if self.args.num_robots > 1:
+			self.Initial_robot2_avoid_angle=self.robot2_avoid_angle + allowance #Set Robot 2 avoid angle in reset
 		#print("Self_Robot2Ang",self.Initial_robot2_avoid_angle)
 		#print("goal",_)
 		#print(type(self.joint_vel))
 		#return np.array(self.robot1_bbox[0] +self.robot1_bbox[1] +self.robot1_bbox[2] +self.robot1_bbox[3] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3] + self.contacts + self.contacts2+ list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+  list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped])
-		return np.array(list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped])
+		# return np.array(list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped])
+		return self.return_state()
 
 
 	def move_goal_and_static_robot(self, initial_x, initial_y, yaw):
@@ -354,14 +376,14 @@ class Env(EnvBasePB):
 		# Get a new goal position, make sure it is far enough away from the robot. 
 		state_object=[np.random.uniform(-4, 4), np.random.uniform(-4, 4), 0.00]
 		dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
-		while dist < 4:
+		while dist < 3:
 			state_object=[np.random.uniform(-4, 4), np.random.uniform(-4, 4), 0.00]
 			dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
 
 		# Estimate time to target, velocity in steps + time to turn + current steps + buffer for going around a robot / acceleration
 		# Keep an eye on this, need to make sure there's enough time to get to the goal
 		self.heading_error, _ = self.calc_angle_error(state_object, [initial_x, initial_y], yaw)
-		self.time_to_target = dist / self.timeStep + abs(self.heading_error) / self.timeStep + self.steps + 400
+		self.time_to_target = dist / self.timeStep + abs(self.heading_error) / self.timeStep + self.steps + 500
 		
 		#Equation of the line trajectory from moving robot to goal
 
@@ -401,12 +423,12 @@ class Env(EnvBasePB):
 
 		# Move the goal
 		self.set_position(state_object, robot_id=self.Goal)
+		self.state_goal, _ = p.getBasePositionAndOrientation(self.Goal)
 
 		# Move the static robot
-		self.set_position(pos2, orn2, robot_id=self.Id2)
-
-		self.state_goal, _ = p.getBasePositionAndOrientation(self.Goal)
-		self.state_robot2, self.orn_robot2 = p.getBasePositionAndOrientation(self.Id2)
+		if self.args.num_robots > 1:
+			self.set_position(pos2, orn2, robot_id=self.Id2)
+			self.state_robot2, self.orn_robot2 = p.getBasePositionAndOrientation(self.Id2)
 
 
 	def twist_to_tracks(self, actions):
@@ -423,27 +445,29 @@ class Env(EnvBasePB):
 		#print(self)
 		# actions=[2.5,5]
 
-		actions = 0.05*actions
-
+		# actions = 0.5*actions
 		# ===========================
 		# This is an expert function
 		# ===========================
-		# if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
-		# 	actions[0] = 0.15
-		# else:	
-		# 	actions[0] = 0.0
-		# actions[1] = 0.25*np.clip(self.heading_error, -1, 1)
+		exp_actions = [0.0]*2
+		if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
+			exp_actions[0] = 0.25
+		else:	
+			exp_actions[0] = 0.0
+		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+		
+		if self.args.just_expert or self.args.cur:
+			applied_actions = (self.Kp/self.initial_Kp) * np.array(exp_actions)
+			if not self.args.just_expert:
+				applied_actions += self.action_multiplier*actions
+		else:
+			applied_actions = self.action_multiplier*actions
 
 		# Network now outputs a twist message
-		actions = self.twist_to_tracks(actions)
+		track_actions = self.twist_to_tracks(applied_actions)
 
-		for (a, tracks) in zip(actions,[self.left_track, self.right_track]):
-			#print("a",a)
-			#print("tracks",tracks)
-			#print("actions",actions)	
-			#print("L",self.left_track, "R", self.right_track)
+		for (a, tracks) in zip(track_actions,[self.left_track, self.right_track]):
 			for track in tracks:
-
 				p.setJointMotorControl2(self.Id, track, p.VELOCITY_CONTROL, targetVelocity=a*20, force=100)
 		
 		p.stepSimulation()
@@ -455,25 +479,29 @@ class Env(EnvBasePB):
 		reward, done = getattr(self, self.reward_fn_name)()
 
 		# Move the waypoint and static robot if close the waypoint
-		# print(self.time_to_target, self.steps)
+		# print(self.ep_goal_success, self.time_to_target, self.steps, self.dist_to_wp)
 		if self.dist_to_wp < 1.0:
-			self.ep_success = True
-			self.cur_success.append(True)
 			self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
-			print("success")
+			self.goal_success.append(True)
+
 		elif self.time_to_target < self.steps or done:
 			self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
-			self.cur_success.append(False)
-			self.ep_success = False
-			print("failure")
+			self.goal_success.append(False)
 
 		self.prev_actions = actions
 		self.steps += 1
 		self.total_steps += 1
 		self.total_reward += reward
 		#return np.array(self.robot1_bbox[0] +self.robot1_bbox[1] +self.robot1_bbox[2] +self.robot1_bbox[3] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3] + self.contacts + self.contacts2 + list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped]), reward, done, self.ob_dict
-		return np.array(list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped]), reward, done, self.ob_dict
+		# return np.array(list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped]), reward, done, self.ob_dict
 
+		return self.return_state(), reward, done, self.ob_dict
+
+	def return_state(self):
+		if self.args.num_robots > 1:
+			return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.yaw, self.vx, self.yaw_vel] + list(self.body_xyz2) + [self.yaw2])
+		else:
+			return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.yaw, self.vx, self.yaw_vel])
 
 	def get_reward_1(self):
 		"""
@@ -491,21 +519,32 @@ class Env(EnvBasePB):
 		# elif abs(self.heading_error) < 0.5:
 		# 	goal = np.exp(-0.5*self.dist_to_wp)
 		# else:	
-		# 	goal = 0
-		
-		goal = self.heading_vx
+		goal = 0
+		if abs(self.heading_error) < 0.5:
+			goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+		heading = 0.25*np.exp(-0.5*self.heading_error**2)
+		neg = 0
+		if self.vx < 0:
+			neg = 0.25*self.vx 
+		# if self.vx > 0 and self.heading_vx > 0:
+			# goal = 0.5*np.clip(self.heading_vx, 0, 3)
 
-		#heading_obs = np.exp(-0.5*self.heading_error_obs**2)
-		# heading = np.exp(-0.5*self.heading_error**2)
+		# goal = 1.5*np.exp(-10*(0.5 - self.heading_vx)**2)
+		# goal = 1.5*np.exp(-10*(3.0 - self.heading_vx)**2)
+		# neg = 0.25*self.vx if self.vx < 0 else 0
+		# heading_obs = np.exp(-0.5*self.heading_error_obs**2)
 		#print(goal, heading, heading_obs)
 		# reward = 1.0 * goal + 0.2 * heading #- 0.2 * heading_obs
-		reward = 1.0 * goal
+		reward = goal + neg + heading
+		# reward = goal + heading 
 		#print("reward", reward)
 		
 
 		self.ep_reward_dict["Reward/goal"] += goal
-		# self.ep_reward_dict["Reward/heading"] += heading
+		self.ep_reward_dict["Reward/neg"] += neg
+		self.ep_reward_dict["Reward/heading"] += heading
 		#self.ep_reward_dict["Reward/heading_obs"] += heading_obs
+		
 		#print(state_object[0])
 		#print("prev",self.prev_dist_to_goal)
 		#print(self.prev_dist_to_goal)
@@ -831,12 +870,18 @@ class Env(EnvBasePB):
 		self.body_xyz, orn = p.getBasePositionAndOrientation(self.Id)
 		self.pos = self.body_xyz
 
-		self.body_xyz2, orn2 = p.getBasePositionAndOrientation(self.Id2)
-		self.pos2 = self.body_xyz2
-		self.orn2 = list(orn2)
-		self.qx2, self.qy2, self.qz2, self.qw2 = self.orn2
-		self.roll2, self.pitch2, self.yaw2 = p.getEulerFromQuaternion(self.orn2)
-		self.body_vxyz2, self.base_rot_vel2 = p.getBaseVelocity(self.Id2)
+		if self.args.num_robots > 1:
+			self.body_xyz2, orn2 = p.getBasePositionAndOrientation(self.Id2)
+			self.pos2 = self.body_xyz2
+			self.orn2 = list(orn2)
+			self.qx2, self.qy2, self.qz2, self.qw2 = self.orn2
+			self.roll2, self.pitch2, self.yaw2 = p.getEulerFromQuaternion(self.orn2)
+			self.body_vxyz2, self.base_rot_vel2 = p.getBaseVelocity(self.Id2)
+
+			self.roll_vel2 = self.base_rot_vel2[0]
+			self.pitch_vel2 = self.base_rot_vel2[1]
+			self.yaw_vel2 = self.base_rot_vel2[2]
+
 		#print("pos_euler",self.pos)
 		#print("self.body_xyz",self.body_xyz)
 		#print("posx", self.pos[0],"posy", self.pos[1],"posz", self.pos[2])
@@ -855,6 +900,9 @@ class Env(EnvBasePB):
 		self.roll_vel = self.base_rot_vel[0]
 		self.pitch_vel = self.base_rot_vel[1]
 		self.yaw_vel = self.base_rot_vel[2]
+
+
+
 		#dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
 		#print(dist_to_goal)
 		rot_speed = np.array(
@@ -867,11 +915,20 @@ class Env(EnvBasePB):
 		self.contacts2 = []
 		for contact in self.contact_dict:
 			self.contacts.append(len(p.getContactPoints(self.Id, -1, self.contact_dict[contact], -1))>0)
-			self.contacts2.append(len(p.getContactPoints(self.Id2, -1, self.contact_dict[contact], -1))>0)
+			if self.args.num_robots > 1:
+				self.contacts2.append(len(p.getContactPoints(self.Id2, -1, self.contact_dict[contact], -1))>0)
 			#self.contacts.append(len(p.getContactPoints(self.Id, self.Id2, self.contact_dict[contact], -1))>0)
 			#self.contacts.append(len(p.getContactPoints(self.Id2, -1, self.contact_dict[contact], -1))>0)
 		#print(self.contacts, self.contacts2)
 		self.vx, self.vy, self.vz = np.dot(rot_speed, (self.body_vxyz[0],self.body_vxyz[1],self.body_vxyz[2]))
+
+		if self.args.num_robots > 1:
+			rot_speed2 = np.array(
+			[[np.cos(-self.yaw2), -np.sin(-self.yaw2), 0],
+				[np.sin(-self.yaw2), np.cos(-self.yaw2), 0],
+				[		0,			 0, 1]]
+			)
+			self.vx2, self.vy2, self.vz2 = np.dot(rot_speed2, (self.body_vxyz2[0],self.body_vxyz2[1],self.body_vxyz2[2]))
 		
 		if abs(self.orn[0]) > 0.35 or abs(self.orn[1]) > 0.35:
 			self.tipped = True
@@ -909,72 +966,73 @@ class Env(EnvBasePB):
 		self.lineId2 = [-1]*4 
 		
 		# ########################
-		
-
-		# #This part is for setting inflation radious bounding box around robots
-		self.robot1_bbox=[]
-		self.robot2_bbox=[]
-		
-
-
-		for i in range(len(self.corners1)-1):
-			
-			
-			start1 = p.multiplyTransforms(self.pos, self.orn, self.corners1[i], [0, 0, 0, 1])[0]
-			#print(list(start1))
-			#print(i, self.corners1[i])
-			self.robot1_bbox.append(list(start1))
-			#print(self.corners[i])
-				
-			#print(p.multiplyTransforms(pos, orn, self.corners[i], [0, 0, 0, 1]))
-			end1 = p.multiplyTransforms(self.pos, self.orn, self.corners1[i+1], [0, 0, 0, 1])[0]
-			if self.args.debug:
-				self.lineId1[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.lineId1[i])
-		
-		
-
-			#for j in range(len(self.corners2)-1):
-			start2 = p.multiplyTransforms(self.pos2, self.orn2, self.corners2[i], [0, 0, 0, 1])[0]
-			
-			self.robot2_bbox.append(list(start2))
-			#print(self.corners[i])
-			#print(p.multiplyTransforms(pos, orn, self.corners[i], [0, 0, 0, 1]))
-			end2 = p.multiplyTransforms(self.pos2, self.orn2, self.corners2[i+1], [0, 0, 0, 1])[0]
-			if self.args.debug:
-				self.lineId2[i]=p.addUserDebugLine(start2, end2, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.lineId2[i])
-				#print("robotA", start1, "robotB",start2)
-
-		self.robot1_bbox.append(self.robot1_bbox[0])
-		self.robot2_bbox.append(self.robot2_bbox[0])
-		# check for intersection between the two lines
 		self.intersection = False
-		# print(self.intersection)
-		for i in range(len(self.robot1_bbox)-1):
-			for j in range(len(self.robot2_bbox)-1):
+		
+		if self.args.num_robots > 1:
 
-				#print(self.intersection)
-				x1,y1,z1=self.robot1_bbox[i]     #Rotating start coordinates for Robot 1
-				x2,y2,z2=self.robot1_bbox[i+1]   #Rotating end coordinates for Robot 1
-				x3,y3,z3=self.robot2_bbox[j]     #Rotating start coordinates for Robot 2
-				x4,y4,z4=self.robot2_bbox[j+1]   #Rotating end coordinates for Robot 2
+			# #This part is for setting inflation radious bounding box around robots
+			self.robot1_bbox=[]
+			self.robot2_bbox=[]
+			
 
 
-				if (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1) == 0:
+			for i in range(len(self.corners1)-1):
+				
+				
+				start1 = p.multiplyTransforms(self.pos, self.orn, self.corners1[i], [0, 0, 0, 1])[0]
+				#print(list(start1))
+				#print(i, self.corners1[i])
+				self.robot1_bbox.append(list(start1))
+				#print(self.corners[i])
 					
-					self.intersection = True
-					print("Denominator_Zero")
-				else:
-					uA = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
-					uB = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
+				#print(p.multiplyTransforms(pos, orn, self.corners[i], [0, 0, 0, 1]))
+				end1 = p.multiplyTransforms(self.pos, self.orn, self.corners1[i+1], [0, 0, 0, 1])[0]
+				if self.args.debug:
+					self.lineId1[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.lineId1[i])
+			
+			
+
+				#for j in range(len(self.corners2)-1):
+				start2 = p.multiplyTransforms(self.pos2, self.orn2, self.corners2[i], [0, 0, 0, 1])[0]
+				
+				self.robot2_bbox.append(list(start2))
+				#print(self.corners[i])
+				#print(p.multiplyTransforms(pos, orn, self.corners[i], [0, 0, 0, 1]))
+				end2 = p.multiplyTransforms(self.pos2, self.orn2, self.corners2[i+1], [0, 0, 0, 1])[0]
+				if self.args.debug:
+					self.lineId2[i]=p.addUserDebugLine(start2, end2, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.lineId2[i])
+					#print("robotA", start1, "robotB",start2)
+
+			self.robot1_bbox.append(self.robot1_bbox[0])
+			self.robot2_bbox.append(self.robot2_bbox[0])
+			# check for intersection between the two lines
+			# print(self.intersection)
+			for i in range(len(self.robot1_bbox)-1):
+				for j in range(len(self.robot2_bbox)-1):
+
+					#print(self.intersection)
+					x1,y1,z1=self.robot1_bbox[i]     #Rotating start coordinates for Robot 1
+					x2,y2,z2=self.robot1_bbox[i+1]   #Rotating end coordinates for Robot 1
+					x3,y3,z3=self.robot2_bbox[j]     #Rotating start coordinates for Robot 2
+					x4,y4,z4=self.robot2_bbox[j+1]   #Rotating end coordinates for Robot 2
 
 
-				# uA = ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3)) / ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
-				# uB = ((x3-x4)*(y1-y2) - (y3-y4)*(x1-x2)) / ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
-				#uA = ((end2[0]-start2[0])*(start1[1]-start2[1]) - (end2[1]-start2[1])*(start1[0]-start2[0])) / ((end2[1]-start2[1])*(end1[0]-start1[0]) - (end2[0]-start2[0])*(end1[1]-start1[1]))
-				#uB = ((end1[0]-start1[0])*(start1[1]-start2[1]) - (end1[1]-start1[1])*(start1[0]-start2[0])) / ((end2[1]-start2[1])*(end1[0]-start1[0]) - (end2[0]-start2[0])*(end1[1]-start1[1]))
-				#print("line1",uA,"line2", uB)
-					if 0 <= uA <= 1 and 0 <= uB <= 1:
+					if (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1) == 0:
+						
 						self.intersection = True
+						print("Denominator_Zero")
+					else:
+						uA = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
+						uB = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
+
+
+					# uA = ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3)) / ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
+					# uB = ((x3-x4)*(y1-y2) - (y3-y4)*(x1-x2)) / ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
+					#uA = ((end2[0]-start2[0])*(start1[1]-start2[1]) - (end2[1]-start2[1])*(start1[0]-start2[0])) / ((end2[1]-start2[1])*(end1[0]-start1[0]) - (end2[0]-start2[0])*(end1[1]-start1[1]))
+					#uB = ((end1[0]-start1[0])*(start1[1]-start2[1]) - (end1[1]-start1[1])*(start1[0]-start2[0])) / ((end2[1]-start2[1])*(end1[0]-start1[0]) - (end2[0]-start2[0])*(end1[1]-start1[1]))
+					#print("line1",uA,"line2", uB)
+						if 0 <= uA <= 1 and 0 <= uB <= 1:
+							self.intersection = True
 
 		#Uncomment above section if you want to use inflation radius
 			   
@@ -1002,16 +1060,17 @@ class Env(EnvBasePB):
 		)
 		self.heading_vx, _, _ = np.dot(rot_speed, (self.body_vxyz[0],self.body_vxyz[1],self.body_vxyz[2]))
 
-		#Between Robot 1 and Robot 2
-		self.robot2_pos_robot1 = self.world_to_robot(self.yaw, self.pos, self.state_robot2)
-		#print("self.robot2_pos_robot1",self.robot2_pos_robot1)
-		self.dist_to_robot2 = math.sqrt(self.robot2_pos_robot1[0]**2 + self.robot2_pos_robot1[1]**2)
-		#print("self.dist_to_robot2 ",self.dist_to_robot2 )
-		self.heading_error_obs, self.target_angle_obs = self.calc_angle_error(self.state_robot2, self.pos, self.yaw)
-		#print("heading_error_obs", self.heading_error_obs)
-		#print("target_angle_obs", self.target_angle_obs)
-		self.robot2_avoid_angle = np.arctan2(0.7, self.dist_to_robot2)
-		#print("robot2_avoid_angle",self.robot2_avoid_angle*(180/np.pi),self.robot2_avoid_angle)
+		if self.args.num_robots > 1:
+			#Between Robot 1 and Robot 2
+			self.robot2_pos_robot1 = self.world_to_robot(self.yaw, self.pos, self.state_robot2)
+			#print("self.robot2_pos_robot1",self.robot2_pos_robot1)
+			self.dist_to_robot2 = math.sqrt(self.robot2_pos_robot1[0]**2 + self.robot2_pos_robot1[1]**2)
+			#print("self.dist_to_robot2 ",self.dist_to_robot2 )
+			self.heading_error_obs, self.target_angle_obs = self.calc_angle_error(self.state_robot2, self.pos, self.yaw)
+			#print("heading_error_obs", self.heading_error_obs)
+			#print("target_angle_obs", self.target_angle_obs)
+			self.robot2_avoid_angle = np.arctan2(0.7, self.dist_to_robot2)
+			#print("robot2_avoid_angle",self.robot2_avoid_angle*(180/np.pi),self.robot2_avoid_angle)
 		
 		# robot2_avoid_angle = np.arctan2(0.7*self.yaw2, self.dist_to_robot2)
 		# print("robot2_avoid_angleyaw",robot2_avoid_angle*(180/np.pi))

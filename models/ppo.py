@@ -170,7 +170,7 @@ class PPOBuffer:
 def ppo(env, ac_kwargs=dict(), seed=0, 
         steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
         vf_lr=1e-3, train_pi_iters=100, train_v_iters=100, lam=0.97, max_ep_len=2048, local_epoch_len=2048,
-        target_kl=0.01, logger_kwargs=dict(), save_freq=10, PATH=None, writer=None, use_perception=False):
+        target_kl=0.01, logger_kwargs=dict(), save_freq=10, PATH=None, writer=None, use_perception=False, load_path=""):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -297,12 +297,20 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     if use_perception:
         actor_critic=core.MLPActorCriticPerception
         im_size = env.im_size
-        ac = actor_critic(env.observation_space, im_size, env.action_space, **ac_kwargs)
+        if load_path != "":
+            ac = torch.load(load_path)
+            print("Loading saved weights: ", load_path)
+        else:
+            ac = actor_critic(env.observation_space, im_size, env.action_space, **ac_kwargs)
         train_pi_iters = 10
         train_v_iters = 10
     else:    
         actor_critic=core.MLPActorCritic
-        ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
+        if load_path != "":
+            ac = torch.load(load_path)
+            print("Loading saved weights: ", load_path)
+        else:
+            ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
         train_pi_iters = 100
         train_v_iters = 100
 
@@ -473,17 +481,17 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             # Wait for all processes before doing an update
             comm.Barrier()
             # Currently runnning a test shuts the physics server for PyBullet, unsure why
-            if "pb" not in env.args.env:
-                save_state = env.get_env_state()
-                restore_state = [env.pos, env.orn, env.joints]
-                test_success = run_test(env, PATH + "model.pt", use_perception=use_perception)
-                if proc_id() == 0:
-                    print("Test success:", test_success)
-                    writer.add_scalar("SuccessTest", np.mean(test_success), epoch)
-                env.reset(test=True, restore_state=restore_state)
-                if use_perception:
-                    im = env.get_image()
-                env.restore_env_state(save_state)
+            # if "pb" not in env.args.env:
+            #     save_state = env.get_env_state()
+            #     restore_state = [env.pos, env.orn, env.joints]
+            #     test_success = run_test(env, PATH + "model.pt", use_perception=use_perception)
+            #     if proc_id() == 0:
+            #         print("Test success:", test_success)
+            #         writer.add_scalar("SuccessTest", np.mean(test_success), epoch)
+            #     env.reset(test=True, restore_state=restore_state)
+            #     if use_perception:
+            #         im = env.get_image()
+            #     env.restore_env_state(save_state)
 
         # Perform PPO update!
         update(epoch)

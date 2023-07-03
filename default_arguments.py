@@ -96,6 +96,7 @@ def get_defaults():
     parser.add_argument('--reset_fn', type=int, default=1)
     parser.add_argument('--step_fn', type=int, default=1)
     parser.add_argument('--cmd_scaling', type=float, default=1.0)
+    parser.add_argument('--load_path', default="")
 
     # ========================================================================
     # Terrain
