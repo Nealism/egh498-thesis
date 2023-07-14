@@ -56,8 +56,11 @@ class Env(EnvBasePB):
 				self.ob_size = 6
 		self.Kp = 400
 		self.initial_Kp = self.Kp
-		self.a=6.0
-		self.b=0.5
+		# self.a=6.0
+		# self.b=0.5
+
+		self.a=0.0
+		self.b=0.0
 		
 		self.action_multiplier = 0.1 
 
@@ -128,7 +131,7 @@ class Env(EnvBasePB):
 			#state_object= [random.uniform(-4,4),random.uniform(4,1),0.00]
 			robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
 			self.contact_list = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
-			if self.args.num_robots > 1:
+			if self.args.num_robots > 1 and self.args.insert_robot2:
 				robot2=self.load_urdf_robot2("./assets/urdfs/dynamic_titan.urdf")
 			#robot2=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
 			self.contact_list2 = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
@@ -248,9 +251,7 @@ class Env(EnvBasePB):
 		
 		# self.lineId1 = [-1]*4  # initialize with an invalid ID for lines around robots
 		# self.lineId2 = [-1]*4 
-		# p.removeAllUserDebugItems()
-
-		
+		p.removeAllUserDebugItems()		
 
 
 
@@ -352,12 +353,19 @@ class Env(EnvBasePB):
 		# print("robot_positions", pos2)
 		# print("robot_state")
 		# print(self.state_robot2)
+
+		self.lineId1 = [-1]*4  # initialize with an invalid ID for lines around robots
+		self.lineId2 = [-1]*4 
+		self.ray_line = [-1]*2
+		self.hit = False
+
 		self.get_observation()
 		
 		self.episodes += 1
 
 		self.cur_time = 0
 		self.total_reward = 0
+
 		# Time to take single step
 		#print(list(self.pos))
 		postuple= tuple(self.pos)
@@ -420,15 +428,18 @@ class Env(EnvBasePB):
 		self.initial_yaw2 = np.random.uniform(-1, 1)
 		self.initial_orn2 = p.getQuaternionFromEuler([0,0,self.initial_yaw2])
 		self.z_offset = 0
-		pos2, orn2 = [initial_x2, initial_y2, self.z_offset+0.31],self.initial_orn2
+		self.pos2, self.orn2 = [initial_x2, initial_y2, self.z_offset+0.31],self.initial_orn2
+		self.state_robot2 = self.pos2
+		self.orn_robot2 = self.orn2
+		self.roll2, self.pitch2, self.yaw2 = p.getEulerFromQuaternion(self.orn2)
 
 		# Move the goal
 		self.set_position(state_object, robot_id=self.Goal)
 		self.state_goal, _ = p.getBasePositionAndOrientation(self.Goal)
 
 		# Move the static robot
-		if self.args.num_robots > 1:
-			self.set_position(pos2, orn2, robot_id=self.Id2)
+		if self.args.num_robots > 1 and self.args.insert_robot2:
+			self.set_position(self.pos2, self.orn2, robot_id=self.Id2)
 			self.state_robot2, self.orn_robot2 = p.getBasePositionAndOrientation(self.Id2)
 
 
@@ -452,24 +463,24 @@ class Env(EnvBasePB):
 		# ===========================
 		exp_actions = [0.0]*2
 
-		if self.args.num_robots > 1:
-			if abs(self.heading_error) < 0.5 and self.dist_r1_r2 >1.5 and self.dist_to_wp > 1.0:
-				exp_actions[0] = 0.25
-				exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+		# if self.args.num_robots > 1:
+		# 	if abs(self.heading_error) < 0.5 and self.dist_r1_r2 >1.5 and self.dist_to_wp > 1.0:
+		# 		exp_actions[0] = 0.25
+		# 		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
 			
-			elif abs(self.heading_error) < 1.5 and self.dist_r1_r2 <1.5 and self.dist_to_wp > 1.0:
-				exp_actions[0] = 0.04
-				exp_actions[1] = -0.5*np.clip(self.heading_error_obs, -1, 1)
-			else:	
-				exp_actions[0] = 0.0
-				exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+		# 	elif abs(self.heading_error) < 1.5 and self.dist_r1_r2 <1.5 and self.dist_to_wp > 1.0:
+		# 		exp_actions[0] = 0.04
+		# 		exp_actions[1] = -0.5*np.clip(self.heading_error_obs, -1, 1)
+		# 	else:	
+		# 		exp_actions[0] = 0.0
+		# 		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
       
-		else:
-			if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
-				exp_actions[0] = 0.25
-			else:	
-				exp_actions[0] = 0.0
-			exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+		# else:
+		if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
+			exp_actions[0] = 0.25
+		else:	
+			exp_actions[0] = 0.0
+		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
 		
 		if self.args.just_expert or self.args.cur:
 			applied_actions = (self.Kp/self.initial_Kp) * np.array(exp_actions)
@@ -953,7 +964,7 @@ class Env(EnvBasePB):
 		self.body_xyz, orn = p.getBasePositionAndOrientation(self.Id)
 		self.pos = self.body_xyz
 
-		if self.args.num_robots > 1:
+		if self.args.num_robots > 1 and self.args.insert_robot2:
 			self.body_xyz2, orn2 = p.getBasePositionAndOrientation(self.Id2)
 			self.pos2 = self.body_xyz2
 			self.orn2 = list(orn2)
@@ -998,14 +1009,14 @@ class Env(EnvBasePB):
 		self.contacts2 = []
 		for contact in self.contact_dict:
 			self.contacts.append(len(p.getContactPoints(self.Id, -1, self.contact_dict[contact], -1))>0)
-			if self.args.num_robots > 1:
+			if self.args.num_robots > 1 and self.args.insert_robot2:
 				self.contacts2.append(len(p.getContactPoints(self.Id2, -1, self.contact_dict[contact], -1))>0)
 			#self.contacts.append(len(p.getContactPoints(self.Id, self.Id2, self.contact_dict[contact], -1))>0)
 			#self.contacts.append(len(p.getContactPoints(self.Id2, -1, self.contact_dict[contact], -1))>0)
 		#print(self.contacts, self.contacts2)
 		self.vx, self.vy, self.vz = np.dot(rot_speed, (self.body_vxyz[0],self.body_vxyz[1],self.body_vxyz[2]))
 
-		if self.args.num_robots > 1:
+		if self.args.num_robots > 1 and self.args.insert_robot2:
 			rot_speed2 = np.array(
 			[[np.cos(-self.yaw2), -np.sin(-self.yaw2), 0],
 				[np.sin(-self.yaw2), np.cos(-self.yaw2), 0],
@@ -1025,7 +1036,8 @@ class Env(EnvBasePB):
 		#Do not use this part if you already used it in reset
 		#Uncomment this part if you want to use dynamic inflation radius
 
-		m= 0.075+((abs(self.body_vxyz[0])+abs(self.body_vxyz[1]))*0.05)#0.075 #value of inflation radius
+		m= 0.075
+		# m= 0.075+((abs(self.body_vxyz[0])+abs(self.body_vxyz[1]))*0.05)#0.075 #value of inflation radius
 		
 		
 		x=(1.4/2)+m
@@ -1043,10 +1055,7 @@ class Env(EnvBasePB):
 		  		(-x,-y,z),
 		  		(-x,y,z),
 		  		(x,y,z)]
-		
-		
-		self.lineId1 = [-1]*4  # initialize with an invalid ID for lines around robots
-		self.lineId2 = [-1]*4 
+
 		
 		# ########################
 		self.intersection = False
@@ -1171,6 +1180,23 @@ class Env(EnvBasePB):
 		# robot2_avoid_angle = np.arctan2(math.sqrt(0.7**2 + self.yaw2**2), self.dist_to_robot2)
 		# print("robot2_avoid_anglesqrt",robot2_avoid_angle*(180/np.pi))
 		# print(self.yaw2)
+
+		rayLen = 2
+		mat = p.getMatrixFromQuaternion(self.orn)
+		dir = [mat[0], mat[3], mat[6]]
+		lines_from = []
+		lines_to = []
+		for n, line_from in enumerate(self.robot1_bbox[:2]):
+			line_to = [line_from[0] + dir[0] * rayLen, line_from[1] + dir[1] * rayLen, line_from[2] + dir[2] * rayLen]
+			line_from = [self.body_xyz[0] + dir[0] * 0.5, self.body_xyz[1] + dir[1] * 0.5, self.body_xyz[2] + dir[2] * 0.5]
+			lines_from.append(line_from)
+			lines_to.append(line_to)
+		if self.args.debug:
+			for n, (line_to, line_from) in enumerate(zip(lines_from, lines_to)):
+				self.ray_line[n] = p.addUserDebugLine(line_from, line_to, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.ray_line[n])
+		hits = p.rayTestBatch(lines_from, lines_to)
+		self.hit = [hits[0][0] > 0, hits[1][0] > 0]
+
 
 	def world_to_robot(self, robot_yaw, robot, world):
 		x,y = world[0] - robot[0], world[1] - robot[1]                       #longitudinal distance
