@@ -5,14 +5,14 @@ import pybullet as p
 import time
 from gym import spaces
 from collections import deque
-import cv2
+
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 import math
 import random
-from utils.terrain import Hfield, TerrainGen
+
 from assets.env_base_pb import EnvBasePB
-import pandas as pd
+
 
 
 #Currently, we are commenting our work on inlation radius. We will consider our inflation radius work before testing phase.
@@ -51,12 +51,12 @@ class Env(EnvBasePB):
 		else:
 			self.ac_size = 2
 			if self.args.num_robots > 1:
-				self.ob_size = 11
+				self.ob_size = 18
 			else:
-				self.ob_size = 7
+				self.ob_size = 6
 		self.Kp = 400
 		self.initial_Kp = self.Kp
-		self.a=4.0
+		self.a=6.0
 		self.b=0.5
 		
 		self.action_multiplier = 0.1 
@@ -314,7 +314,8 @@ class Env(EnvBasePB):
 
 
 		# self.a is the fixed value of unit ( how far from the line) and self.b is the step size ( Here, step size is 0.5 unit)
-		# print("static robot distance from trajectory",self.a-self.b,"and cur_success", self.cur_success)
+		#print("static robot distance from trajectory",self.a-self.b,"and cur_success", self.cur_success)
+		#print("cur_success", self.cur_success)	
 		if self.args.num_robots > 1 and self.args.cur and self.check_for_success():
 			if self.a-self.b == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
 				self.b = self.a
@@ -357,7 +358,7 @@ class Env(EnvBasePB):
 
 		self.cur_time = 0
 		self.total_reward = 0
-        # Time to take single step
+		# Time to take single step
 		#print(list(self.pos))
 		postuple= tuple(self.pos)
 		allowance = 0.05 # allowance for flexibility in avoiding robot2
@@ -450,11 +451,25 @@ class Env(EnvBasePB):
 		# This is an expert function
 		# ===========================
 		exp_actions = [0.0]*2
-		if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
-			exp_actions[0] = 0.25
-		else:	
-			exp_actions[0] = 0.0
-		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+
+		if self.args.num_robots > 1:
+			if abs(self.heading_error) < 0.5 and self.dist_r1_r2 >1.5 and self.dist_to_wp > 1.0:
+				exp_actions[0] = 0.25
+				exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+			
+			elif abs(self.heading_error) < 1.5 and self.dist_r1_r2 <1.5 and self.dist_to_wp > 1.0:
+				exp_actions[0] = 0.04
+				exp_actions[1] = -0.5*np.clip(self.heading_error_obs, -1, 1)
+			else:	
+				exp_actions[0] = 0.0
+				exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+      
+		else:
+			if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
+				exp_actions[0] = 0.25
+			else:	
+				exp_actions[0] = 0.0
+			exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
 		
 		if self.args.just_expert or self.args.cur:
 			applied_actions = (self.Kp/self.initial_Kp) * np.array(exp_actions)
@@ -499,9 +514,9 @@ class Env(EnvBasePB):
 
 	def return_state(self):
 		if self.args.num_robots > 1:
-			return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.yaw, self.vx, self.yaw_vel] + list(self.body_xyz2) + [self.yaw2])
+			return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3])
 		else:
-			return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.yaw, self.vx, self.yaw_vel])
+			return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel])
 
 	def get_reward_1(self):
 		"""
@@ -523,6 +538,7 @@ class Env(EnvBasePB):
 		if abs(self.heading_error) < 0.5:
 			goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
 		heading = 0.25*np.exp(-0.5*self.heading_error**2)
+		#heading_obs = np.exp(-0.5*self.heading_error_obs**2)
 		neg = 0
 		if self.vx < 0:
 			neg = 0.25*self.vx 
@@ -533,7 +549,7 @@ class Env(EnvBasePB):
 		# goal = 1.5*np.exp(-10*(3.0 - self.heading_vx)**2)
 		# neg = 0.25*self.vx if self.vx < 0 else 0
 		# heading_obs = np.exp(-0.5*self.heading_error_obs**2)
-		#print(goal, heading, heading_obs)
+		#print("goal", goal, "h", heading, "hO", heading_obs, "ng", neg)
 		# reward = 1.0 * goal + 0.2 * heading #- 0.2 * heading_obs
 		reward = goal + neg + heading
 		# reward = goal + heading 
@@ -594,12 +610,79 @@ class Env(EnvBasePB):
 		
 		#print(self.contacts)
 
-		# if dist_to_goal <1:  #(later)
-		# 	reward =50 
-		# if dist_to_goal < 0.5:
-		# 	reward = 100
-		# if dist_to_goal < 0.1:
-		# 	reward = 200
+
+		#######################
+		#uncomment this part if inlation radius is used
+		if self.intersection:   #Multi RObot Collision
+			done=True
+			print("Multi_Robot_Collision",done)
+		######################
+		
+		if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+			done=True
+			#print("Hit_Obstacle",done)
+		if self.tipped == True:
+			done = True
+
+
+		return reward, done
+
+	def get_reward_2(self):
+		"""
+		Reward Function 1
+		"""
+		#reward = 1.5*np.exp(-2.5*max(0, self.target_speed - self.vx)**2)
+		#done = False
+		done=False
+		
+		dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+		#print(dist_to_goal)
+
+		# if self.dist_to_robot2 < 2.0:                  #robot1 close to robot 2  distance < x
+		# 	goal = np.exp(-0.5*self.dist_to_wp)
+		# elif abs(self.heading_error) < 0.5:
+		# 	goal = np.exp(-0.5*self.dist_to_wp)
+		# else:	
+		goal = 0
+		heading = 0.25*np.exp(-0.5*self.heading_error**2)
+		if self.dist_r1_r2 < 1.5 and abs(self.heading_error) < 1.6:
+			goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+			heading = -0.25*np.exp(-0.5*self.heading_error_obs**2)
+		elif self.dist_r1_r2 > 1.5 and abs(self.heading_error) < 0.5:
+			goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+			heading = 0.25*np.exp(-0.5*self.heading_error**2)
+		#heading_obs = 0.25*np.exp(-0.5*self.heading_error_obs**2)
+		neg = 0
+		if self.vx < 0:
+			neg = 0.25*self.vx 
+		# if self.vx > 0 and self.heading_vx > 0:
+			# goal = 0.5*np.clip(self.heading_vx, 0, 3)
+
+		# goal = 1.5*np.exp(-10*(0.5 - self.heading_vx)**2)
+		# goal = 1.5*np.exp(-10*(3.0 - self.heading_vx)**2)
+		# neg = 0.25*self.vx if self.vx < 0 else 0
+		# heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+		#print("goal", goal, "h", heading, "hO", heading_obs, "ng", neg)
+		# reward = 1.0 * goal + 0.2 * heading #- 0.2 * heading_obs
+		reward = goal + neg + heading
+		# reward = goal + heading 
+		#print("reward", reward)
+		
+
+		self.ep_reward_dict["Reward/goal"] += goal
+		self.ep_reward_dict["Reward/neg"] += neg
+		self.ep_reward_dict["Reward/heading"] += heading
+		#self.ep_reward_dict["Reward/heading_obs"] += heading_obs
+		
+		
+		
+		
+		distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+		self.ep_reward_dict["Distance to Goal Improved"] += distance_improve
+		
+		
+		self.prev_dist_to_goal = dist_to_goal
+		
 
 
 		#######################
@@ -618,7 +701,7 @@ class Env(EnvBasePB):
 
 		return reward, done
 	
-	def get_reward_2(self):
+	def get_reward_2_old(self):
 		"""
 		Reward Function 2
 		"""
@@ -1036,7 +1119,18 @@ class Env(EnvBasePB):
 
 		#Uncomment above section if you want to use inflation radius
 			   
-		#print(self.robot1_bbox[0])
+		#print(tuple(self.robot1_bbox[0]))
+		if self.args.num_robots > 1:
+			#self.c_robot1 = [(tuple(self.robot1_bbox[0])),(tuple(self.robot1_bbox[1])),(tuple(self.robot1_bbox[2])),(tuple(self.robot1_bbox[3]))]
+			self.c_robot1 = [(tuple(self.robot1_bbox[0])),(tuple(self.robot1_bbox[1]))]
+			self.c_robot2 = [(tuple(self.robot2_bbox[0])),(tuple(self.robot2_bbox[1])),(tuple(self.robot2_bbox[2])),(tuple(self.robot2_bbox[3]))]
+  
+			self.dist_r1_r2 = self.min_distance_corners(self.c_robot1, self.c_robot2)
+			#print("Minimum Distance between the corner points of robot1 and robot2:", self.dist_r1_r2)
+  
+  
+  
+		
 		
 
 		# print "Collision detected!" if the lines are intersecting
@@ -1100,3 +1194,16 @@ class Env(EnvBasePB):
 			angle_error = angle_error - np.pi
 
 		return angle_error, target_angle
+
+	def min_distance_corners(self, corners_robot1, corners_robot2):
+	
+
+		min_distance = float('inf')
+
+		for corner1 in corners_robot1:
+			for corner2 in corners_robot2:
+				dist = math.sqrt((corner2[0] - corner1[0]) ** 2 + (corner2[1] - corner1[1]) ** 2)
+				#print(dist)
+				min_distance = min(min_distance, dist)
+
+		return min_distance
