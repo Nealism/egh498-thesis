@@ -1253,6 +1253,9 @@ class Env(EnvBasePB):
 		#print(hits[0])
 			self.hit = [hits[0][0] > 0, hits[1][0] > 0]
 			print(self.hit)
+   
+		#self.gap=self.gap_generator(length=1, width=0.5,height=0.015,pos=self.pos2,orn=(0.0,0.0,0.0,1.0),wall_length = 2,lineId=[-1]*4,lineIdgap=[-1]*4,lineIdA=[-1]*4,lineIdB=[-1]*4)
+		#print(self.orn2)
   
 
 
@@ -1416,3 +1419,88 @@ class Env(EnvBasePB):
 							intersection_point = (x1 + uA * (x2 - x1), y1 + uB * (y2 - y1))
 							intersection_p.append(intersection_point)
 		return intersection, intersection_p
+
+	def gap_generator(self,length, width,height,pos,orn,wall_length,lineId,lineIdgap,lineIdA,lineIdB):
+	 
+		x=length+wall_length
+		y=width
+		z=height
+		# get the self.corners of the bounding box
+		corners = [(x, y, z),
+				  (x,-y,z),
+				  (-x,-y,z),
+				  (-x,y,z),
+				  (x,y,z)]
+	 
+		robot_bbox=[]
+
+		for i in range(len(corners)-1):
+				
+			start1 = p.multiplyTransforms(pos, orn, corners[i], [0, 0, 0, 1])[0]
+
+			robot_bbox.append(list(start1))
+
+			end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
+			# if self.args.debug:
+			# 		lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[0, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+		x=length
+		cornersgap = [(x, y, z),
+				  (x,-y,z),
+				  (-x,-y,z),
+				  (-x,y,z),
+				  (x,y,z)]
+		# x=4
+		# cornersA = [(x, y, z),
+		# 		  (x,-y,z),
+		# 		  (-robot_bbox[1][0],-y,z),
+		# 		  (-robot_bbox[0][0],y,z),
+		# 		  (x,y,z)]
+	 
+		robot1_bbox=[]
+
+		for i in range(len(cornersgap)-1):
+				
+			start1 = p.multiplyTransforms((pos), orn, cornersgap[i], [0, 0, 0, 1])[0]
+
+			robot1_bbox.append(list(start1))
+
+			end1 = p.multiplyTransforms((pos), orn, cornersgap[i+1], [0, 0, 0, 1])[0]
+			# if self.args.debug:
+			# 		lineIdgap[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[0.2, 0.5, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+     
+		cornersA = [robot1_bbox[1],
+				  robot1_bbox[0],
+				  robot_bbox[0],
+				  robot_bbox[1],
+				  robot1_bbox[1]]
+		
+		robot2_bbox=[]
+
+		for i in range(len(cornersA)-1):
+				
+			start1 = cornersA[i]
+
+			robot2_bbox.append(list(start1))
+
+			end1 = cornersA[i+1]
+			if self.args.debug:
+					lineIdA[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdA[i])
+     
+		cornersB = [robot1_bbox[2],
+				  robot1_bbox[3],
+				  robot_bbox[3],
+				  robot_bbox[2],
+				  robot1_bbox[2]]
+		
+		robot3_bbox=[]
+
+		for i in range(len(cornersB)-1):
+				
+			start1 = cornersB[i]
+
+			robot3_bbox.append(list(start1))
+
+			end1 = cornersB[i+1]
+			if self.args.debug:
+					lineIdB[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdB[i])
+		return robot2_bbox,robot3_bbox
