@@ -44,6 +44,8 @@ def get_defaults():
     parser.add_argument('--cmd_ranges', type=str, default="(1, 1, 1)")
     parser.add_argument('--one_wp_per_ep', default=False, action="store_true")
     parser.add_argument('--insert_robot2', default=False, action="store_true")
+    parser.add_argument('--insert_box', default=False, action="store_true")
+    parser.add_argument('--obstacle_avoidance', default=False, action="store_true")
 
     # ========================================================================
     # PyBullet biped environment - TODO: move to config and cleanup

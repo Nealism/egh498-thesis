@@ -56,6 +56,7 @@ class Env(EnvBasePB):
 				self.ob_size = 6
 		self.Kp = 400
 		self.initial_Kp = self.Kp
+
 		# self.a=6.0
 		# self.b=0.5
 
@@ -133,6 +134,9 @@ class Env(EnvBasePB):
 			self.contact_list = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
 			if self.args.num_robots > 1 and self.args.insert_robot2:
 				robot2=self.load_urdf_robot2("./assets/urdfs/dynamic_titan.urdf")
+			if self.args.insert_box:
+				wall_dir= "Wall_URDF/"
+				self.square = p.loadURDF(wall_dir + "square.urdf", [0,2,0.5], useFixedBase=True)
 			#robot2=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
 			self.contact_list2 = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
 			wall_dir= "Wall_URDF/"
@@ -151,6 +155,9 @@ class Env(EnvBasePB):
 			state_object=[np.random.uniform(-2, 2),np.random.uniform(-3, -3.5),0.00]
 			wall_dir= "Wall_URDF/"
 			self.Goal = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=state_object)
+			
+			
+			
 			
 			#p.setCollisionFilterPair(self.Id, self.Id2, -1, -1, 0)
 			
@@ -251,6 +258,7 @@ class Env(EnvBasePB):
 		
 		# self.lineId1 = [-1]*4  # initialize with an invalid ID for lines around robots
 		# self.lineId2 = [-1]*4 
+		
 		p.removeAllUserDebugItems()		
 
 
@@ -258,6 +266,9 @@ class Env(EnvBasePB):
 
 
 		p.removeBody(self.Goal)
+		# p.removeBody(self.Goal2)
+		# p.removeBody(self.Goal3)
+		
 		#state_object= [random.uniform(-4,4),random.uniform(-4,0),0.00]
 		#state_object=[-2,-3,0.00]
 
@@ -268,6 +279,7 @@ class Env(EnvBasePB):
 		wall_dir= "Wall_URDF/"
 		self.Goal = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=state_object)
 		p.setCollisionFilterGroupMask(self.Goal, -1, collisionFilterGroup=0, collisionFilterMask=0)
+		
 		
 		
 		if self.rank == 0 and self.args.record_sim and self.episodes > 0:
@@ -353,14 +365,20 @@ class Env(EnvBasePB):
 		# print("robot_positions", pos2)
 		# print("robot_state")
 		# print(self.state_robot2)
-
+		self.lineId = [-1]
+		self.lineId_object= -1
+		self.lineId_r2_big = [-1]*4 
 		self.lineId1 = [-1]*4  # initialize with an invalid ID for lines around robots
+		self.lineId12 = [-1]*4
 		self.lineId2 = [-1]*4 
+		self.lineId_box1 = [-1]*4
+		self.lineId_box1big = [-1]*4
 		self.ray_line = [-1]*2
 		self.hit = False
 
 		self.get_observation()
-		
+		#self.Goal2 = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=self.waypoint)
+		# self.Goal3 = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=self.way_point2)
 		self.episodes += 1
 
 		self.cur_time = 0
@@ -383,7 +401,7 @@ class Env(EnvBasePB):
 	def move_goal_and_static_robot(self, initial_x, initial_y, yaw):
 
 		# Get a new goal position, make sure it is far enough away from the robot. 
-		state_object=[np.random.uniform(-4, 4), np.random.uniform(-4, 4), 0.00]
+		state_object=[np.random.uniform(-7, 7), np.random.uniform(-8, -6), 0.00]
 		dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
 		while dist < 3:
 			state_object=[np.random.uniform(-4, 4), np.random.uniform(-4, 4), 0.00]
@@ -392,7 +410,7 @@ class Env(EnvBasePB):
 		# Estimate time to target, velocity in steps + time to turn + current steps + buffer for going around a robot / acceleration
 		# Keep an eye on this, need to make sure there's enough time to get to the goal
 		self.heading_error, _ = self.calc_angle_error(state_object, [initial_x, initial_y], yaw)
-		self.time_to_target = dist / self.timeStep + abs(self.heading_error) / self.timeStep + self.steps + 500
+		self.time_to_target = dist / self.timeStep + abs(self.heading_error) / self.timeStep + self.steps + 50000
 		
 		#Equation of the line trajectory from moving robot to goal
 
@@ -419,7 +437,7 @@ class Env(EnvBasePB):
 		initial_y2 = target_dist * np.sin(target_angle) + rand_y
 
 		if self.args.debug:
-			p.addUserDebugLine((initial_x, initial_y, 0), (state_object[0], state_object[1], 0), lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=5)
+			self.lineId=p.addUserDebugLine((initial_x, initial_y, 0), (state_object[0], state_object[1], 0), lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=5)
 			p.addUserDebugLine((rand_x, rand_y, 0), (initial_x2, initial_y2, 0), lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=5)
 
 		#initial_y2 = np.random.uniform(0, 0.5)   
@@ -442,6 +460,11 @@ class Env(EnvBasePB):
 			self.set_position(self.pos2, self.orn2, robot_id=self.Id2)
 			self.state_robot2, self.orn_robot2 = p.getBasePositionAndOrientation(self.Id2)
 
+		# Move the square box
+		if self.args.insert_box:
+			self.set_position(self.pos2, self.orn2, robot_id=self.square)
+			self.state_box, self.orn_box = p.getBasePositionAndOrientation(self.square)
+
 
 	def twist_to_tracks(self, actions):
 		radius = 0.14
@@ -463,7 +486,50 @@ class Env(EnvBasePB):
 		# ===========================
 		exp_actions = [0.0]*2
 
-		# if self.args.num_robots > 1:
+		#if self.args.num_robots > 1:
+		# 	if self.hit[0] == True:
+		# 		exp_actions[0] = 0.0
+		# 		exp_actions[1] = -0.5
+		# 	elif self.hit[1] == True:
+		# 		exp_actions[0] = 0.0
+		# 		exp_actions[1] = 0.5
+		# 	elif abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
+		# 		exp_actions[0] = 0.25
+		# 		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+		# 	else:	
+		# 		exp_actions[0] = 0.0
+		# 		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+	  
+		if self.args.obstacle_avoidance:
+		####################_______WAY_POINT_ATTEMPT_FAILED______######################
+			if self.intersection_line_square== True and abs(self.heading_error) < 1.6: 
+				# self.square_bigbox=self.bbox_generator_box(3,0.035,self.pos2,self.orn2,self.lineId_box1big)
+				# self.square_bigbox.append(self.square_bigbox[0])
+				# self.corner_robot1 = [(tuple(self.robot1_bbox[0])),(tuple(self.robot1_bbox[1]))]
+				# self.corner_square_bigbox= [(tuple(self.square_bigbox[0])),(tuple(self.square_bigbox[1])),(tuple(self.square_bigbox[2])),(tuple(self.square_bigbox[3]))]
+				# _,_,self.way_point1,self.way_point2= self.min_distance_corners(self.corner_robot1 , self.corner_square_bigbox)
+				# self.heading_error_wp1, _ = self.calc_angle_error(self.way_point1, self.pos, self.yaw)
+				# self.heading_error_wp2, _ = self.calc_angle_error(self.way_point2, self.pos, self.yaw)
+				exp_actions[0] = 0.1
+				exp_actions[1] = 0.5#*np.clip(self.heading_error_wp1, -1, 1)
+				# if self.args.obstacle_avoidance:
+				# 	exp_actions[0] = 0.2
+				# 	exp_actions[1] = 0.5*np.clip(self.heading_error_wp2, -1, 1)
+			elif self.intersection_corner1_square == True and abs(self.heading_error) < 1.6:
+				exp_actions[0] = 0.06
+				exp_actions[1] = -0.5	
+			elif self.intersection_corner2_square ==True and abs(self.heading_error) < 1.6:
+				exp_actions[0] = 0.06
+				exp_actions[1] = 0.5
+			elif abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
+				exp_actions[0] = 0.25
+				exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+			else:	
+				exp_actions[0] = 0.0
+				exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+   
+		######################____OLD_IS_GOLD___#################################
+  
 		# 	if abs(self.heading_error) < 0.5 and self.dist_r1_r2 >1.5 and self.dist_to_wp > 1.0:
 		# 		exp_actions[0] = 0.25
 		# 		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
@@ -474,13 +540,13 @@ class Env(EnvBasePB):
 		# 	else:	
 		# 		exp_actions[0] = 0.0
 		# 		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
-      
-		# else:
-		if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
-			exp_actions[0] = 0.25
-		else:	
-			exp_actions[0] = 0.0
-		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+	  
+		else:
+			if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
+				exp_actions[0] = 0.25
+			else:	
+				exp_actions[0] = 0.0
+			exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
 		
 		if self.args.just_expert or self.args.cur:
 			applied_actions = (self.Kp/self.initial_Kp) * np.array(exp_actions)
@@ -559,7 +625,7 @@ class Env(EnvBasePB):
 		# goal = 1.5*np.exp(-10*(0.5 - self.heading_vx)**2)
 		# goal = 1.5*np.exp(-10*(3.0 - self.heading_vx)**2)
 		# neg = 0.25*self.vx if self.vx < 0 else 0
-		# heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+		# heading_obs = np.exp(-0.5*self.heading_error_obs**2)exper
 		#print("goal", goal, "h", heading, "hO", heading_obs, "ng", neg)
 		# reward = 1.0 * goal + 0.2 * heading #- 0.2 * heading_obs
 		reward = goal + neg + heading
@@ -624,14 +690,17 @@ class Env(EnvBasePB):
 
 		#######################
 		#uncomment this part if inlation radius is used
-		if self.intersection:   #Multi RObot Collision
+		if self.args.num_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
 			done=True
 			print("Multi_Robot_Collision",done)
+		if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+			done=True
+			print("Hit_Obstacle",done)
 		######################
 		
 		if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
 			done=True
-			#print("Hit_Obstacle",done)
+			#print("Hit_Wall",done)
 		if self.tipped == True:
 			done = True
 
@@ -698,9 +767,9 @@ class Env(EnvBasePB):
 
 		#######################
 		#uncomment this part if inlation radius is used
-		if self.intersection:   #Multi RObot Collision
-			done=True
-			print("Multi_Robot_Collision",done)
+		# if self.args.num_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+		# 	done=True
+		# 	print("Multi_Robot_Collision",done)
 		######################
 		
 		if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
@@ -1036,95 +1105,72 @@ class Env(EnvBasePB):
 		#Do not use this part if you already used it in reset
 		#Uncomment this part if you want to use dynamic inflation radius
 
-		m= 0.075
-		# m= 0.075+((abs(self.body_vxyz[0])+abs(self.body_vxyz[1]))*0.05)#0.075 #value of inflation radius
-		
-		
-		x=(1.4/2)+m
-		y=(0.78/2)+m
-		z=0.235
-		# get the self.corners of the bounding box
-		self.corners1 = [(x, y, z),
-		  		(x,-y,z),
-		  		(-x,-y,z),
-		  		(-x,y,z),
-		  		(x,y,z)]
-		
-		self.corners2 = [(x, y, z),
-		  		(x,-y,z),
-		  		(-x,-y,z),
-		  		(-x,y,z),
-		  		(x,y,z)]
-
+		# m= 0.075
+		# # m= 0.075+((abs(self.body_vxyz[0])+abs(self.body_vxyz[1]))*0.05)#0.075 #value of inflation radius
 		
 		# ########################
-		self.intersection = False
+		#self.intersection = False
+		# 	# #This part is for generating bounding box around any object except robots
+		#self.square_bbox=self.bbox_generator(self.square, radius=2, height=0.5, lineId=[-1]*4)
+		if self.args.obstacle_avoidance:
+			self.square_bbox=self.bbox_generator_box(0.35,0.011,self.pos2,self.orn2,self.lineId_box1)
+			self.square_bbox.append(self.square_bbox[0])
+			self.robot1_bbox=self.bbox_generator_titan(0.075,self.pos,self.orn,self.lineId1)
+			self.robot1_bbox.append(self.robot1_bbox[0])
+			#print(self.robot1_bbox[0][2],self.square_bbox[0][2])
+
+   
+			# To set robot collision with obstacle
+			self.intersection_r1_box,_= self.intersection_check(self.robot1_bbox,self.square_bbox)
+			
+   
+			   # check the intersection with middle line and obstacle
+			self.line1_points=(self.pos[0], self.pos[1], 0), (self.state_goal[0], self.state_goal[1], 0)
+			self.intersection_line_square,_= self.intersection_check(self.line1_points,self.square_bbox)
+			
+			# check the intersection with heading corner lines and obstacle
+			self.robot1_safe_box=self.bbox_generator_titan(0.8,self.pos,self.orn,self.lineId12, [.29,.45,.27])
+			self.robot1_safe_box.append(self.robot1_safe_box[0])
+			self.corner1_points=(self.robot1_safe_box[0][0], self.robot1_safe_box[0][1], 0), (self.state_goal[0], self.state_goal[1], 0)
+			self.intersection_corner1_square,_= self.intersection_check(self.corner1_points,self.square_bbox)
+			self.corner2_points=(self.robot1_safe_box[1][0], self.robot1_safe_box[1][1], 0), (self.state_goal[0], self.state_goal[1], 0)
+			self.intersection_corner2_square,_= self.intersection_check(self.corner2_points,self.square_bbox)
+   
+			   # print(self.int_point_square[0])
+			# self.waypoint = (self.int_point_square[0][0],self.int_point_square[0][1],0.05)
+			# print("way",self.waypoint)
+
+  
 		
 		if self.args.num_robots > 1:
 
-			# #This part is for setting inflation radious bounding box around robots
-			self.robot1_bbox=[]
-			self.robot2_bbox=[]
+		# 	# #This part is for setting inflation radious bounding box around robots
+		
+			self.robot1_bbox=self.bbox_generator_titan(0.075,self.pos,self.orn,self.lineId1)
+			self.robot2_bbox=self.bbox_generator_titan(0.075,self.pos2,self.orn2,self.lineId2)
+			#self.robot2_bbox=self.bbox_generator_titan2(0.0,self.pos2,self.orn2,self.lineId2)
 			
-
-
-			for i in range(len(self.corners1)-1):
-				
-				
-				start1 = p.multiplyTransforms(self.pos, self.orn, self.corners1[i], [0, 0, 0, 1])[0]
-				#print(list(start1))
-				#print(i, self.corners1[i])
-				self.robot1_bbox.append(list(start1))
-				#print(self.corners[i])
-					
-				#print(p.multiplyTransforms(pos, orn, self.corners[i], [0, 0, 0, 1]))
-				end1 = p.multiplyTransforms(self.pos, self.orn, self.corners1[i+1], [0, 0, 0, 1])[0]
-				if self.args.debug:
-					self.lineId1[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.lineId1[i])
-			
-			
-
-				#for j in range(len(self.corners2)-1):
-				start2 = p.multiplyTransforms(self.pos2, self.orn2, self.corners2[i], [0, 0, 0, 1])[0]
-				
-				self.robot2_bbox.append(list(start2))
-				#print(self.corners[i])
-				#print(p.multiplyTransforms(pos, orn, self.corners[i], [0, 0, 0, 1]))
-				end2 = p.multiplyTransforms(self.pos2, self.orn2, self.corners2[i+1], [0, 0, 0, 1])[0]
-				if self.args.debug:
-					self.lineId2[i]=p.addUserDebugLine(start2, end2, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.lineId2[i])
-					#print("robotA", start1, "robotB",start2)
-
+   
 			self.robot1_bbox.append(self.robot1_bbox[0])
 			self.robot2_bbox.append(self.robot2_bbox[0])
+			
+		
+		# 	# #This part is for generating big bounding box around robot2 to create way point
+			self.robot2_bigbox=self.bbox_generator_titan(1,self.pos2,self.orn2,self.lineId_r2_big)
+			self.robot2_bigbox.append(self.robot2_bigbox[0])
+
+
+			
+			self.intersection_r1_r2,_= self.intersection_check(self.robot1_bbox,self.robot2_bbox)
+
+   
+			#check intersection between mid line trajectory versus robot 2 master bounding box
+			self.line1_points=(self.pos[0], self.pos[1], 0), (self.state_goal[0], self.state_goal[1], 0)
+			self.intersection_line_r2,intersection_points= self.intersection_check(self.line1_points,self.robot2_bbox)
+			
 			# check for intersection between the two lines
-			# print(self.intersection)
-			for i in range(len(self.robot1_bbox)-1):
-				for j in range(len(self.robot2_bbox)-1):
-
-					#print(self.intersection)
-					x1,y1,z1=self.robot1_bbox[i]     #Rotating start coordinates for Robot 1
-					x2,y2,z2=self.robot1_bbox[i+1]   #Rotating end coordinates for Robot 1
-					x3,y3,z3=self.robot2_bbox[j]     #Rotating start coordinates for Robot 2
-					x4,y4,z4=self.robot2_bbox[j+1]   #Rotating end coordinates for Robot 2
-
-
-					if (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1) == 0:
-						
-						self.intersection = True
-						print("Denominator_Zero")
-					else:
-						uA = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
-						uB = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
-
-
-					# uA = ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3)) / ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
-					# uB = ((x3-x4)*(y1-y2) - (y3-y4)*(x1-x2)) / ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
-					#uA = ((end2[0]-start2[0])*(start1[1]-start2[1]) - (end2[1]-start2[1])*(start1[0]-start2[0])) / ((end2[1]-start2[1])*(end1[0]-start1[0]) - (end2[0]-start2[0])*(end1[1]-start1[1]))
-					#uB = ((end1[0]-start1[0])*(start1[1]-start2[1]) - (end1[1]-start1[1])*(start1[0]-start2[0])) / ((end2[1]-start2[1])*(end1[0]-start1[0]) - (end2[0]-start2[0])*(end1[1]-start1[1]))
-					#print("line1",uA,"line2", uB)
-						if 0 <= uA <= 1 and 0 <= uB <= 1:
-							self.intersection = True
+			#print(self.intersection_line_r2)
+			
 
 		#Uncomment above section if you want to use inflation radius
 			   
@@ -1133,9 +1179,16 @@ class Env(EnvBasePB):
 			#self.c_robot1 = [(tuple(self.robot1_bbox[0])),(tuple(self.robot1_bbox[1])),(tuple(self.robot1_bbox[2])),(tuple(self.robot1_bbox[3]))]
 			self.c_robot1 = [(tuple(self.robot1_bbox[0])),(tuple(self.robot1_bbox[1]))]
 			self.c_robot2 = [(tuple(self.robot2_bbox[0])),(tuple(self.robot2_bbox[1])),(tuple(self.robot2_bbox[2])),(tuple(self.robot2_bbox[3]))]
-  
-			self.dist_r1_r2 = self.min_distance_corners(self.c_robot1, self.c_robot2)
+			# self.c_robot2_bigbox= [(tuple(self.robot2_bigbox[0])),(tuple(self.robot2_bigbox[1])),(tuple(self.robot2_bigbox[2])),(tuple(self.robot2_bigbox[3]))]
+			# self.c_goal = [(tuple(self.state_goal))]
+			# #self.dist_r1_r2,_ = self.min_distance_corners(self.c_robot1, self.c_robot2)
+			# _,_,_,self.way_point2= self.min_distance_corners(self.c_goal , self.c_robot2_bigbox)
+			# _,_,self.way_point1,_ = self.min_distance_corners(self.c_robot1, self.c_robot2_bigbox)
+			#print("Waypoint1", self.way_point1, "Waypoint2", self.way_point2)
 			#print("Minimum Distance between the corner points of robot1 and robot2:", self.dist_r1_r2)
+			#print(tuple(self.state_goal))
+			
+   
   
   
   
@@ -1180,22 +1233,27 @@ class Env(EnvBasePB):
 		# robot2_avoid_angle = np.arctan2(math.sqrt(0.7**2 + self.yaw2**2), self.dist_to_robot2)
 		# print("robot2_avoid_anglesqrt",robot2_avoid_angle*(180/np.pi))
 		# print(self.yaw2)
-
-		rayLen = 2
-		mat = p.getMatrixFromQuaternion(self.orn)
-		dir = [mat[0], mat[3], mat[6]]
-		lines_from = []
-		lines_to = []
-		for n, line_from in enumerate(self.robot1_bbox[:2]):
-			line_to = [line_from[0] + dir[0] * rayLen, line_from[1] + dir[1] * rayLen, line_from[2] + dir[2] * rayLen]
-			line_from = [self.body_xyz[0] + dir[0] * 0.5, self.body_xyz[1] + dir[1] * 0.5, self.body_xyz[2] + dir[2] * 0.5]
-			lines_from.append(line_from)
-			lines_to.append(line_to)
-		if self.args.debug:
-			for n, (line_to, line_from) in enumerate(zip(lines_from, lines_to)):
-				self.ray_line[n] = p.addUserDebugLine(line_from, line_to, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.ray_line[n])
-		hits = p.rayTestBatch(lines_from, lines_to)
-		self.hit = [hits[0][0] > 0, hits[1][0] > 0]
+		if self.args.num_robots > 1:
+			rayLen = 3
+			mat = p.getMatrixFromQuaternion(self.orn)
+		#print(self.orn)
+			dir = [mat[0], mat[3], mat[6]]
+			lines_from = []
+			lines_to = []
+			for n, line_from in enumerate(self.robot1_bbox[:2]):
+				line_to = [line_from[0] + dir[0] * rayLen, line_from[1] + dir[1] * rayLen, line_from[2] + dir[2] * rayLen]
+				line_from = [line_from[0] + dir[0] * 0.5, line_from[1] + dir[1] * 0.5, line_from[2] + dir[2] * 0.5]
+				#line_from = [self.body_xyz[0] + dir[0] * 0.5, self.body_xyz[1] + dir[1] * 0.5, self.body_xyz[2] + dir[2] * 0.5]
+				lines_from.append(line_from)
+				lines_to.append(line_to)
+			if self.args.debug:
+				for n, (line_to, line_from) in enumerate(zip(lines_from, lines_to)):
+					self.ray_line[n] = p.addUserDebugLine(line_from, line_to, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.ray_line[n])
+			hits = p.rayTestBatch(lines_from, lines_to)
+		#print(hits[0])
+			self.hit = [hits[0][0] > 0, hits[1][0] > 0]
+			print(self.hit)
+  
 
 
 	def world_to_robot(self, robot_yaw, robot, world):
@@ -1225,11 +1283,136 @@ class Env(EnvBasePB):
 	
 
 		min_distance = float('inf')
+		second_min_distance = float('inf')
+		min_point = None
+		second_min_point = None
 
 		for corner1 in corners_robot1:
 			for corner2 in corners_robot2:
-				dist = math.sqrt((corner2[0] - corner1[0]) ** 2 + (corner2[1] - corner1[1]) ** 2)
+				distance = math.sqrt((corner2[0] - corner1[0]) ** 2 + (corner2[1] - corner1[1]) ** 2)
 				#print(dist)
-				min_distance = min(min_distance, dist)
+				#min_distance = min(min_distance, dist)
+				if distance < min_distance:
+					second_min_distance = min_distance
+					second_min_point = min_point
+					min_distance = distance
+					min_point = corner2
+				elif distance < second_min_distance:
+					second_min_distance = distance
+					second_min_point = corner2
 
-		return min_distance
+		return min_distance, second_min_distance, min_point, second_min_point
+
+	def bbox_generator_titan(self,radius,pos,orn,lineId,lineColorRGB=[1, 0, 0]):
+	 
+		x=(1.4/2)+radius
+		y=(0.78/2)+radius
+		z=0.235
+		# get the self.corners of the bounding box
+		corners = [(x, y, z),
+				  (x,-y,z),
+				  (-x,-y,z),
+				  (-x,y,z),
+				  (x,y,z)]
+	 
+		robot_bbox=[]
+
+		for i in range(len(corners)-1):
+				
+			start1 = p.multiplyTransforms(pos, orn, corners[i], [0, 0, 0, 1])[0]
+
+			robot_bbox.append(list(start1))
+
+			end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
+			if self.args.debug:
+					lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB, lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+		return robot_bbox
+
+	def bbox_generator_box(self,radius,height,pos,orn,lineId):
+	 
+		x=(0.5/2)+radius
+		y=(0.5/2)+radius
+		z=height
+		# get the self.corners of the bounding box
+		corners = [(x, y, z),
+				  (x,-y,z),
+				  (-x,-y,z),
+				  (-x,y,z),
+				  (x,y,z)]
+	 
+		robot_bbox=[]
+
+		for i in range(len(corners)-1):
+				
+			start1 = p.multiplyTransforms(pos, orn, corners[i], [0, 0, 0, 1])[0]
+
+			robot_bbox.append(list(start1))
+
+			end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
+			if self.args.debug:
+					lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+		return robot_bbox
+
+	def bbox_generator(self,object_id,radius,height,lineId):
+	 
+		aabbMin, aabbMax = p.getAABB(object_id)
+		pos, orn = p.getBasePositionAndOrientation(object_id)
+		# get the self.corners of the bounding box
+		r = radius #inflation radius
+		h= height #height of the box with the plane
+		# get the corners of the bounding box
+		corners = [(aabbMin[0]*r, aabbMin[1]*r, aabbMin[2]*h),
+				(aabbMin[0]*r, aabbMax[1]*r, aabbMin[2]*h),
+				(aabbMax[0]*r, aabbMax[1]*r, aabbMin[2]*h),
+				(aabbMax[0]*r, aabbMin[1]*r, aabbMin[2]*h),
+				(aabbMin[0]*r, aabbMin[1]*r, aabbMin[2]*h)]
+	 
+		object_bbox=[]
+
+		for i in range(len(corners)-1):
+				
+			start1 = p.multiplyTransforms(pos, orn, corners[i], [0, 0, 0, 1])[0]
+
+			object_bbox.append(list(start1))
+			print(object_bbox)
+
+			end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
+			if self.args.debug:
+					lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+		return object_bbox
+
+	def intersection_check(self, line1,line2):
+		intersection = False
+		intersection_p=[]
+		for i in range(len(line1)-1):
+				for j in range(len(line2)-1):
+
+					#print(self.intersection)
+					x1,y1,z1=line1[i]     #Rotating start coordinates for Robot 1
+					x2,y2,z2=line1[i+1]   #Rotating end coordinates for Robot 1
+					x3,y3,z3=line2[j]     #Rotating start coordinates for Robot 2
+					x4,y4,z4=line2[j+1]   #Rotating end coordinates for Robot 2
+
+
+					if (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1) == 0:
+						
+						intersection = True
+						print("Denominator_Zero")
+					else:
+						uA = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
+						uB = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
+						#print("uA",uA)
+						#print("uB",uB)
+	  
+
+
+					# uA = ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3)) / ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
+					# uB = ((x3-x4)*(y1-y2) - (y3-y4)*(x1-x2)) / ((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
+					#uA = ((end2[0]-start2[0])*(start1[1]-start2[1]) - (end2[1]-start2[1])*(start1[0]-start2[0])) / ((end2[1]-start2[1])*(end1[0]-start1[0]) - (end2[0]-start2[0])*(end1[1]-start1[1]))
+					#uB = ((end1[0]-start1[0])*(start1[1]-start2[1]) - (end1[1]-start1[1])*(start1[0]-start2[0])) / ((end2[1]-start2[1])*(end1[0]-start1[0]) - (end2[0]-start2[0])*(end1[1]-start1[1]))
+					#print("line1",uA,"line2", uB)
+						if 0 <= uA <= 1 and 0 <= uB <= 1:
+							intersection = True
+							intersection_point = (x1 + uA * (x2 - x1), y1 + uB * (y2 - y1))
+							intersection_p.append(intersection_point)
+		return intersection, intersection_p
