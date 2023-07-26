@@ -14,7 +14,7 @@ def run(args):
     if args.hpc:
         path_home = "/hpc-scratch/" + home.split("/")[-1]
     else:
-        path_home = "/scratch1/" + home.split("/")[-1]
+        path_home = "/scratch3/" + home.split("/")[-1]
 
     path_home += "/results/" + args.env + "/" + args.exp + "/"
 
