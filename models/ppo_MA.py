@@ -151,11 +151,7 @@ class PPOBuffer:
         self.path_start_idx = self.ptr
 
 
-    class MA_PPOBuffer:
-        def __init__(self, args.num_robots):
-            self.buffers=[PPOBuffer for Robot in args.num_robots]
-        def store(self, obs, acts, rews, vals, logps):
-            for buffer, ob, act,rew,val,logp in zip(self.buffers, obs,acts,rews,vals,logps)
+    
 
     def get(self):
         """
@@ -171,6 +167,18 @@ class PPOBuffer:
         data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf,
                     adv=self.adv_buf, logp=self.logp_buf)
         return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in data.items()}
+    
+class MA_PPOBuffer:
+        def __init__(self, args.num_robots):
+            self.buffers=[PPOBuffer for Robot in args.num_robots]
+            
+        def store(self, obs, acts, rews, vals, logps):
+            for buffer, ob, act,rew,val,logp in zip(self.buffers, obs,acts,rews,vals,logps):
+                buffer.store(ob,act,rew,val,logp)
+
+        def finish_path(self, vals):
+            for buffer,val in zip(self.buffers,vals):
+                buffer.finish_path(val)
 
 
 
