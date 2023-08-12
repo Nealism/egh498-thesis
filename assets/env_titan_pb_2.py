@@ -59,7 +59,7 @@ class Env(EnvBasePB):
         self.Kp = 400
         self.initial_Kp = self.Kp
 
-        if self.args.obstacle_avoidance and self.args.cur:
+        if self.args.obstacle_avoidance and self.args.cur and self.args.collision_likelihood_curr:
             self.a=5.0
             self.b=0.5
         else:
@@ -67,22 +67,35 @@ class Env(EnvBasePB):
             self.a=0.0
             self.b=0.0
             
-        if self.args.gap_avoidance and self.args.cur:
+        if self.args.gap_avoidance and self.args.cur and self.args.gap_curr:
             #parameters for gap curr
             self.max_gap_width=5.0
-            self.increase_gap_width=0.5
+            self.decrease_gap_width=0.5
             self.final_gap_width=1
             #parameters for tunnel curr
-            self.max_tunnel_depth = 20
+            self.max_tunnel_depth = 5
             self.increase_tunnel_depth = 0.2
-        else:
+            
+            
+        elif self.args.gap_avoidance:
             self.max_gap_width=1.0
-            self.increase_gap_width=0
+            self.decrease_gap_width=0
+            self.max_tunnel_depth = 0.1
+            self.increase_tunnel_depth = 0.1
+            
+
+        # if self.args.gap_avoidance and self.args.cur and self.args.tunnel_curr:
+            
+        # elif self.args.gap_avoidance:
+        #     self.max_tunnel_depth=20
+        #     self.increase_tunnel_depth=0
+
+
    
         if self.args.obstacle_avoidance or self.args.gap_avoidance:
             self.max_goal_dist=20	
-            self.increase_goal_dist=12
-        elif self.args.cur:
+            self.increase_goal_dist=10
+        elif self.args.cur and self.args.region_curr:
             self.max_goal_dist=20	
             self.increase_goal_dist=5
         else:
@@ -127,7 +140,7 @@ class Env(EnvBasePB):
         self.states_to_restore = ["pos", "orn", "joints", "base_vel", "joint_vel", "args", "episodes", "steps", "total_steps"]
 
         # Things we want to log each training step (print and add to tensorboard)
-        self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Diffficulty": self.terrain_difficulty}
+        #self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Diffficulty": self.terrain_difficulty}
 
         self.load_robot()
 
@@ -213,8 +226,11 @@ class Env(EnvBasePB):
     def get_log_things(self):
         # Things we want to log each training step (print and add to tensorboard)
         # print("What the ", self.ep_goal_success); exit()
+        if self.args.obstacle_avoidance and self.args.gap_avoidance:
+            return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.max_goal_dist - self.increase_goal_dist, "GC: Gap Width":self.max_gap_width-self.decrease_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth,"CLC: distance between obstacle and path": self.a-self.b, "EC: Kp": self.Kp }
+        else:
+            return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.max_goal_dist - self.increase_goal_dist, "EC: Kp": self.Kp }
 
-        return_dict = {"Kp": self.Kp, "Curriculum Success": self.cur_success, "static robot distance from trajectory": self.a-self.b, "Difficulty_increase": self.b, "Goal Success": self.ep_goal_success }
         return_dict.update(self.reward_dict)
         return return_dict
 
@@ -254,7 +270,7 @@ class Env(EnvBasePB):
             self.ep_goal_success = np.mean(self.goal_success) if self.goal_success else 0.0
 
         self.goal_success = []
-        print("cur",self.cur_success)
+        #print("cur",self.cur_success)
         #print(self.body_xyz)
         
 
@@ -347,7 +363,7 @@ class Env(EnvBasePB):
         ######___________ALL CURRICULUM STAGES ARE HERE__________________##################################################
         
         #REGION_CUrriculum: Increasing Distance to Goal Gradually
-        if self.args.cur and self.check_for_success():
+        if self.args.cur and self.args.region_curr and self.check_for_success():
             if self.max_goal_dist-self.increase_goal_dist == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                 self.increase_goal_dist = self.max_goal_dist
                 self.cur_success = deque([0.0], maxlen=5)
@@ -358,18 +374,18 @@ class Env(EnvBasePB):
                 self.cur_success = deque([0.0], maxlen=5)
                 
         #GAP_CUrriculum: Reducing Gap Width Gradually
-        if self.args.gap_avoidance and self.args.cur and self.check_for_success():
-            if self.max_gap_width-self.increase_gap_width - self.final_gap_width == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
-                self.increase_gap_width = self.max_gap_width
+        if self.args.gap_avoidance and self.args.cur and self.args.gap_curr and self.check_for_success():
+            if self.max_gap_width-self.decrease_gap_width - self.final_gap_width == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
+                self.decrease_gap_width = self.max_gap_width
                 self.cur_success = deque([0.0], maxlen=5)
                 #print("cur_success", self.cur_success)			
             else:
-                self.increase_gap_width += 0.2			
+                self.decrease_gap_width += 0.5			
                 
                 self.cur_success = deque([0.0], maxlen=5)
                 
         #Tunnel_CUrriculum: Increasing the Tunnel/Gap length Gradually
-        if self.args.gap_avoidance and self.args.cur and self.check_for_success():
+        if self.args.gap_avoidance and self.args.cur and self.args.tunnel_curr and self.check_for_success():
             if self.max_tunnel_depth-self.increase_tunnel_depth == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                 self.increase_tunnel_depth = self.max_tunnel_depth
                 self.cur_success = deque([0.0], maxlen=5)
@@ -386,7 +402,7 @@ class Env(EnvBasePB):
         # self.a is the fixed value of unit ( how far from the line) and self.b is the step size ( Here, step size is 0.5 unit)
         #print("static robot distance from trajectory",self.a-self.b,"and cur_success", self.cur_success)
         #print("cur_success", self.cur_success)	
-        if (self.args.num_robots > 1 or self.args.obstacle_avoidance) and self.args.cur and self.check_for_success():
+        if (self.args.num_robots > 1 or self.args.obstacle_avoidance) and self.args.cur and self.args.collision_likelihood_curr and self.check_for_success():
             if self.a-self.b == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                 self.b = self.a
                 self.cur_success = deque([0.0], maxlen=5)
@@ -397,7 +413,7 @@ class Env(EnvBasePB):
                 self.cur_success = deque([0.0], maxlen=5)
 
         #########____EXPERT/GUIDED_CURRICULUM__########
-        if self.args.cur and self.Kp > 0 and self.check_for_success():
+        if (self.args.cur and self.args.just_expert) and self.Kp > 0 and self.check_for_success():
             self.Kp = 0.75*self.Kp
             if self.Kp < 5:
                 self.Kp = 0
@@ -411,7 +427,7 @@ class Env(EnvBasePB):
         #y = (np.random.uniform(1, 5) if np.random.randint(2) else np.random.uniform(-1, -5))
         #self.goal = (x, y)
         
-
+        #print("Curriculum Success", self.cur_success, "Goal Success", self.ep_goal_success, "RC_Initial Distance to Goal", self.max_goal_dist - self.increase_goal_dist, "GC: Gap Width", self.max_gap_width-self.decrease_gap_width, "TC: Tunnel Width", self.increase_tunnel_depth,"CLC: distance between obstacle and path", self.a-self.b, "EC: Kp", self.Kp)
         # Visual element of the goal
         #Goal(self.goal)
 
@@ -453,7 +469,7 @@ class Env(EnvBasePB):
             self.line_orn=(0.0,0.0, self.line1_angle,0.1)
             
             #Set the Gap width taken from the gap curriculum in reset
-            self.gap_width=self.max_gap_width-self.increase_gap_width
+            self.gap_width=self.max_gap_width-self.decrease_gap_width
             
             #Set the Tunnel/Gap Depth from the Tunnel Curriculum in reset
             self.tunnel_depth= self.increase_tunnel_depth
@@ -489,7 +505,8 @@ class Env(EnvBasePB):
         robot1_pos=(initial_x, initial_y)
         state_object=self.find_position_B(robot1_pos, self.increase_goal_dist, random.randint(0, 360))
         dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
-        print(dist)
+        #print(dist)
+        #print(self.max_goal_dist- self.increase_goal_dist)
         while dist < 3:
             state_object=self.find_position_B(robot1_pos, 8, random.randint(0, 360))
             dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
@@ -497,7 +514,8 @@ class Env(EnvBasePB):
         # Estimate time to target, velocity in steps + time to turn + current steps + buffer for going around a robot / acceleration
         # Keep an eye on this, need to make sure there's enough time to get to the goal
         self.heading_error, _ = self.calc_angle_error(state_object, [initial_x, initial_y], yaw)
-        self.time_to_target = dist / self.timeStep + abs(self.heading_error) / self.timeStep + self.steps + 500
+        self.time_to_target = dist / self.timeStep + abs(self.heading_error) / self.timeStep + self.steps + 50000
+        #print(self.time_to_target)
         
         #Equation of the line trajectory from moving robot to goal
 
@@ -654,7 +672,7 @@ class Env(EnvBasePB):
                 exp_actions[0] = 0.0
             exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
         
-        if self.args.just_expert or self.args.cur:
+        if self.args.just_expert and self.args.cur:
             applied_actions = (self.Kp/self.initial_Kp) * np.array(exp_actions)
             if not self.args.just_expert:
                 applied_actions += self.action_multiplier*actions
@@ -681,7 +699,7 @@ class Env(EnvBasePB):
         if self.dist_to_wp < 1.0:
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
             self.goal_success.append(True)
-            print(self.goal_success)
+            #print(self.goal_success)
 
         elif self.time_to_target < self.steps or done:
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
