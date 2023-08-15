@@ -93,14 +93,18 @@ class Env(EnvBasePB):
 
    
         if self.args.obstacle_avoidance or self.args.gap_avoidance:
-            self.max_goal_dist=20	
-            self.increase_goal_dist=10
-        elif self.args.cur and self.args.region_curr:
-            self.max_goal_dist=20	
-            self.increase_goal_dist=5
+            self.initial_goal_dist=5	
+            self.increase_goal_dist=0
+            self.max_goal_dist=30
+
+        elif self.args.cur and (self.args.region_curr or self.args.just_expert):
+            self.initial_goal_dist=5	
+            self.increase_goal_dist=0
+            self.max_goal_dist=30
         else:
-            self.max_goal_dist=20
-            self.increase_goal_dist=20
+            self.initial_goal_dist=30
+            self.increase_goal_dist=0
+            self.max_goal_dist=30
         
         self.action_multiplier = 0.1 
 
@@ -227,9 +231,9 @@ class Env(EnvBasePB):
         # Things we want to log each training step (print and add to tensorboard)
         # print("What the ", self.ep_goal_success); exit()
         if self.args.obstacle_avoidance and self.args.gap_avoidance:
-            return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.max_goal_dist - self.increase_goal_dist, "GC: Gap Width":self.max_gap_width-self.decrease_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth,"CLC: distance between obstacle and path": self.a-self.b, "EC: Kp": self.Kp }
+            return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "GC: Gap Width":self.max_gap_width-self.decrease_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth,"CLC: distance between obstacle and path": self.a-self.b, "EC: Kp": self.Kp }
         else:
-            return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.max_goal_dist - self.increase_goal_dist, "EC: Kp": self.Kp }
+            return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "EC: Kp": self.Kp }
 
         return_dict.update(self.reward_dict)
         return return_dict
@@ -270,7 +274,7 @@ class Env(EnvBasePB):
             self.ep_goal_success = np.mean(self.goal_success) if self.goal_success else 0.0
 
         self.goal_success = []
-        #print("cur",self.cur_success)
+        print("cur",self.cur_success)
         #print(self.body_xyz)
         
 
@@ -364,15 +368,18 @@ class Env(EnvBasePB):
         
         #REGION_CUrriculum: Increasing Distance to Goal Gradually
         if self.args.cur and self.args.region_curr and self.check_for_success():
-            if self.max_goal_dist-self.increase_goal_dist == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
-                self.increase_goal_dist = self.max_goal_dist
+            self.initial_goal_dist=self.initial_goal_dist+self.increase_goal_dist
+            print(self.initial_goal_dist,self.max_goal_dist)
+
+
+            if self.initial_goal_dist >= self.max_goal_dist:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
+                self.increase_goal_dist = 0
                 self.cur_success = deque([0.0], maxlen=5)
                 #print("cur_success", self.cur_success)			
             else:
                 self.increase_goal_dist +=1			
-                
                 self.cur_success = deque([0.0], maxlen=5)
-                
+            
         #GAP_CUrriculum: Reducing Gap Width Gradually
         if self.args.gap_avoidance and self.args.cur and self.args.gap_curr and self.check_for_success():
             if self.max_gap_width-self.decrease_gap_width - self.final_gap_width == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
@@ -503,10 +510,10 @@ class Env(EnvBasePB):
         # Get a new goal position, make sure it is far enough away from the robot. 
         #state_object=[np.random.uniform(-7, 7), np.random.uniform(-8, -6), 0.00]
         robot1_pos=(initial_x, initial_y)
-        state_object=self.find_position_B(robot1_pos, self.increase_goal_dist, random.randint(0, 360))
+        state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, random.randint(0, 360))
         dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
-        #print(dist)
-        #print(self.max_goal_dist- self.increase_goal_dist)
+        print(dist)
+        print(self.initial_goal_dist)
         while dist < 3:
             state_object=self.find_position_B(robot1_pos, 8, random.randint(0, 360))
             dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
@@ -518,6 +525,9 @@ class Env(EnvBasePB):
         #print(self.time_to_target)
         
         #Equation of the line trajectory from moving robot to goal
+        if (initial_x-state_object[0])==0:
+            initial_x=state_object[0]+0.01
+            print("DENOM_ZERO")
 
         #Slope
         M = (initial_y-state_object[1])/(initial_x-state_object[0])
@@ -587,7 +597,7 @@ class Env(EnvBasePB):
 
         # actions = 0.5*actions
         # ===========================
-        # This is an expert function
+        # This is an expert functionexper
         # ===========================
         exp_actions = [0.0]*2
         # ##########################__RAY_LINE___###################
