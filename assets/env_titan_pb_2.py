@@ -1467,6 +1467,7 @@ class Env(EnvBasePB):
                 self.h =self.h+1
             elif self.goal_dist<1:
                 self.h=0
+            #print(self.h)
 
             
             
@@ -1501,7 +1502,15 @@ class Env(EnvBasePB):
             self.dist_R124G = None
             self.dist_R134G = None
 
+
+            if self.goal_dist <1:
+                self.wp1_reach=0
+                self.wp2_reach=0
+                self.wp3_reach=0
+                self.wp4_reach=0
             
+
+
             if self.h>0:
                 #print("MOVE MOVE MOVE",self.poshit_x,self.poshit_y,self.poshit_z,"h_value",self.h,"ORN_HITS",self.ornhit_a,self.ornhit_b ,self.ornhit_c ,self.ornhit_d )
                 self.poshit=(self.poshit_x,self.poshit_y,self.poshit_z)
@@ -1570,25 +1579,23 @@ class Env(EnvBasePB):
 
                 if self.dist_wp1<1:
                     self.wp1_reach=self.wp1_reach + 1
-                elif self.dist_goal <1:
-                    self.wp1_reach=0
+                
 
 
                 if self.dist_wp2<1:
                     self.wp2_reach=self.wp2_reach + 1
-                elif self.dist_goal <1:
-                    self.wp2_reach=0
+                
 
                 if self.dist_wp3<1:
                     self.wp3_reach=self.wp3_reach + 1
-                elif self.dist_goal <1:
-                    self.wp3_reach=0
+                
 
 
                 if self.dist_wp4<1:
                     self.wp4_reach=self.wp4_reach + 1
-                elif self.dist_goal <1:
-                    self.wp4_reach=0
+                
+
+                #print(self.wp1_reach,self.wp2_reach,self.wp3_reach,self.wp4_reach)
 
             # pm=None
             # if self.h==1:
