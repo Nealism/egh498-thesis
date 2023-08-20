@@ -4,18 +4,25 @@
 # Experiment type
 # ==================================================================================
 declare -a Experiments=(
-                      "s2/RG30"
-                      "s2/RGE30"
-                      "s2/RGRE30"
-                      "s2/RGR30"
+                      "s3/S40"
+                      "s3/SE40"
+                      "s3/SRE40"
+                      "s3/SR40"
+                      "s3/SRE40LN"
+                      "s3/SR40LN"
+                      
                       
 
                         )
 declare -a Arguments=(
-    "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 3048 --local_epoch_len 5048"
-    "--cpu 64 --env titan_pb_2 --training_on_hpc --cur --epochs 5000 --max_ep_len 3048 --local_epoch_len 5048 --just_expert"
-    "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 3048 --local_epoch_len 5048 --just_expert --region_curr"
-    "--cpu 64 --env titan_pb_2 --training_on_hpc --cur --epochs 5000 --max_ep_len 3048 --local_epoch_len 5048 --region_curr"
+    "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 6000 --local_epoch_len 6000"
+    "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 6000 --local_epoch_len 6000 --expert_curr"
+    "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 6000 --local_epoch_len 6000 --expert_curr --region_curr"
+    "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 6000 --local_epoch_len 6000 --region_curr"
+    "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 6000 --local_epoch_len 6000 --expert_curr --region_curr --num_layers 3 --num_nodes 456"
+    "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 6000 --local_epoch_len 6000 --region_curr --num_layers 3 --num_nodes 456"
+   
+
     
     
 )

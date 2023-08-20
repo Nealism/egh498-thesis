@@ -77,3 +77,4 @@ class EnvBase():
             if self.rank == 0:
                 print(thing, self.all_log_things["all_" + thing])
                 writer.add_scalar(thing, np.mean(self.all_log_things["all_" + thing]), iters_so_far)
+                

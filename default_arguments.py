@@ -51,6 +51,7 @@ def get_defaults():
     parser.add_argument('--gap_curr', default=False, action="store_true")
     parser.add_argument('--tunnel_curr', default=False, action="store_true")
     parser.add_argument('--collision_likelihood_curr', default=False, action="store_true")
+    parser.add_argument('--expert_curr', default=False, action="store_true")
     
 
     # ========================================================================
@@ -140,6 +141,8 @@ def get_env(args):
     # Not all of these are implemented yet..
     if args.env == "humanoid_pb":
         from assets.env_humanoid_pb import Env
+    elif args.env == "multi_robot":
+        from assets.env_multi_robot import Env 
     elif args.env == "biped_pb":
         from assets.env_biped_pb import Env 
     elif args.env == "franka_ball_mj":

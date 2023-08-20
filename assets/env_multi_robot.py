@@ -1,10 +1,23 @@
-from env_titan_pb_2 import Env as RobotEnv
+from assets.env_titan_pb_2 import Env as RobotEnv
 import pybullet as p
+from assets.env_base_pb import EnvBasePB
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
 
 
-class Env():
-    def __init__(self, args.num_robots):
+class Env(EnvBasePB):
+    def __init__(self, PATH=None, args=None, writer=None):
+    #def __init__(self, args.num_robots):
+        self.rank = comm.Get_rank()
+        self.args = args
+        self.render = args.render and self.rank == 0
+        self.PATH = PATH
+        self.writer = writer
+        self.master = True
+        super().__init__(PATH)
+
         self.load_simulator()
+        
         objects = p.loadMJCF("./assets/xmls/ground.xml")
         self.worldId = objects[0]
         self.robots=[RobotEnv() for n in args.num_robots]

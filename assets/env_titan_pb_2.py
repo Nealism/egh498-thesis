@@ -9,7 +9,9 @@ from collections import deque
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 import math
+from heapq import nsmallest
 import random
+import copy
 
 from assets.env_base_pb import EnvBasePB
 
@@ -58,8 +60,10 @@ class Env(EnvBasePB):
                 self.ob_size = 6
         self.Kp = 400
         self.initial_Kp = self.Kp
+        
+        
 
-        if self.args.obstacle_avoidance and self.args.cur and self.args.collision_likelihood_curr:
+        if self.args.obstacle_avoidance and self.args.collision_likelihood_curr or self.args.cur:
             self.a=5.0
             self.b=0.5
         else:
@@ -67,7 +71,7 @@ class Env(EnvBasePB):
             self.a=0.0
             self.b=0.0
             
-        if self.args.gap_avoidance and self.args.cur and self.args.gap_curr:
+        if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
             #parameters for gap curr
             self.max_gap_width=5.0
             self.decrease_gap_width=0.5
@@ -92,19 +96,14 @@ class Env(EnvBasePB):
 
 
    
-        if self.args.obstacle_avoidance or self.args.gap_avoidance:
-            self.initial_goal_dist=5	
-            self.increase_goal_dist=0
-            self.max_goal_dist=30
+        
 
-        elif self.args.cur and (self.args.region_curr or self.args.just_expert):
-            self.initial_goal_dist=5	
-            self.increase_goal_dist=0
-            self.max_goal_dist=30
+        if self.args.cur or self.args.region_curr:
+            self.initial_goal_dist=3	
+            self.max_goal_dist=15
         else:
-            self.initial_goal_dist=30
-            self.increase_goal_dist=0
-            self.max_goal_dist=30
+            self.initial_goal_dist=15
+            self.max_goal_dist=15
         
         self.action_multiplier = 0.1 
 
@@ -114,7 +113,7 @@ class Env(EnvBasePB):
         
         self.steps = -1
         
-        self.reward_names = ["Reward/goal", "Reward/heading", "Reward/heading_obs", "Reward/neg", "Distance to Goal Improved"]
+        self.reward_names = ["Reward/goal", "Reward/heading", "Reward/heading_obs", "Reward/neg"]
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
     
@@ -366,22 +365,24 @@ class Env(EnvBasePB):
     
         ######___________ALL CURRICULUM STAGES ARE HERE__________________##################################################
         
+        #########____EXPERT/GUIDED_CURRICULUM__########
+        if (self.args.cur or self.args.expert_curr) and self.Kp > 0 and self.check_for_success():
+            self.Kp = 0.75*self.Kp
+            if self.Kp < 5:
+                self.Kp = 0
+            self.cur_success = deque([0.0], maxlen=5)
+        
         #REGION_CUrriculum: Increasing Distance to Goal Gradually
-        if self.args.cur and self.args.region_curr and self.check_for_success():
-            self.initial_goal_dist=self.initial_goal_dist+self.increase_goal_dist
-            print(self.initial_goal_dist,self.max_goal_dist)
-
-
-            if self.initial_goal_dist >= self.max_goal_dist:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
-                self.increase_goal_dist = 0
-                self.cur_success = deque([0.0], maxlen=5)
+        if (self.args.cur or self.args.region_curr) and self.check_for_success() and self.initial_goal_dist <= self.max_goal_dist:
+            #self.initial_goal_dist=self.initial_goal_dist+self.increase_goal_dist
+            #print(self.initial_goal_dist,self.max_goal_dist)
+            # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
+            self.initial_goal_dist +=1 # = 0
+            self.cur_success = deque([0.0], maxlen=5)
                 #print("cur_success", self.cur_success)			
-            else:
-                self.increase_goal_dist +=1			
-                self.cur_success = deque([0.0], maxlen=5)
             
         #GAP_CUrriculum: Reducing Gap Width Gradually
-        if self.args.gap_avoidance and self.args.cur and self.args.gap_curr and self.check_for_success():
+        if self.args.gap_avoidance and (self.args.cur or self.args.gap_curr) and self.check_for_success():
             if self.max_gap_width-self.decrease_gap_width - self.final_gap_width == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                 self.decrease_gap_width = self.max_gap_width
                 self.cur_success = deque([0.0], maxlen=5)
@@ -392,7 +393,7 @@ class Env(EnvBasePB):
                 self.cur_success = deque([0.0], maxlen=5)
                 
         #Tunnel_CUrriculum: Increasing the Tunnel/Gap length Gradually
-        if self.args.gap_avoidance and self.args.cur and self.args.tunnel_curr and self.check_for_success():
+        if self.args.gap_avoidance and (self.args.cur or self.args.tunnel_curr) and self.check_for_success():
             if self.max_tunnel_depth-self.increase_tunnel_depth == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                 self.increase_tunnel_depth = self.max_tunnel_depth
                 self.cur_success = deque([0.0], maxlen=5)
@@ -409,7 +410,7 @@ class Env(EnvBasePB):
         # self.a is the fixed value of unit ( how far from the line) and self.b is the step size ( Here, step size is 0.5 unit)
         #print("static robot distance from trajectory",self.a-self.b,"and cur_success", self.cur_success)
         #print("cur_success", self.cur_success)	
-        if (self.args.num_robots > 1 or self.args.obstacle_avoidance) and self.args.cur and self.args.collision_likelihood_curr and self.check_for_success():
+        if (self.args.num_robots > 1 or self.args.obstacle_avoidance) and (self.args.cur or self.args.collision_likelihood_curr) and self.check_for_success():
             if self.a-self.b == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                 self.b = self.a
                 self.cur_success = deque([0.0], maxlen=5)
@@ -419,12 +420,7 @@ class Env(EnvBasePB):
                 
                 self.cur_success = deque([0.0], maxlen=5)
 
-        #########____EXPERT/GUIDED_CURRICULUM__########
-        if (self.args.cur and self.args.just_expert) and self.Kp > 0 and self.check_for_success():
-            self.Kp = 0.75*self.Kp
-            if self.Kp < 5:
-                self.Kp = 0
-            self.cur_success = deque([0.0], maxlen=5)
+        
         
         
         
@@ -445,6 +441,7 @@ class Env(EnvBasePB):
             pos, orn, self.joints, self.base_vel, self.joint_vel = [initial_x, initial_y, self.z_offset+0.31],self.initial_orn, [0]*self.ac_size, [[0,0,0],[0,0,0]], [0.]*self.ac_size
             # pos2, orn2, self.joints, self.base_vel, self.joint_vel = [initial_x2, initial_y2, self.z_offset+0.31],self.initial_orn2, [0]*self.ac_size, [[0,0,0],[0,0,0]], [0.]*self.ac_size
             self.set_position(pos, orn, robot_id=self.Id)
+            #self.h=0
 
         # Function to move the goal and the static robot
         self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw)
@@ -452,13 +449,17 @@ class Env(EnvBasePB):
         # print("robot_positions", pos2)
         # print("robot_state")
         # print(self.state_robot2)
+        self.lineId_heading = -1
         self.lineId = [-1]
         self.lineId_object= -1
         self.lineId_r2_big = [-1]*4 
         self.lineId1 = [-1]*4  # initialize with an invalid ID for lines around robots
+        self.lineId1bonus = [-1]*4  # initialize with an invalid ID for lines around robots
         self.lineId12 = [-1]*4
+        self.lineId12_static = [-1]*4
         self.lineId2 = [-1]*4 
         self.lineId_box1 = [-1]*4
+        self.lineId_box1_safety = [-1]*4
         self.lineId_box1big = [-1]*4
         self.ray_line = [-1]*2
         #gap line ids
@@ -467,6 +468,22 @@ class Env(EnvBasePB):
         self.lineIdB=[-1]*4
         self.lineIdWall=[-1]*4
         self.hit = False
+        self.h=0
+        self.poshit_x=None
+        self.poshit_y=None
+        self.poshit_z=None
+        self.ornhit_a=None
+        self.ornhit_b=None 
+        self.ornhit_c=None
+        self.ornhit_d=None
+
+        self.wp1_reach=0
+        self.wp2_reach=0
+        self.wp3_reach=0
+        self.wp4_reach=0
+
+        
+
         
         if self.args.gap_avoidance:
             #THIS PART IS NEEDED FOR SETTING ORIENTATION OF GAP WITH THE MID LINE
@@ -480,9 +497,24 @@ class Env(EnvBasePB):
             
             #Set the Tunnel/Gap Depth from the Tunnel Curriculum in reset
             self.tunnel_depth= self.increase_tunnel_depth
+
         
+            
 
         self.get_observation()
+
+        
+        
+
+        # if self.args.obstacle_avoidance:
+        #     self.corner_robot1 = [(tuple(self.robot1_bbox[0])),(tuple(self.robot1_bbox[1]))]
+        #     self.corner_square_bigbox= [(tuple(self.safety_square_bbox[0])),(tuple(self.safety_square_bbox[1])),(tuple(self.safety_square_bbox[2])),(tuple(self.safety_square_bbox[3]))]
+        #     self.way_point1,self.way_point2,self.way_point3,self.way_point4,_,_,_,_= self.min_fourth_min_distances(self.corner_robot1 , self.corner_square_bigbox)
+        #     print(self.way_point1)
+        #     self.Goal2 = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=self.way_point1[1])
+
+        #     pm,om=p.getBasePositionAndOrientation(self.Id)
+        #     print(pm)
         
         #self.Goal2 = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=self.waypoint)
         # self.Goal3 = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=self.way_point2)
@@ -512,8 +544,8 @@ class Env(EnvBasePB):
         robot1_pos=(initial_x, initial_y)
         state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, random.randint(0, 360))
         dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
-        print(dist)
-        print(self.initial_goal_dist)
+        # print(dist)
+        # print(self.initial_goal_dist)
         while dist < 3:
             state_object=self.find_position_B(robot1_pos, 8, random.randint(0, 360))
             dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
@@ -521,7 +553,7 @@ class Env(EnvBasePB):
         # Estimate time to target, velocity in steps + time to turn + current steps + buffer for going around a robot / acceleration
         # Keep an eye on this, need to make sure there's enough time to get to the goal
         self.heading_error, _ = self.calc_angle_error(state_object, [initial_x, initial_y], yaw)
-        self.time_to_target = dist / self.timeStep + abs(self.heading_error) / self.timeStep + self.steps + 50000
+        self.time_to_target = dist / self.timeStep + abs(self.heading_error) / self.timeStep + self.steps + 500000
         #print(self.time_to_target)
         
         #Equation of the line trajectory from moving robot to goal
@@ -635,32 +667,97 @@ class Env(EnvBasePB):
                 exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
        
         elif self.args.obstacle_avoidance:
-        ####################_______WAY_POINT_ATTEMPT_FAILED______######################
-            if self.intersection_line_square== True and abs(self.heading_error) < 1.6: 
-                # self.square_bigbox=self.bbox_generator_box(3,0.035,self.pos2,self.orn2,self.lineId_box1big)
-                # self.square_bigbox.append(self.square_bigbox[0])
-                # self.corner_robot1 = [(tuple(self.robot1_bbox[0])),(tuple(self.robot1_bbox[1]))]
-                # self.corner_square_bigbox= [(tuple(self.square_bigbox[0])),(tuple(self.square_bigbox[1])),(tuple(self.square_bigbox[2])),(tuple(self.square_bigbox[3]))]
-                # _,_,self.way_point1,self.way_point2= self.min_distance_corners(self.corner_robot1 , self.corner_square_bigbox)
-                # self.heading_error_wp1, _ = self.calc_angle_error(self.way_point1, self.pos, self.yaw)
-                # self.heading_error_wp2, _ = self.calc_angle_error(self.way_point2, self.pos, self.yaw)
+        # ####################_______WayPoint System Inspired by Bug 2 algorithm______######################
+            if self.intersection_wp2G_obs == None or self.intersection_wp3G_obs == None or self.dist_R12G == None or self.dist_R13G == None or self.dist_R124G==None or self.dist_R134G==None:
+                if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
+                    exp_actions[0] = 0.25
+                else:	
+                    exp_actions[0] = 0.0
+                exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+
+            elif (self.intersection_wp2G_obs == True and self.intersection_wp3G_obs == False) or (self.intersection_wp2G_obs == False and self.intersection_wp3G_obs == False and self.dist_R13G<self.dist_R12G):
                 exp_actions[0] = 0.1
-                exp_actions[1] = 0.5#*np.clip(self.heading_error_wp1, -1, 1)
-                # if self.args.obstacle_avoidance:
-                # 	exp_actions[0] = 0.2
-                # 	exp_actions[1] = 0.5*np.clip(self.heading_error_wp2, -1, 1)
-            elif self.intersection_corner1_square == True and abs(self.heading_error) < 1.6:
-                exp_actions[0] = 0.05
-                exp_actions[1] = -0.5	
-            elif self.intersection_corner2_square ==True and abs(self.heading_error) < 1.6:
-                exp_actions[0] = 0.05
-                exp_actions[1] = 0.5
-            elif abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
-                exp_actions[0] = 0.25
-                exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
-            else:	
-                exp_actions[0] = 0.0
-                exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+                exp_actions[1] = 0.5*np.clip(self.heading_error_wp1, -1, 1)
+                if self.wp1_reach>0:
+                    exp_actions[0] = 0.1
+                    exp_actions[1] = 0.5*np.clip(self.heading_error_wp3, -1, 1)
+                    if self.wp3_reach>0:
+                        exp_actions[0] = 0.1
+                        exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+                
+                    
+
+
+            elif (self.intersection_wp3G_obs == True and self.intersection_wp2G_obs == False) or (self.intersection_wp2G_obs == False and self.intersection_wp3G_obs == False and self.dist_R12G<self.dist_R13G):
+                exp_actions[0] = 0.1
+                exp_actions[1] = 0.5*np.clip(self.heading_error_wp1, -1, 1)
+                if self.wp1_reach>0:
+                    exp_actions[0] = 0.1
+                    exp_actions[1] = 0.5*np.clip(self.heading_error_wp2, -1, 1)
+                    if self.wp2_reach>0:
+                        exp_actions[0] = 0.1
+                        exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+                
+                    
+
+            elif self.intersection_wp2G_obs == True and self.intersection_wp3G_obs == True and self.dist_R124G<self.dist_R134G:
+                exp_actions[0] = 0.1
+                exp_actions[1] = 0.5*np.clip(self.heading_error_wp1, -1, 1)
+                if self.wp1_reach>0:
+                    exp_actions[0] = 0.1
+                    exp_actions[1] = 0.5*np.clip(self.heading_error_wp2, -1, 1)
+                    if self.wp2_reach>0:
+                        exp_actions[0] = 0.1
+                        exp_actions[1] = 0.5*np.clip(self.heading_error_wp4, -1, 1)
+                        if self.wp4_reach>0:
+                            exp_actions[0] = 0.1
+                            exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+                
+                    
+
+
+            elif self.intersection_wp2G_obs == True and self.intersection_wp3G_obs == True and self.dist_R134G<self.dist_R124G:
+                exp_actions[0] = 0.1
+                exp_actions[1] = 0.5*np.clip(self.heading_error_wp1, -1, 1)
+                if self.wp1_reach>0:
+                    exp_actions[0] = 0.1
+                    exp_actions[1] = 0.5*np.clip(self.heading_error_wp3, -1, 1)
+                    if self.wp3_reach>0:
+                        exp_actions[0] = 0.1
+                        exp_actions[1] = 0.5*np.clip(self.heading_error_wp4, -1, 1)
+                        if self.wp4_reach>0:
+                            exp_actions[0] = 0.1
+                            exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+                
+                    
+
+
+        # ####################_______BUG_1_intersection_only______######################
+            # if self.intersection_line_square== True and abs(self.heading_error) < 1.6: 
+            #     # self.square_bigbox=self.bbox_generator_box(3,0.035,self.pos2,self.orn2,self.lineId_box1big)
+            #     # self.square_bigbox.append(self.square_bigbox[0])
+            #     # self.corner_robot1 = [(tuple(self.robot1_bbox[0])),(tuple(self.robot1_bbox[1]))]
+            #     # self.corner_square_bigbox= [(tuple(self.square_bigbox[0])),(tuple(self.square_bigbox[1])),(tuple(self.square_bigbox[2])),(tuple(self.square_bigbox[3]))]
+            #     # _,_,self.way_point1,self.way_point2= self.min_distance_corners(self.corner_robot1 , self.corner_square_bigbox)
+            #     # self.heading_error_wp1, _ = self.calc_angle_error(self.way_point1, self.pos, self.yaw)
+            #     # self.heading_error_wp2, _ = self.calc_angle_error(self.way_point2, self.pos, self.yaw)
+            #     exp_actions[0] = 0.1
+            #     exp_actions[1] = 0.5#*np.clip(self.heading_error_wp1, -1, 1)
+            #     # if self.args.obstacle_avoidance:
+            #     # 	exp_actions[0] = 0.2
+            #     # 	exp_actions[1] = 0.5*np.clip(self.heading_error_wp2, -1, 1)
+            # elif self.intersection_corner1_square == True and abs(self.heading_error) < 1.6:
+            #     exp_actions[0] = 0.05
+            #     exp_actions[1] = -0.5	
+            # elif self.intersection_corner2_square ==True and abs(self.heading_error) < 1.6:
+            #     exp_actions[0] = 0.05
+            #     exp_actions[1] = 0.5
+            # elif abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
+            #     exp_actions[0] = 0.25
+            #     exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+            # else:	
+            #     exp_actions[0] = 0.0
+            #     exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
    
         ######################____OLD_IS_GOLD___#################################
   
@@ -682,7 +779,7 @@ class Env(EnvBasePB):
                 exp_actions[0] = 0.0
             exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
         
-        if self.args.just_expert and self.args.cur:
+        if self.args.just_expert or (self.args.cur or self.args.expert_curr):
             applied_actions = (self.Kp/self.initial_Kp) * np.array(exp_actions)
             if not self.args.just_expert:
                 applied_actions += self.action_multiplier*actions
@@ -709,7 +806,7 @@ class Env(EnvBasePB):
         if self.dist_to_wp < 1.0:
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
             self.goal_success.append(True)
-            #print(self.goal_success)
+            print(self.goal_success)
 
         elif self.time_to_target < self.steps or done:
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
@@ -801,7 +898,7 @@ class Env(EnvBasePB):
         
         
         distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
-        self.ep_reward_dict["Distance to Goal Improved"] += distance_improve
+        #self.ep_reward_dict["Distance to Goal Improved"] += distance_improve
         #print(distance_improve)
         # print(reward)
         # if dist_to_goal < .2:
@@ -1240,8 +1337,26 @@ class Env(EnvBasePB):
             self.tipped = False
 
         #print(self.body_vxyz[0]+self.body_vxyz[1])
+        
+        
 
+        #Between Goal and Robot 1
+        self.wp_pos_robot = self.world_to_robot(self.yaw, self.pos, self.state_goal)
+        #print(self.wp_pos_robot)
+        #print("waypoint_pos", self.wp_pos_robot)
+        self.heading_error, self.target_angle = self.calc_angle_error(self.state_goal, self.pos, self.yaw)
+        #print("heading_error", self.heading_error)
+        self.dist_to_wp = math.sqrt(self.wp_pos_robot[0]**2 + self.wp_pos_robot[1]**2)
+        #print("distanc-to_wp", self.dist_to_wp)
 
+        rot_speed = np.array(
+        [[np.cos(-self.target_angle), -np.sin(-self.target_angle), 0],
+            [np.sin(-self.target_angle), np.cos(-self.target_angle), 0],
+            [		0,			 0, 1]]
+        )
+        self.heading_vx, _, _ = np.dot(rot_speed, (self.body_vxyz[0],self.body_vxyz[1],self.body_vxyz[2]))
+
+        
         ########################
         #Do not use this part if you already used it in reset
         #Uncomment this part if you want to use dynamic inflation radius
@@ -1258,7 +1373,11 @@ class Env(EnvBasePB):
         if self.args.obstacle_avoidance or self.args.gap_avoidance:
             self.robot1_bbox=self.bbox_generator_titan(0.075,self.pos,self.orn,self.lineId1)
             self.robot1_bbox.append(self.robot1_bbox[0])
-            #print(self.robot1_bbox[0][2],self.square_bbox[0][2])
+            #print(self.robot1_bbox[0][1],self.robot1_bbox[0][2])
+
+            # self.robot100_bbox=self.bbox_generator_titan2(0.075,self.pos,self.orn,self.lineId1bonus)
+            # #self.robot100_bbox.append(self.robot100_bbox)
+            # print(self.robot100_bbox)
             
             # Creating green safe bounding box around robot 1
             self.robot1_safe_box=self.bbox_generator_titan(0.8,self.pos,self.orn,self.lineId12, [.29,.45,.27])
@@ -1300,7 +1419,25 @@ class Env(EnvBasePB):
             #generating obstacle
             self.square_bbox=self.bbox_generator_box(0.35,0.011,self.pos2,self.orn2,self.lineId_box1)
             self.square_bbox.append(self.square_bbox[0])
+
+            #Generating Heading Mid line
+            self.heading_line_end=self.find_position_B(self.pos,distance_d=10,angle_degrees=math.degrees(self.yaw))
+            self.head_line=(self.pos[0], self.pos[1], 0.34), (self.heading_line_end[0], self.heading_line_end[1], 0.34)
+
+            self.side_line1_end=self.find_position_B(self.robot1_safe_box[0],distance_d=10,angle_degrees=math.degrees(self.yaw))
+            self.side_line1=self.robot1_safe_box[0], (self.side_line1_end[0], self.side_line1_end[1], 0.34)
+
+            self.side_line2_end=self.find_position_B(self.robot1_safe_box[1],distance_d=10,angle_degrees=math.degrees(self.yaw))
+            self.side_line2=self.robot1_safe_box[1], (self.side_line2_end[0], self.side_line2_end[1], 0.34)
+        
+            #pDrawing Heading Mid Line
+            if self.args.debug:
+                self.lineId=p.addUserDebugLine((self.pos[0], self.pos[1], 0.34), (self.heading_line_end[0], self.heading_line_end[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_heading)
     
+
+
+
+
             # To set robot collision with obstacle
             self.intersection_r1_box,_= self.intersection_check(self.robot1_bbox,self.square_bbox)
    
@@ -1314,10 +1451,162 @@ class Env(EnvBasePB):
             self.line1_points=(self.pos[0], self.pos[1], 0), (self.state_goal[0], self.state_goal[1], 0)
             self.intersection_line_square,_= self.intersection_check(self.line1_points,self.square_bbox)
             
+            #check the intersection with Head Line and obstacle 
+
+            self.obs_check,_=self.intersection_check(self.head_line, self.square_bbox)
+            #print(self.obs_check)
+
+            #check the intersection between 2 heading corner lines with obstacle
+
+            self.obs_check_2,_=self.intersection_check(self.side_line1,self.square_bbox)
+            self.obs_check_3,_=self.intersection_check(self.side_line2,self.square_bbox)
+
+            self.goal_dist=self.distance(self.pos,self.state_goal)
+            #This is to make sure that keep taking decision after obs_check = True, not only just while obs_check = True
+            if self.obs_check or self.obs_check_2 or self.obs_check_3:
+                self.h =self.h+1
+            elif self.goal_dist<1:
+                self.h=0
+
+            
+            
+            # This part is hard part that ensure to freeze the moving robot position to get the position on exact moment of heading ray hitting the obstacle. Not changing the position after robot move
+            if self.h == 1:
+                hit_pos, hit_orn= p.getBasePositionAndOrientation(self.Id)
+                self.poshit_x,self.poshit_y,self.poshit_z, self.ornhit_a,self.ornhit_b,self.ornhit_c,self.ornhit_d=hit_pos[0],hit_pos[1],hit_pos[2],hit_orn[0],hit_orn[1],hit_orn[2],hit_orn[3]
+
+            if self.poshit_x is None:
+                self.poshit_x= 0
+            if self.poshit_y is None:
+                self.poshit_y=0
+            if self.poshit_z is None:
+                self.poshit_z=0
+
+
+            if self.ornhit_a is None:
+                self.ornhit_a= 0
+            if self.ornhit_b is None:
+                self.ornhit_b=0
+            if self.ornhit_c is None:
+                self.ornhit_c=0
+            if self.ornhit_d is None:
+                self.ornhit_d=0
+
+            
+
+            self.intersection_wp2G_obs=None
+            self.intersection_wp3G_obs=None
+            self.dist_R12G = None
+            self.dist_R13G = None
+            self.dist_R124G = None
+            self.dist_R134G = None
+
+            
+            if self.h>0:
+                #print("MOVE MOVE MOVE",self.poshit_x,self.poshit_y,self.poshit_z,"h_value",self.h,"ORN_HITS",self.ornhit_a,self.ornhit_b ,self.ornhit_c ,self.ornhit_d )
+                self.poshit=(self.poshit_x,self.poshit_y,self.poshit_z)
+                self.ornhit=(self.ornhit_a,self.ornhit_b ,self.ornhit_c ,self.ornhit_d)
+                #generating safety bounding box aroung obstacle box
+                self.safety_square_bbox=self.bbox_generator_box(2.5,0.011,self.pos2,self.orn2,self.lineId_box1_safety)
+                self.safety_square_bbox.append(self.safety_square_bbox[0])
+                #print(self.safety_square_bbox)
+
+                #generating static bounding box around robot when hit
+                self.robot1_static_box=self.bbox_generator_titan(0.8,self.poshit,self.ornhit,self.lineId12_static, [.1,.25,.9])
+                self.robot1_static_box.append(self.robot1_static_box[0])
+
+                #Generating waypoints based on closest point finding among the corners of the obstacle safety box from the robot static bbox heading points
+                #self.corner_robot1 = [(tuple(self.robot1_static_box[0])),(tuple(self.robot1_static_box[1])),(tuple(self.robot1_static_box[2])),(tuple(self.robot1_static_box[3]))]
+                self.corner_square_bigbox= [(tuple(self.safety_square_bbox[0])),(tuple(self.safety_square_bbox[1])),(tuple(self.safety_square_bbox[2])),(tuple(self.safety_square_bbox[3]))]
+                closest_coordinates= self.find_closest_coordinates(self.poshit , self.corner_square_bigbox)
+
+                self.cp=[]
+                self.cd=[]
+                for i, (min_dist, closest_point) in enumerate(closest_coordinates, start=1):
+                    self.cp.append(closest_point)
+                    self.cd.append(min_dist)
+                self.way_point1,self.way_point2,self.way_point3,self.way_point4=self.cp
+                D1,D2,D3,D4=self.cd
+                # print(D1,D2,D3,D4)
+                # print("CHILLLLLAAAAAAAAAAA",self.way_point1,self.way_point2,self.way_point3,self.way_point4)
+
+                wall_dir= "Wall_URDF/"
+
+                # self.Goal1 = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=self.way_point1)
+                # self.Goal2 = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=self.way_point2)
+                # self.Goal3 = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=self.way_point3)
+                # self.Goal4 = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=self.way_point4)
+
+                
+                #Distance to waypoints:
+
+                self.dist_wp1=self.distance(self.pos,self.way_point1)
+                self.dist_wp2=self.distance(self.pos,self.way_point2)
+                self.dist_wp3=self.distance(self.pos,self.way_point3)
+                self.dist_wp4=self.distance(self.pos,self.way_point4)
+                self.dist_goal=self.distance(self.pos,self.state_goal)
+                
+
+
+                #Measuring distance for different paths created by waypoint
+                self.dist_R12G=self.distance(self.poshit,self.way_point1) + self.distance(self.way_point1,self.way_point2) +self.distance(self.way_point2,self.state_goal)
+                self.dist_R124G=self.distance(self.poshit,self.way_point1) + self.distance(self.way_point1,self.way_point2) + self.distance(self.way_point2,self.way_point4) +self.distance(self.way_point4,self.state_goal)
+                
+                
+                self.dist_R13G=self.distance(self.poshit,self.way_point1) + self.distance(self.way_point1,self.way_point3) +self.distance(self.way_point3,self.state_goal)
+                self.dist_R134G=self.distance(self.poshit,self.way_point1) + self.distance(self.way_point1,self.way_point3) + self.distance(self.way_point3,self.way_point4) + self.distance(self.way_point4,self.state_goal)
+                
+
+                #checking intersection between the obstacle and the line from last waypoint to goal
+                self.intersection_wp2G_obs,_= self.intersection_check((self.way_point2,self.state_goal),self.square_bbox)
+                self.intersection_wp3G_obs,_= self.intersection_check((self.way_point3,self.state_goal),self.square_bbox)
+
+
+                #Measuring Heading error to different way points
+                self.heading_error_wp1, _ = self.calc_angle_error(self.way_point1, self.pos, self.yaw)
+                self.heading_error_wp2, _ = self.calc_angle_error(self.way_point2, self.pos, self.yaw)
+                self.heading_error_wp3, _ = self.calc_angle_error(self.way_point3, self.pos, self.yaw)
+                self.heading_error_wp4, _ = self.calc_angle_error(self.way_point4, self.pos, self.yaw)
+
+                if self.dist_wp1<1:
+                    self.wp1_reach=self.wp1_reach + 1
+                elif self.dist_goal <1:
+                    self.wp1_reach=0
+
+
+                if self.dist_wp2<1:
+                    self.wp2_reach=self.wp2_reach + 1
+                elif self.dist_goal <1:
+                    self.wp2_reach=0
+
+                if self.dist_wp3<1:
+                    self.wp3_reach=self.wp3_reach + 1
+                elif self.dist_goal <1:
+                    self.wp3_reach=0
+
+
+                if self.dist_wp4<1:
+                    self.wp4_reach=self.wp4_reach + 1
+                elif self.dist_goal <1:
+                    self.wp4_reach=0
+
+            # pm=None
+            # if self.h==1:
+            #     pm,om=p.getBasePositionAndOrientation(self.Id)
+            # print(pm+pm)
+
+
+            
+            
+            
             
             
 
-            
+                
+
+                
+                
+                #print(way_point1)
                # print(self.int_point_square[0])
             # self.waypoint = (self.int_point_square[0][0],self.int_point_square[0][1],0.05)
             # print("way",self.waypoint)
@@ -1382,21 +1671,7 @@ class Env(EnvBasePB):
         # 	print("Collision detected!")
 
 
-        #Between Goal and Robot 1
-        self.wp_pos_robot = self.world_to_robot(self.yaw, self.pos, self.state_goal)
-        #print(self.wp_pos_robot)
-        #print("waypoint_pos", self.wp_pos_robot)
-        self.heading_error, self.target_angle = self.calc_angle_error(self.state_goal, self.pos, self.yaw)
-        #print("heading_error", self.heading_error)
-        self.dist_to_wp = math.sqrt(self.wp_pos_robot[0]**2 + self.wp_pos_robot[1]**2)
-        #print("distanc-to_wp", self.dist_to_wp)
-
-        rot_speed = np.array(
-        [[np.cos(-self.target_angle), -np.sin(-self.target_angle), 0],
-            [np.sin(-self.target_angle), np.cos(-self.target_angle), 0],
-            [		0,			 0, 1]]
-        )
-        self.heading_vx, _, _ = np.dot(rot_speed, (self.body_vxyz[0],self.body_vxyz[1],self.body_vxyz[2]))
+        
 
         if self.args.num_robots > 1:
             #Between Robot 1 and Robot 2
@@ -1463,29 +1738,29 @@ class Env(EnvBasePB):
 
         return angle_error, target_angle
 
-    def min_distance_corners(self, corners_robot1, corners_robot2):
+    # def min_distance_corners(self, corners_robot1, corners_robot2):
     
 
-        min_distance = float('inf')
-        second_min_distance = float('inf')
-        min_point = None
-        second_min_point = None
+    #     min_distance = float('inf')
+    #     second_min_distance = float('inf')
+    #     min_point = None
+    #     second_min_point = None
 
-        for corner1 in corners_robot1:
-            for corner2 in corners_robot2:
-                distance = math.sqrt((corner2[0] - corner1[0]) ** 2 + (corner2[1] - corner1[1]) ** 2)
-                #print(dist)
-                #min_distance = min(min_distance, dist)
-                if distance < min_distance:
-                    second_min_distance = min_distance
-                    second_min_point = min_point
-                    min_distance = distance
-                    min_point = corner2
-                elif distance < second_min_distance:
-                    second_min_distance = distance
-                    second_min_point = corner2
+    #     for corner1 in corners_robot1:
+    #         for corner2 in corners_robot2:
+    #             distance = math.sqrt((corner2[0] - corner1[0]) ** 2 + (corner2[1] - corner1[1]) ** 2)
+    #             #print(dist)
+    #             #min_distance = min(min_distance, dist)
+    #             if distance < min_distance:
+    #                 second_min_distance = min_distance
+    #                 second_min_point = min_point
+    #                 min_distance = distance
+    #                 min_point = corner2
+    #             elif distance < second_min_distance:
+    #                 second_min_distance = distance
+    #                 second_min_point = corner2
 
-        return min_distance, second_min_distance, min_point, second_min_point
+    #     return min_distance, second_min_distance, min_point, second_min_point
 
     def bbox_generator_titan(self,radius,pos,orn,lineId,lineColorRGB=[1, 0, 0]):
      
@@ -1511,6 +1786,32 @@ class Env(EnvBasePB):
             if self.args.debug:
                     lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB, lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
         return robot_bbox
+    
+    def bbox_generator_titan2(self,radius,pos,orn,lineId,lineColorRGB=[1, 0, 0]):
+     
+        x=(1.4/2)+radius
+        y=(0.78/2)+radius
+        z=0.235
+        # get the self.corners of the bounding box
+        corners = [(x, y, z),
+                  (x,-y,z),
+                  (-x,-y,z),
+                  (-x,y,z),
+                  (x,y,z)]
+     
+        robot_bbox=[]
+        start1 = p.multiplyTransforms(pos, orn, len(corners)-1, [0, 0, 0, 1])[0]
+
+        robot_bbox.append(list(start1))
+
+        #for i in range(len(corners)-1):
+                
+            
+
+        #end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
+            # if self.args.debug:
+            #         lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB, lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+        return robot_bbox
 
     def bbox_generator_box(self,radius,height,pos,orn,lineId):
      
@@ -1533,8 +1834,8 @@ class Env(EnvBasePB):
             robot_bbox.append(list(start1))
 
             end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
-            if self.args.debug:
-                    lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+            #if self.args.debug:
+            lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
         return robot_bbox
 
     def bbox_generator(self,object_id,radius,height,lineId):
@@ -1633,6 +1934,9 @@ class Env(EnvBasePB):
      
         robot1_bbox=[]
 
+        # if self.args.debug:
+        #         lineIdgap[i]=p.addUserDebugLine((cornersgap[0][0]/2,cornersgap[0][1],.2),(-cornersgap[0][0]/2,-cornersgap[0][1],.2), lineColorRGB=[0, 0, 0], lineWidth=100, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+
         for i in range(len(cornersgap)-1):
                 
             start1 = p.multiplyTransforms((pos), orn, cornersgap[i], [0, 0, 0, 1])[0]
@@ -1640,7 +1944,9 @@ class Env(EnvBasePB):
             robot1_bbox.append(list(start1))
 
             end1 = p.multiplyTransforms((pos), orn, cornersgap[i+1], [0, 0, 0, 1])[0]
-            # if self.args.debug:
+            if self.args.debug:
+                lineIdgap[i]=p.addUserDebugLine(robot1_bbox[0], robot1_bbox[1], lineColorRGB=[0.2, 0.5, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+
             # 		lineIdgap[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[0.2, 0.5, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
      
         cornersA = [robot1_bbox[1],
@@ -1683,6 +1989,7 @@ class Env(EnvBasePB):
     def find_position_B(self,position_a, distance_d, angle_degrees):
         # Convert the angle from degrees to radians
         angle_radians = math.radians(angle_degrees)
+        
 
         # Calculate the coordinates (x, y) of position B
         x_b = position_a[0] + distance_d * math.cos(angle_radians)
@@ -1705,4 +2012,20 @@ class Env(EnvBasePB):
         # Ensure the angle is within the range [0, 360)
         angle_degrees = angle_degrees % 360
 
-        return angle_degrees,angle_radians 
+        return angle_degrees,angle_radians
+    
+    def distance(self,point1, point2):
+        return math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
+
+    def find_closest_coordinates(self,center_box1, box2_corners):
+        distances = [(self.distance(center_box1, corner), corner) for corner in box2_corners]
+        sorted_distances = sorted(distances, key=lambda x: x[0])
+    
+        return sorted_distances
+    
+    def komol(self,l,id):
+                if l==1:
+                    pm,om=p.getBasePositionAndOrientation(id)
+                    
+                
+                    return pm[0],pm[1],pm[2]
