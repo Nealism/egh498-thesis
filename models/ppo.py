@@ -434,7 +434,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
             else:
                 a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
-
+            v, logp = v.item(), logp.item()
             next_o, r, d, _ = env.step(a)
             if use_perception:
                 next_im = env.get_image()

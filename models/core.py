@@ -238,7 +238,8 @@ class MLPActorCritic(nn.Module):
 
         # Memory leak happens here somewhere. Copying the arrays seems to help??
         a_copy = a.cpu().detach().data.numpy().copy()
-        return a_copy, v.item(), logp_a.item()
+        # return a_copy, v.item(), logp_a.item()
+        return a_copy, v, logp_a
 
     def act(self, obs):
         return self.step(obs)[0]
