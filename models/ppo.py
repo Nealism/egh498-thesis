@@ -465,6 +465,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                         _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                     else:
                         _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32))
+                    v = v.item()
                 else:
                     v = 0
                 buf.finish_path(v)
