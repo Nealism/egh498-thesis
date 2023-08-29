@@ -10,6 +10,8 @@ declare -a Experiments=(
                       "s3/SR40"
                       "s3/SRE40LN"
                       "s3/SR40LN"
+                      "s3/S40LN"
+                      "s3/SE40LN"
                       
                       
 
@@ -21,6 +23,8 @@ declare -a Arguments=(
     "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 6000 --local_epoch_len 6000 --region_curr"
     "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 6000 --local_epoch_len 6000 --expert_curr --region_curr --num_layers 3 --num_nodes 456"
     "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 6000 --local_epoch_len 6000 --region_curr --num_layers 3 --num_nodes 456"
+    "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 6000 --local_epoch_len 6000 --num_layers 3 --num_nodes 456"
+    "--cpu 64 --env titan_pb_2 --training_on_hpc --epochs 5000 --max_ep_len 6000 --local_epoch_len 6000 --expert_curr --num_layers 3 --num_nodes 456"
    
 
     

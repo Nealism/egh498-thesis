@@ -100,10 +100,10 @@ class Env(EnvBasePB):
 
         if self.args.cur or self.args.region_curr:
             self.initial_goal_dist=3	
-            self.max_goal_dist=15
+            self.max_goal_dist=20
         else:
-            self.initial_goal_dist=15
-            self.max_goal_dist=15
+            self.initial_goal_dist=20
+            self.max_goal_dist=20
         
         self.action_multiplier = 0.1 
 
@@ -240,9 +240,9 @@ class Env(EnvBasePB):
     
 
     def get_success(self):
-        # dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        #dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
         #print("success_dist",dist_to_goal)
-        # return dist_to_goal < 1.0
+        #return dist_to_goal < 1.0
         return self.total_reward > 700
     
 
@@ -268,12 +268,13 @@ class Env(EnvBasePB):
             self.success.append(self.get_success())
             # print(self.success)
             self.ep_success = self.get_success()
-            # print(self.ep_success)			
+            print("Episdoe_Succ", self.ep_success)			
             self.cur_success.append(self.ep_success)
             self.ep_goal_success = np.mean(self.goal_success) if self.goal_success else 0.0
 
         self.goal_success = []
-        print("cur",self.cur_success)
+        print("GOAL", self.ep_goal_success)
+        #print("cur",self.cur_success)
         #print(self.body_xyz)
         
 
@@ -420,6 +421,8 @@ class Env(EnvBasePB):
                 
                 self.cur_success = deque([0.0], maxlen=5)
 
+        print(self.cur_success)
+
         
         
         
@@ -450,6 +453,8 @@ class Env(EnvBasePB):
         # print("robot_state")
         # print(self.state_robot2)
         self.lineId_heading = -1
+        self.lineId_side1 = -1
+        self.lineId_side2 = -1
         self.lineId = [-1]
         self.lineId_object= -1
         self.lineId_r2_big = [-1]*4 
@@ -670,7 +675,7 @@ class Env(EnvBasePB):
         # ####################_______WayPoint System Inspired by Bug 2 algorithm______######################
             if self.intersection_wp2G_obs == None or self.intersection_wp3G_obs == None or self.dist_R12G == None or self.dist_R13G == None or self.dist_R124G==None or self.dist_R134G==None:
                 if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
-                    exp_actions[0] = 0.25
+                    exp_actions[0] = 0.15
                 else:	
                     exp_actions[0] = 0.0
                 exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
@@ -811,6 +816,7 @@ class Env(EnvBasePB):
         elif self.time_to_target < self.steps or done:
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
             self.goal_success.append(False)
+        #print(self.goal_success)
 
         self.prev_actions = actions
         self.steps += 1
@@ -1425,14 +1431,17 @@ class Env(EnvBasePB):
             self.head_line=(self.pos[0], self.pos[1], 0.34), (self.heading_line_end[0], self.heading_line_end[1], 0.34)
 
             self.side_line1_end=self.find_position_B(self.robot1_safe_box[0],distance_d=10,angle_degrees=math.degrees(self.yaw))
-            self.side_line1=self.robot1_safe_box[0], (self.side_line1_end[0], self.side_line1_end[1], 0.34)
-
             self.side_line2_end=self.find_position_B(self.robot1_safe_box[1],distance_d=10,angle_degrees=math.degrees(self.yaw))
-            self.side_line2=self.robot1_safe_box[1], (self.side_line2_end[0], self.side_line2_end[1], 0.34)
+
+            self.side_line1=self.robot1_safe_box[0], (self.side_line2_end[0], self.side_line2_end[1], 0.34)
+
+            self.side_line2=self.robot1_safe_box[1], (self.side_line1_end[0], self.side_line1_end[1], 0.34)
         
             #pDrawing Heading Mid Line
-            if self.args.debug:
-                self.lineId=p.addUserDebugLine((self.pos[0], self.pos[1], 0.34), (self.heading_line_end[0], self.heading_line_end[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_heading)
+            #if self.args.debug:
+            # self.lineId=p.addUserDebugLine((self.pos[0], self.pos[1], 0.34), (self.heading_line_end[0], self.heading_line_end[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_heading)
+            # self.lineId=p.addUserDebugLine((self.robot1_safe_box[0][0], self.robot1_safe_box[0][1], 0.34), (self.side_line2_end[0], self.side_line2_end[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side1)
+            # self.lineId=p.addUserDebugLine((self.robot1_safe_box[1][0], self.robot1_safe_box[1][1], 0.34), (self.side_line1_end[0], self.side_line1_end[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side2)
     
 
 
@@ -1472,7 +1481,7 @@ class Env(EnvBasePB):
             
             
             # This part is hard part that ensure to freeze the moving robot position to get the position on exact moment of heading ray hitting the obstacle. Not changing the position after robot move
-            if self.h == 1:
+            if self.h == 1:  #this is the moment when heading rays hit obstacle
                 hit_pos, hit_orn= p.getBasePositionAndOrientation(self.Id)
                 self.poshit_x,self.poshit_y,self.poshit_z, self.ornhit_a,self.ornhit_b,self.ornhit_c,self.ornhit_d=hit_pos[0],hit_pos[1],hit_pos[2],hit_orn[0],hit_orn[1],hit_orn[2],hit_orn[3]
 
@@ -1508,9 +1517,12 @@ class Env(EnvBasePB):
                 self.wp2_reach=0
                 self.wp3_reach=0
                 self.wp4_reach=0
+                #self.goal_success.append(True)
             
 
 
+
+            #Counting from when the heading rays hit the obstacle
             if self.h>0:
                 #print("MOVE MOVE MOVE",self.poshit_x,self.poshit_y,self.poshit_z,"h_value",self.h,"ORN_HITS",self.ornhit_a,self.ornhit_b ,self.ornhit_c ,self.ornhit_d )
                 self.poshit=(self.poshit_x,self.poshit_y,self.poshit_z)
@@ -1593,6 +1605,11 @@ class Env(EnvBasePB):
 
                 if self.dist_wp4<1:
                     self.wp4_reach=self.wp4_reach + 1
+
+                if self.dist_goal <1:
+                
+                    self.goal_success.append(True)
+                    #print(self.goal_success)
                 
 
                 #print(self.wp1_reach,self.wp2_reach,self.wp3_reach,self.wp4_reach)
@@ -1841,8 +1858,8 @@ class Env(EnvBasePB):
             robot_bbox.append(list(start1))
 
             end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
-            #if self.args.debug:
-            lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+            if self.args.debug:
+                lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
         return robot_bbox
 
     def bbox_generator(self,object_id,radius,height,lineId):

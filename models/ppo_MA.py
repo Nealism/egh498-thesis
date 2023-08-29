@@ -136,7 +136,7 @@ class PPOBuffer:
         This allows us to bootstrap the reward-to-go calculation to account
         for timesteps beyond the arbitrary episode horizon (or epoch cutoff).
         """
-
+        print("Debug",self)
         path_slice = slice(self.path_start_idx, self.ptr)
         rews = np.append(self.rew_buf[path_slice], last_val)
         vals = np.append(self.val_buf[path_slice], last_val)
@@ -169,23 +169,38 @@ class PPOBuffer:
         return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in data.items()}
     
 class MA_PPOBuffer:
-        def __init__(self, args.num_robots):
-            self.buffers=[PPOBuffer for Robot in args.num_robots]
+        def __init__(self, ob_size, ac_size, size, gamma=0.99, lam=0.95, num_robots=None):
+            #self.args = args
+            self.buffers=[PPOBuffer for Robot in range(num_robots)]
+
             
         def store(self, obs, acts, rews, vals, logps):
-            for buffer, ob, act,rew,val,logp in zip(self.buffers, obs,acts,rews,vals,logps):
+            
+            for buffer, ob, act,rew,val,logp in zip(self.buffers, obs,[acts],rews,[vals],[logps]):
+                print("bf",buffer,"ob", ob, "act",act,"rw",rew,"vl",val,"lgp",logp)
                 buffer.store(ob,act,rew,val,logp)
+            
 
-        def finish_path(self, vals):
-            for buffer,val in zip(self.buffers,vals):
-                buffer.finish_path(val)
+        def finish_path(self, last_vals=0):
+            
+            for buffer, last_val in zip(self.buffers,[last_vals]):
+                print("NEW_DEBUG",buffer.finish_path(buffer,last_val=10), last_val);exit()
+
+                print("val",buffer.finish_path(last_valu))
+
+                buffer.finish_path(last_valu)
+
+        
+        def get(self):
+            for buffer in self.buffers:
+                buffer.get()
 
 
 
 def ppo(env, ac_kwargs=dict(), seed=0, 
         steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
         vf_lr=1e-3, train_pi_iters=100, train_v_iters=100, lam=0.97, max_ep_len=2048, local_epoch_len=2048,
-        target_kl=0.01, logger_kwargs=dict(), save_freq=10, PATH=None, writer=None, use_perception=False, load_path=""):
+        target_kl=0.01, logger_kwargs=dict(), save_freq=10, PATH=None, writer=None, use_perception=False, load_path="",robot_number=None):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -307,6 +322,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
     ob_size = env.observation_space.shape
     ac_size = env.action_space.shape
+    
 
     # Create actor-critic module
     if use_perception:
@@ -343,7 +359,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     if use_perception:
         buf = PPOBufferPerception(ob_size, im_size, ac_size, local_steps_per_epoch, gamma, lam)
     else:
-        buf = PPOBuffer(ob_size, ac_size, local_steps_per_epoch, gamma, lam)
+        buf = MA_PPOBuffer(ob_size, ac_size, local_steps_per_epoch, gamma, lam, robot_number)
 
     # Set up function for computing PPO policy loss
     def compute_loss_pi(data):
@@ -449,10 +465,11 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
 
             next_o, r, d, _ = env.step(a)
+            print("obs",next_o,"rew", r, "done", d, "dict",_)
             if use_perception:
                 next_im = env.get_image()
             
-            ep_ret += r
+            ep_ret += r.pop() 
             ep_len += 1
 
             # save and log

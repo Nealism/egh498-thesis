@@ -136,6 +136,7 @@ class PPOBuffer:
         This allows us to bootstrap the reward-to-go calculation to account
         for timesteps beyond the arbitrary episode horizon (or epoch cutoff).
         """
+        print("Debug",self)
 
         path_slice = slice(self.path_start_idx, self.ptr)
         rews = np.append(self.rew_buf[path_slice], last_val)
@@ -418,6 +419,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # Prepare for interaction with environment
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
+    print("Printing env.reset()", o)
     if use_perception:
         im = env.get_image()
 

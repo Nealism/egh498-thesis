@@ -4,6 +4,7 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 from pathlib import Path
 home = str(Path.home())
+import numpy as np
 
 from utils.mpi_tools import mpi_fork
 import default_arguments
@@ -30,15 +31,19 @@ def run(args):
         writer = None
 
     env = Env(PATH=PATH, args=args, writer=writer)
-    
+    env.reset()
+    print("reset",env.reset())
+    env.step(np.zeros(2))
     # Need to import Torch after Isaac (for isaac "is" envs) 
     from utils.run_utils import setup_logger_kwargs
-    from models.ppo import ppo
+    from models.ppo_MA import ppo
+    #from models.ppo import ppo
 
     logger_kwargs = setup_logger_kwargs(args.exp, args.seed)
     logger_kwargs["output_dir"] = PATH
 
-    ppo(env, ac_kwargs=dict(hidden_sizes=[args.num_nodes]*args.num_layers), seed=args.seed, epochs=args.epochs, PATH=PATH, writer=writer, local_epoch_len=args.local_epoch_len, logger_kwargs=logger_kwargs, use_perception=args.use_perception, load_path=args.load_path)
+    ppo(env, ac_kwargs=dict(hidden_sizes=[args.num_nodes]*args.num_layers), seed=args.seed, epochs=args.epochs, PATH=PATH, writer=writer, local_epoch_len=args.local_epoch_len, logger_kwargs=logger_kwargs, use_perception=args.use_perception, load_path=args.load_path, robot_number=args.num_robots)
+    #ppo(env, ac_kwargs=dict(hidden_sizes=[args.num_nodes]*args.num_layers), seed=args.seed, epochs=args.epochs, PATH=PATH, writer=writer, local_epoch_len=args.local_epoch_len, logger_kwargs=logger_kwargs, use_perception=args.use_perception, load_path=args.load_path)
 
 if __name__=="__main__":
     args = default_arguments.get_defaults() 

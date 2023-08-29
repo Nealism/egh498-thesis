@@ -21,7 +21,11 @@ class EnvBasePB(EnvBase):
     terrain = np.zeros(terrain_size)
 
     def load_robot(self):
-        self.load_simulator()
+            
+        if self.args.env != "multi_robot_pb":
+            self.load_simulator()
+            
+
 
         if not self.args.test or not self.loaded_sim:
             self.load_specific_robot()
@@ -64,7 +68,7 @@ class EnvBasePB(EnvBase):
             self._p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
         # ======================================================================
 
-        p.setTimeStep(self.simStep)
+        #p.setTimeStep(self.simStep)
         p.setGravity(0,0,-9.8)
 
         
