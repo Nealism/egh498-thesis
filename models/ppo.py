@@ -21,6 +21,7 @@ class PPOBufferPerception:
     """
 
     def __init__(self, ob_size, im_size, ac_size, size, gamma=0.99, lam=0.95):
+        
         self.obs_buf = np.zeros(core.combined_shape(size, ob_size), dtype=np.float32)
         self.im_buf = np.zeros(core.combined_shape(size, im_size), dtype=np.float32)
         self.act_buf = np.zeros(core.combined_shape(size, ac_size), dtype=np.float32)
@@ -109,17 +110,21 @@ class PPOBuffer:
         self.gamma, self.lam = gamma, lam
         self.ptr, self.path_start_idx, self.max_size = 0, 0, size
 
+
     def store(self, obs, act, rew, val, logp):
         """
         Append one timestep of agent-environment interaction to the buffer.
         """
         assert self.ptr < self.max_size     # buffer has to have room so you can store
+        
         self.obs_buf[self.ptr] = obs
         self.act_buf[self.ptr] = act
         self.rew_buf[self.ptr] = rew
         self.val_buf[self.ptr] = val
         self.logp_buf[self.ptr] = logp
         self.ptr += 1
+        #print(self.obs_buf[self.ptr])
+
 
     def finish_path(self, last_val=0):
         """
@@ -136,14 +141,22 @@ class PPOBuffer:
         This allows us to bootstrap the reward-to-go calculation to account
         for timesteps beyond the arbitrary episode horizon (or epoch cutoff).
         """
-        print("Debug",self)
+        print("rw buf",self.rew_buf,type(self.rew_buf))
+
 
         path_slice = slice(self.path_start_idx, self.ptr)
+        #print("path_slice_shape",type(path_slice), path_slice, "adv_buff",self.adv_buf,self.adv_buf.shape)
+        print("last_val",last_val)
+
+
         rews = np.append(self.rew_buf[path_slice], last_val)
         vals = np.append(self.val_buf[path_slice], last_val)
+        print("owch",self,rews,rews.shape,vals,vals.shape)
         
         # the next two lines implement GAE-Lambda advantage calculation
         deltas = rews[:-1] + self.gamma * vals[1:] - vals[:-1]
+        #print("rews[:-1]",rews[:-1],"val[1:]",vals[1:],"vals[:-1]",vals[:-1],"deltas_shape",deltas.shape)
+
         self.adv_buf[path_slice] = core.discount_cumsum(deltas, self.gamma * self.lam)
         
         # the next line computes rewards-to-go, to be targets for the value function
@@ -164,6 +177,7 @@ class PPOBuffer:
         self.adv_buf = (self.adv_buf - adv_mean) / adv_std
         data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf,
                     adv=self.adv_buf, logp=self.logp_buf)
+        
         return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in data.items()}
 
 
@@ -376,7 +390,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     def update(epoch):
 
         data = buf.get()
-
+        print("buffer get",data)
         pi_l_old, pi_info_old = compute_loss_pi(data)
         pi_l_old = pi_l_old.item()
         v_l_old = compute_loss_v(data).item()
@@ -419,7 +433,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # Prepare for interaction with environment
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
-    print("Printing env.reset()", o)
+    #print("Printing env.reset()", o)
     if use_perception:
         im = env.get_image()
 
@@ -447,6 +461,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 buf.store(o, im, a, r, v, logp)
             else:
                 buf.store(o, a, r, v, logp)
+
             logger.store(VVals=v)
             
             # Update obs (critical!)
@@ -468,6 +483,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                     v = v.item()
                 else:
                     v = 0
+
+                #print("v is ",v)
                 buf.finish_path(v)
                 if terminal:
                     # only save EpRet / EpLen if trajectory finished

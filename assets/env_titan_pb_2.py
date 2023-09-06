@@ -240,10 +240,10 @@ class Env(EnvBasePB):
     
 
     def get_success(self):
-        #dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
         #print("success_dist",dist_to_goal)
-        #return dist_to_goal < 1.0
-        return self.total_reward > 700
+        return dist_to_goal < 1.0
+        #return self.total_reward > 700
     
 
     def check_for_success(self):
@@ -268,12 +268,12 @@ class Env(EnvBasePB):
             self.success.append(self.get_success())
             # print(self.success)
             self.ep_success = self.get_success()
-            print("Episdoe_Succ", self.ep_success)			
+            #print("Episdoe_Succ", self.ep_success)			
             self.cur_success.append(self.ep_success)
             self.ep_goal_success = np.mean(self.goal_success) if self.goal_success else 0.0
 
         self.goal_success = []
-        print("GOAL", self.ep_goal_success)
+        #print("GOAL", self.ep_goal_success)
         #print("cur",self.cur_success)
         #print(self.body_xyz)
         
@@ -421,7 +421,7 @@ class Env(EnvBasePB):
                 
                 self.cur_success = deque([0.0], maxlen=5)
 
-        print(self.cur_success)
+        #print(self.cur_success)
 
         
         
@@ -811,7 +811,7 @@ class Env(EnvBasePB):
         if self.dist_to_wp < 1.0:
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
             self.goal_success.append(True)
-            print(self.goal_success)
+            #print(self.goal_success)
 
         elif self.time_to_target < self.steps or done:
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
@@ -1528,7 +1528,7 @@ class Env(EnvBasePB):
                 self.poshit=(self.poshit_x,self.poshit_y,self.poshit_z)
                 self.ornhit=(self.ornhit_a,self.ornhit_b ,self.ornhit_c ,self.ornhit_d)
                 #generating safety bounding box aroung obstacle box
-                self.safety_square_bbox=self.bbox_generator_box(2.5,0.011,self.pos2,self.orn2,self.lineId_box1_safety)
+                self.safety_square_bbox=self.bbox_generator_box(3,0.011,self.pos2,self.orn2,self.lineId_box1_safety)
                 self.safety_square_bbox.append(self.safety_square_bbox[0])
                 #print(self.safety_square_bbox)
 
@@ -1606,9 +1606,9 @@ class Env(EnvBasePB):
                 if self.dist_wp4<1:
                     self.wp4_reach=self.wp4_reach + 1
 
-                if self.dist_goal <1:
+                # if self.dist_goal <1:
                 
-                    self.goal_success.append(True)
+                #     self.goal_success.append(True)
                     #print(self.goal_success)
                 
 
@@ -1642,12 +1642,15 @@ class Env(EnvBasePB):
         # 	# #This part is for setting inflation radious bounding box around robots
         
             self.robot1_bbox=self.bbox_generator_titan(0.075,self.pos,self.orn,self.lineId1)
+            self.robot1_bbox.append(self.robot1_bbox[0])
+            
+            
             self.robot2_bbox=self.bbox_generator_titan(0.075,self.pos2,self.orn2,self.lineId2)
+            self.robot2_bbox.append(self.robot2_bbox[0])
+
             #self.robot2_bbox=self.bbox_generator_titan2(0.0,self.pos2,self.orn2,self.lineId2)
             
    
-            self.robot1_bbox.append(self.robot1_bbox[0])
-            self.robot2_bbox.append(self.robot2_bbox[0])
             
         
         # 	# #This part is for generating big bounding box around robot2 to create way point
@@ -1714,26 +1717,26 @@ class Env(EnvBasePB):
         # robot2_avoid_angle = np.arctan2(math.sqrt(0.7**2 + self.yaw2**2), self.dist_to_robot2)
         # print("robot2_avoid_anglesqrt",robot2_avoid_angle*(180/np.pi))
         # print(self.yaw2)
-        if self.args.num_robots > 1:
-            rayLen = 3
-            mat = p.getMatrixFromQuaternion(self.orn)
-        #print(self.orn)
-            dir = [mat[0], mat[3], mat[6]]
-            lines_from = []
-            lines_to = []
-            for n, line_from in enumerate(self.robot1_bbox[:2]):
-                line_to = [line_from[0] + dir[0] * rayLen, line_from[1] + dir[1] * rayLen, line_from[2] + dir[2] * rayLen]
-                line_from = [line_from[0] + dir[0] * 0.5, line_from[1] + dir[1] * 0.5, line_from[2] + dir[2] * 0.5]
-                #line_from = [self.body_xyz[0] + dir[0] * 0.5, self.body_xyz[1] + dir[1] * 0.5, self.body_xyz[2] + dir[2] * 0.5]
-                lines_from.append(line_from)
-                lines_to.append(line_to)
-            if self.args.debug:
-                for n, (line_to, line_from) in enumerate(zip(lines_from, lines_to)):
-                    self.ray_line[n] = p.addUserDebugLine(line_from, line_to, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.ray_line[n])
-            hits = p.rayTestBatch(lines_from, lines_to)
-        #print(hits[0])
-            self.hit = [hits[0][0] > 0, hits[1][0] > 0]
-            print(self.hit)
+        # if self.args.num_robots > 1:
+        #     rayLen = 3
+        #     mat = p.getMatrixFromQuaternion(self.orn)
+        # #print(self.orn)
+        #     dir = [mat[0], mat[3], mat[6]]
+        #     lines_from = []
+        #     lines_to = []
+        #     for n, line_from in enumerate(self.robot1_bbox[:2]):
+        #         line_to = [line_from[0] + dir[0] * rayLen, line_from[1] + dir[1] * rayLen, line_from[2] + dir[2] * rayLen]
+        #         line_from = [line_from[0] + dir[0] * 0.5, line_from[1] + dir[1] * 0.5, line_from[2] + dir[2] * 0.5]
+        #         #line_from = [self.body_xyz[0] + dir[0] * 0.5, self.body_xyz[1] + dir[1] * 0.5, self.body_xyz[2] + dir[2] * 0.5]
+        #         lines_from.append(line_from)
+        #         lines_to.append(line_to)
+        #     if self.args.debug:
+        #         for n, (line_to, line_from) in enumerate(zip(lines_from, lines_to)):
+        #             self.ray_line[n] = p.addUserDebugLine(line_from, line_to, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.ray_line[n])
+        #     hits = p.rayTestBatch(lines_from, lines_to)
+        # #print(hits[0])
+        #     self.hit = [hits[0][0] > 0, hits[1][0] > 0]
+            #print(self.hit)
    
         #print(self.orn2)
   

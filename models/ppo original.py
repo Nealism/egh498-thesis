@@ -113,7 +113,6 @@ class PPOBuffer:
         """
         Append one timestep of agent-environment interaction to the buffer.
         """
-        print("ptr store",self.ptr,self.max_size, self)
         assert self.ptr < self.max_size     # buffer has to have room so you can store
         self.obs_buf[self.ptr] = obs
         self.act_buf[self.ptr] = act
@@ -122,7 +121,7 @@ class PPOBuffer:
         self.logp_buf[self.ptr] = logp
         self.ptr += 1
 
-    def finish_path(self, last_val=()):
+    def finish_path(self, last_val=0):
         """
         Call this at the end of a trajectory, or when one gets cut off
         by an epoch ending. This looks back in the buffer to where the
@@ -137,31 +136,20 @@ class PPOBuffer:
         This allows us to bootstrap the reward-to-go calculation to account
         for timesteps beyond the arbitrary episode horizon (or epoch cutoff).
         """
-        #print("rw buf",self.rew_buf,type(self.rew_buf))
-        #print("only self",self, 'lastval',last_val)
-        #print("Debug",self)
+        
+
         path_slice = slice(self.path_start_idx, self.ptr)
-        #print("path_slice_shape",type(path_slice), path_slice, "adv_buff",self.adv_buf,self.adv_buf.shape)
-        #print("last_val",last_val)
         rews = np.append(self.rew_buf[path_slice], last_val)
         vals = np.append(self.val_buf[path_slice], last_val)
-        #print("owch",self,rews.shape,vals.shape)
-        
         
         # the next two lines implement GAE-Lambda advantage calculation
         deltas = rews[:-1] + self.gamma * vals[1:] - vals[:-1]
-        #print("rews[:-1]",rews[:-1],"val[1:]",vals[1:],"vals[:-1]",vals[:-1],"deltas_shape",deltas.shape)
         self.adv_buf[path_slice] = core.discount_cumsum(deltas, self.gamma * self.lam)
-
+        
         # the next line computes rewards-to-go, to be targets for the value function
         self.ret_buf[path_slice] = core.discount_cumsum(rews, self.gamma)[:-1]
-        #print("finishinfg",self,len(self.adv_buf),len(self.ret_buf))
-        
         
         self.path_start_idx = self.ptr
-
-
-    
 
     def get(self):
         """
@@ -169,90 +157,21 @@ class PPOBuffer:
         the buffer, with advantages appropriately normalized (shifted to have
         mean zero and std one). Also, resets some pointers in the buffer.
         """
-
-        print("check prt buffer",self.ptr, self.max_size, self)
-        
         assert self.ptr == self.max_size    # buffer has to be full before you can get
         self.ptr, self.path_start_idx = 0, 0
-
         # the next two lines implement the advantage normalization trick
         adv_mean, adv_std = mpi_statistics_scalar(self.adv_buf)
         self.adv_buf = (self.adv_buf - adv_mean) / adv_std
-        #print("get",self,self.obs_buf,self.act_buf,self.ret_buf,self.adv_buf,self.logp_buf)
         data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf,
                     adv=self.adv_buf, logp=self.logp_buf)
-        #print("data",data)
-        #print("return",{k: torch.as_tensor(v, dtype=torch.float32) for k,v in data.items()})
-        
         return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in data.items()}
-    
-class MA_PPOBuffer:
-        def __init__(self, ob_size, ac_size, size, gamma=0.99, lam=0.95, num_robots=None):
-            #self.args = args
-            #self.ptr, self.path_start_idx, self.max_size = 0, 0, size
-            #self.ptr, self.path_start_idx, self.max_size = 0, 0, size
-
-            self.buffers=tuple([PPOBuffer(ob_size, ac_size, size, gamma=gamma, lam=lam) for Robot in range(num_robots)])
-
-            #print("b",tuple(self.buffers), type(self.buffers))
-            
-            
-        def store(self, obs, acts, rews, vals, logps):
-            
-            #num_robots=tuple(range(num_robots))
-            #print(num_robots,type(num_robots))
-            #for Robot in range(num_robots):
-            #robot_id_number=tuple(range(num_robots))
-            for buffer, ob, act,rew,val,logp in zip(self.buffers, tuple(obs),tuple(acts),tuple(rews),tuple(vals.tolist()),tuple(logps.tolist())):
-                    #self.ptr += 1
-                #print("store buffer.ptr",buffer.ptr)
-                #print(buffer,Robot,rew)
-                #print("bf",buffer,"ob", ob, "act",act,"rw",rew,"vl",val,"lgp",logp)
-                #print("buffer store",buffer.store(ob,act,rew,val,logp))
-                buffer.store(ob,act,rew,val,logp)
-            
-
-        def finish_path(self, last_vals=()):
-            #print("initial_lastval",[last_vals],type([last_vals]))
-            #robot_id_number=tuple(range(num_robots))
-            #print("early last vals v",tuple(last_vals), type(last_vals))
-            #print("Life is full of problems,",last_vals.detach().numpy())
-
-            for buffer, last_val in zip(self.buffers,last_vals):
-                #print(buffer,Robot,rew)
-                #print("MA",self.buffers,last_vals)
-                #print("MA_Single",buffer, last_val,Robot)
-                print("f_buf",buffer, "type1",type(buffer), "f_self_buf",self.buffers)
-
-
-                #print("fininsh path",buffer.finish_path(last_val))
-                buffer.finish_path(last_val)
-
-        
-        def get(self,num_robots=None):
-            
-            getting=[]
-            robot_id_number=tuple(range(num_robots))
-            for buffer,Robot in zip(self.buffers,robot_id_number):
-                print("g_buf",buffer,"type1",type(buffer),"self_bu",self.buffers, "r", Robot)
-                #print("buf_get",buffer.get())
-                #print("self",self,"buf",buffer, "self buf",self.buffers)
-                # print("get buffer.ptr",buffer.ptr)
-                # print("MAPPO get return",buffer.get())
-                #print("buf_get",buffer.get())
-                return buffer.get()
-                # getting=getting.append(buffer.get())
-                # print("getting",getting)
-                # #print("buf_get",buffer.get())
-                # #return buffer.get()
-                # return getting
 
 
 
 def ppo(env, ac_kwargs=dict(), seed=0, 
         steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
         vf_lr=1e-3, train_pi_iters=100, train_v_iters=100, lam=0.97, max_ep_len=2048, local_epoch_len=2048,
-        target_kl=0.01, logger_kwargs=dict(), save_freq=10, PATH=None, writer=None, use_perception=False, load_path="",robot_number=None):
+        target_kl=0.01, logger_kwargs=dict(), save_freq=10, PATH=None, writer=None, use_perception=False, load_path=""):
     """
     Proximal Policy Optimization (by clipping), 
 
@@ -374,7 +293,6 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
     ob_size = env.observation_space.shape
     ac_size = env.action_space.shape
-    
 
     # Create actor-critic module
     if use_perception:
@@ -407,12 +325,11 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # Set up experience buffer
     # local_steps_per_epoch = int(steps_per_epoch / num_procs())
     local_steps_per_epoch = local_epoch_len
-    print(local_steps_per_epoch)
     steps_per_epoch = local_epoch_len * num_procs()
     if use_perception:
         buf = PPOBufferPerception(ob_size, im_size, ac_size, local_steps_per_epoch, gamma, lam)
     else:
-        buf = MA_PPOBuffer(ob_size, ac_size, local_steps_per_epoch, gamma, lam, robot_number)
+        buf = PPOBuffer(ob_size, ac_size, local_steps_per_epoch, gamma, lam)
 
     # Set up function for computing PPO policy loss
     def compute_loss_pi(data):
@@ -456,11 +373,10 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # Set up model saving
     logger.setup_pytorch_saver(ac)
 
-    def update(epoch, robot_number=robot_number):
+    def update(epoch):
 
-        
-        data = buf.get(robot_number)
-        #print("buffer get",data)
+        data = buf.get()
+
         pi_l_old, pi_info_old = compute_loss_pi(data)
         pi_l_old = pi_l_old.item()
         v_l_old = compute_loss_v(data).item()
@@ -503,6 +419,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # Prepare for interaction with environment
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
+    #print("Printing env.reset()", o)
     if use_perception:
         im = env.get_image()
 
@@ -516,24 +433,13 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             if use_perception:
                 a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
             else:
-                a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
-
+                a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
+            v, logp = v.item(), logp.item()
             next_o, r, d, _ = env.step(a)
-            
-
-            #print("DONE",d)
             if use_perception:
                 next_im = env.get_image()
             
-            # if robot_number > 1:
-
-            #     ep_ret += r.pop() 
-            
-            # else:
-            ep_ret += sum(r) / len(r)
-            
-
-
+            ep_ret += r
             ep_len += 1
 
             # save and log
@@ -541,11 +447,6 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 buf.store(o, im, a, r, v, logp)
             else:
                 buf.store(o, a, r, v, logp)
-
-            #_,_,_,j,_,_=buf.store(o, a, r, v, logp, robot_number)
-            
-
-            
             logger.store(VVals=v)
             
             # Update obs (critical!)
@@ -553,32 +454,21 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             if use_perception:
                 im = next_im
 
-            #print(d)
             timeout = ep_len == env.args.max_ep_len
-            #print(d)
-            if any(d):
-                terminal = True
-            else:
-                terminal = timeout
-            #print(terminal)                      #CHECK that Part
+            terminal = d or timeout
             epoch_ended = t==local_steps_per_epoch-1
 
             if terminal or epoch_ended:
                 # if trajectory didn't reach terminal state, bootstrap value target
-                if (timeout or epoch_ended) and not any(d):
+                if (timeout or epoch_ended) and not d:
                     if use_perception:
                         _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                     else:
                         _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32))
-                        print("what is that tensor with 2 element",v.detach().numpy(), type(v.detach().numpy()))
-                        v = v.detach().numpy()
+                    v = v.item()
                 else:
-                    #v = 0
-                    v=np.zeros(robot_number)
-
-                print("what is v",v, type(v))
+                    v = 0
                 buf.finish_path(v)
-                #print("finish",buf.finish_path(v))
                 if terminal:
                     # only save EpRet / EpLen if trajectory finished
                     logger.store(EpRet=ep_ret, EpLen=ep_len)

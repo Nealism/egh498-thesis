@@ -51,7 +51,7 @@ class Env(EnvBasePB):
         for Robot in self.robots:
             
             res.append(Robot.reset())
-        print("GREAAATTTTTT", res)
+        #print("GREAAATTTTTT", res)
         return res
 
 
