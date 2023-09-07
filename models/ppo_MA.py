@@ -113,7 +113,7 @@ class PPOBuffer:
         """
         Append one timestep of agent-environment interaction to the buffer.
         """
-        print("ptr store",self.ptr,self.max_size, self)
+        #print("ptr store",self.ptr,self.max_size, self)
         assert self.ptr < self.max_size     # buffer has to have room so you can store
         self.obs_buf[self.ptr] = obs
         self.act_buf[self.ptr] = act
@@ -170,7 +170,7 @@ class PPOBuffer:
         mean zero and std one). Also, resets some pointers in the buffer.
         """
 
-        print("check prt buffer",self.ptr, self.max_size, self)
+        #print("check prt buffer",self.ptr, self.max_size, self)
         
         assert self.ptr == self.max_size    # buffer has to be full before you can get
         self.ptr, self.path_start_idx = 0, 0
@@ -222,7 +222,7 @@ class MA_PPOBuffer:
                 #print(buffer,Robot,rew)
                 #print("MA",self.buffers,last_vals)
                 #print("MA_Single",buffer, last_val,Robot)
-                print("f_buf",buffer, "type1",type(buffer), "f_self_buf",self.buffers)
+                #print("f_buf",buffer, "type1",type(buffer), "f_self_buf",self.buffers)
 
 
                 #print("fininsh path",buffer.finish_path(last_val))
@@ -234,13 +234,14 @@ class MA_PPOBuffer:
             getting=[]
             robot_id_number=tuple(range(num_robots))
             for buffer,Robot in zip(self.buffers,robot_id_number):
-                print("g_buf",buffer,"type1",type(buffer),"self_bu",self.buffers, "r", Robot)
+                #print("g_buf",buffer,"type1",type(buffer),"self_bu",self.buffers, "r", Robot)
                 #print("buf_get",buffer.get())
                 #print("self",self,"buf",buffer, "self buf",self.buffers)
                 # print("get buffer.ptr",buffer.ptr)
                 # print("MAPPO get return",buffer.get())
                 #print("buf_get",buffer.get())
-                return buffer.get()
+                p=buffer.get()
+            return p
                 # getting=getting.append(buffer.get())
                 # print("getting",getting)
                 # #print("buf_get",buffer.get())
