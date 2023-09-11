@@ -231,7 +231,8 @@ class MA_PPOBuffer:
         
         def get(self,num_robots=None):
             
-            getting=[]
+            get_list=[]
+            buffer_list=[]
             robot_id_number=tuple(range(num_robots))
             for buffer,Robot in zip(self.buffers,robot_id_number):
                 #print("g_buf",buffer,"type1",type(buffer),"self_bu",self.buffers, "r", Robot)
@@ -240,8 +241,14 @@ class MA_PPOBuffer:
                 # print("get buffer.ptr",buffer.ptr)
                 # print("MAPPO get return",buffer.get())
                 #print("buf_get",buffer.get())
+                #print(buffer)
+                b=buffer
                 p=buffer.get()
-            return p
+                get_list.append(p)
+                buffer_list.append(b)
+                #print(p)
+                #print("getting list", get_list)
+            return get_list
                 # getting=getting.append(buffer.get())
                 # print("getting",getting)
                 # #print("buf_get",buffer.get())
@@ -408,7 +415,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # Set up experience buffer
     # local_steps_per_epoch = int(steps_per_epoch / num_procs())
     local_steps_per_epoch = local_epoch_len
-    print(local_steps_per_epoch)
+    #print(local_steps_per_epoch)
     steps_per_epoch = local_epoch_len * num_procs()
     if use_perception:
         buf = PPOBufferPerception(ob_size, im_size, ac_size, local_steps_per_epoch, gamma, lam)
@@ -457,11 +464,12 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # Set up model saving
     logger.setup_pytorch_saver(ac)
 
-    def update(epoch, robot_number=robot_number):
+    
+
+
+    def update(data, epoch):
 
         
-        data = buf.get(robot_number)
-        #print("buffer get",data)
         pi_l_old, pi_info_old = compute_loss_pi(data)
         pi_l_old = pi_l_old.item()
         v_l_old = compute_loss_v(data).item()
@@ -570,14 +578,14 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                     if use_perception:
                         _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                     else:
-                        _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32))
-                        print("what is that tensor with 2 element",v.detach().numpy(), type(v.detach().numpy()))
+                        _, v, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
+                        #print("what is that tensor with 2 element",v.detach().numpy(), type(v.detach().numpy()))
                         v = v.detach().numpy()
                 else:
                     #v = 0
                     v=np.zeros(robot_number)
 
-                print("what is v",v, type(v))
+                #print("what is v",v, type(v))
                 buf.finish_path(v)
                 #print("finish",buf.finish_path(v))
                 if terminal:
@@ -608,7 +616,13 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #     env.restore_env_state(save_state)
 
         # Perform PPO update!
-        update(epoch)
+        data_list= buf.get(robot_number)
+
+        for data in data_list:
+            print("data",data)
+            print("datalist",data_list)
+
+            update(data,epoch)
 
         lrlocal = (local_rews, local_lens) # local values
         listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal) # list of tuples
