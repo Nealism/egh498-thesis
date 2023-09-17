@@ -25,7 +25,7 @@ class Env(EnvBasePB):
             self.ob_size = 7
         else:
             self.ac_size = 2
-            if self.args.num_robots > 1:
+            if self.args.static_robots > 1:
                 self.ob_size = 18
             elif self.args.obstacle_avoidance:
                 self.ob_size = 10
@@ -63,6 +63,7 @@ class Env(EnvBasePB):
         self.ob_dicts=[]
         for action,Robot in zip(actions,self.robots):
             ob,rew,done, self.ob_dict=Robot.step(action)
+            
             # Robot.Id
             obs.append(ob)
             rews.append(rew)

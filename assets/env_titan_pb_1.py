@@ -52,7 +52,7 @@ class Env(EnvBasePB):
             self.ob_size = 7
         else:
             self.ac_size = 2
-            if self.args.static_robots > 1:
+            if self.args.num_robots > 1:
                 self.ob_size = 18
             elif self.args.obstacle_avoidance:
                 self.ob_size = 10
@@ -174,7 +174,7 @@ class Env(EnvBasePB):
             #state_object= [random.uniform(-4,4),random.uniform(4,1),0.00]
             robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
             self.contact_list = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
-            if self.args.static_robots > 1 and self.args.insert_robot2:
+            if self.args.num_robots > 1 and self.args.insert_robot2:
                 robot2=self.load_urdf_robot2("./assets/urdfs/dynamic_titan.urdf")
             if self.args.insert_box:
                 wall_dir= "Wall_URDF/"
@@ -411,7 +411,7 @@ class Env(EnvBasePB):
         # self.a is the fixed value of unit ( how far from the line) and self.b is the step size ( Here, step size is 0.5 unit)
         #print("static robot distance from trajectory",self.a-self.b,"and cur_success", self.cur_success)
         #print("cur_success", self.cur_success)	
-        if (self.args.static_robots > 1 or self.args.obstacle_avoidance) and (self.args.cur or self.args.collision_likelihood_curr) and self.check_for_success():
+        if (self.args.num_robots > 1 or self.args.obstacle_avoidance) and (self.args.cur or self.args.collision_likelihood_curr) and self.check_for_success():
             if self.a-self.b == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                 self.b = self.a
                 self.cur_success = deque([0.0], maxlen=5)
@@ -532,7 +532,7 @@ class Env(EnvBasePB):
         #print(list(self.pos))
         postuple= tuple(self.pos)
         allowance = 0.05 # allowance for flexibility in avoiding robot2
-        if self.args.static_robots > 1:
+        if self.args.num_robots > 1:
             self.Initial_robot2_avoid_angle=self.robot2_avoid_angle + allowance #Set Robot 2 avoid angle in reset
         #print("Self_Robot2Ang",self.Initial_robot2_avoid_angle)
         #print("goal",_)
@@ -608,7 +608,7 @@ class Env(EnvBasePB):
         self.state_goal, self.orn_goal = p.getBasePositionAndOrientation(self.Goal)
 
         # Move the static robot
-        if self.args.static_robots > 1 and self.args.insert_robot2:
+        if self.args.num_robots > 1 and self.args.insert_robot2:
             self.set_position(self.pos2, self.orn2, robot_id=self.Id2)
             self.state_robot2, self.orn_robot2 = p.getBasePositionAndOrientation(self.Id2)
 
@@ -829,7 +829,7 @@ class Env(EnvBasePB):
 
     def return_state(self):
         #zeros_array = list(np.zeros((4,)))
-        if self.args.static_robots > 1:
+        if self.args.num_robots > 1:
             return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3])
         elif self.args.obstacle_avoidance:
             return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + [self.square_bbox[0][0] + self.square_bbox[0][1]] + [self.square_bbox[1][0] + self.square_bbox[1][1]]  + [self.square_bbox[2][0] + self.square_bbox[2][1]] + [self.square_bbox[3][0] +self.square_bbox[3][1]])
@@ -931,7 +931,7 @@ class Env(EnvBasePB):
 
         #######################
         #uncomment this part if inlation radius is used
-        if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        if self.args.num_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
             done=True
             print("Multi_Robot_Collision",done)
         if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
@@ -1277,7 +1277,7 @@ class Env(EnvBasePB):
         self.body_xyz, orn = p.getBasePositionAndOrientation(self.Id)
         self.pos = self.body_xyz
 
-        if self.args.static_robots > 1 and self.args.insert_robot2:
+        if self.args.num_robots > 1 and self.args.insert_robot2:
             self.body_xyz2, orn2 = p.getBasePositionAndOrientation(self.Id2)
             self.pos2 = self.body_xyz2
             self.orn2 = list(orn2)
@@ -1322,14 +1322,14 @@ class Env(EnvBasePB):
         self.contacts2 = []
         for contact in self.contact_dict:
             self.contacts.append(len(p.getContactPoints(self.Id, -1, self.contact_dict[contact], -1))>0)
-            if self.args.static_robots > 1 and self.args.insert_robot2:
+            if self.args.num_robots > 1 and self.args.insert_robot2:
                 self.contacts2.append(len(p.getContactPoints(self.Id2, -1, self.contact_dict[contact], -1))>0)
             #self.contacts.append(len(p.getContactPoints(self.Id, self.Id2, self.contact_dict[contact], -1))>0)
             #self.contacts.append(len(p.getContactPoints(self.Id2, -1, self.contact_dict[contact], -1))>0)
         #print(self.contacts, self.contacts2)
         self.vx, self.vy, self.vz = np.dot(rot_speed, (self.body_vxyz[0],self.body_vxyz[1],self.body_vxyz[2]))
 
-        if self.args.static_robots > 1 and self.args.insert_robot2:
+        if self.args.num_robots > 1 and self.args.insert_robot2:
             rot_speed2 = np.array(
             [[np.cos(-self.yaw2), -np.sin(-self.yaw2), 0],
                 [np.sin(-self.yaw2), np.cos(-self.yaw2), 0],
@@ -1637,7 +1637,7 @@ class Env(EnvBasePB):
 
   
         
-        if self.args.static_robots > 1:
+        if self.args.num_robots > 1:
 
         # 	# #This part is for setting inflation radious bounding box around robots
         
@@ -1673,7 +1673,7 @@ class Env(EnvBasePB):
         #Uncomment above section if you want to use inflation radius
                
         #print(tuple(self.robot1_bbox[0]))
-        if self.args.static_robots > 1:
+        if self.args.num_robots > 1:
             #self.c_robot1 = [(tuple(self.robot1_bbox[0])),(tuple(self.robot1_bbox[1])),(tuple(self.robot1_bbox[2])),(tuple(self.robot1_bbox[3]))]
             self.c_robot1 = [(tuple(self.robot1_bbox[0])),(tuple(self.robot1_bbox[1]))]
             self.c_robot2 = [(tuple(self.robot2_bbox[0])),(tuple(self.robot2_bbox[1])),(tuple(self.robot2_bbox[2])),(tuple(self.robot2_bbox[3]))]
@@ -1700,7 +1700,7 @@ class Env(EnvBasePB):
 
         
 
-        if self.args.static_robots > 1:
+        if self.args.num_robots > 1:
             #Between Robot 1 and Robot 2
             self.robot2_pos_robot1 = self.world_to_robot(self.yaw, self.pos, self.state_robot2)
             #print("self.robot2_pos_robot1",self.robot2_pos_robot1)

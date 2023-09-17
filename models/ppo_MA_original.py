@@ -209,7 +209,6 @@ class MA_PPOBuffer:
                 #print(buffer,Robot,rew)
                 #print("bf",buffer,"ob", ob, "act",act,"rw",rew,"vl",val,"lgp",logp)
                 #print("buffer store",buffer.store(ob,act,rew,val,logp))
-                #print("ob_size_mabuf",len(tuple(obs)))
                 buffer.store(ob,act,rew,val,logp)
             
 
@@ -383,7 +382,6 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
     ob_size = env.observation_space.shape
     ac_size = env.action_space.shape
-    print(ob_size,ac_size)
     
 
     # Create actor-critic module
@@ -513,25 +511,24 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
     # Prepare for interaction with environment
     start_time = time.time()
-    o, ep_ret, ep_len = env.reset(), [0] * robot_number, 0
+    o, ep_ret, ep_len = env.reset(), 0, 0
     if use_perception:
         im = env.get_image()
 
     local_lens = []
     local_rews = []
     t1 = time.time()
-    #print("os",np.array(o))
 
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
         for t in range(local_steps_per_epoch):
             if use_perception:
-                a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
             else:
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
 
             next_o, r, d, _ = env.step(a)
-            #print(r)
+            
 
             #print("DONE",d)
             if use_perception:
@@ -542,7 +539,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #     ep_ret += r.pop() 
             
             # else:
-            ep_ret += r #sum(r) / len(r)
+            ep_ret += sum(r) / len(r)
             
 
 
@@ -556,7 +553,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
             #_,_,_,j,_,_=buf.store(o, a, r, v, logp, robot_number)
             
-            #print("obs_size",len(o))
+
             
             logger.store(VVals=v)
             
@@ -594,12 +591,9 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 if terminal:
                     # only save EpRet / EpLen if trajectory finished
                     logger.store(EpRet=ep_ret, EpLen=ep_len)
-                    #print(len(ep_ret))
-                    local_rews.append(ep_ret[int(len(ep_ret)/1)-1])
+                    local_rews.append(ep_ret)
                     local_lens.append(ep_len)
-                    #print("local",len(local_rews.append(ep_ret[int(len(ep_ret)/2)])))
-                
-                o, ep_ret, ep_len = env.reset(), [0] * robot_number, 0
+                o, ep_ret, ep_len = env.reset(), 0, 0
                 if use_perception:
                     im = env.get_image()
         if (epoch % save_freq == 0) or (epoch == epochs-1):
@@ -630,46 +624,46 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
             update(data,epoch)
 
-            lrlocal = (local_rews, local_lens) # local values
-            listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal) # list of tuples
-            rews, lens = map(flatten_lists, zip(*listoflrpairs))
-            rewbuffer.extend(rews)
-            lenbuffer.extend(lens)
-            process = psutil.Process(os.getpid())
+        lrlocal = (local_rews, local_lens) # local values
+        listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal) # list of tuples
+        rews, lens = map(flatten_lists, zip(*listoflrpairs))
+        rewbuffer.extend(rews)
+        lenbuffer.extend(lens)
+        process = psutil.Process(os.getpid())
         
-            for g in pi_optimizer.param_groups:
-                learning_rate_pi = g['lr']
+        for g in pi_optimizer.param_groups:
+            learning_rate_pi = g['lr']
 
-            for g in vf_optimizer.param_groups:
-                learning_rate_vf = g['lr']
+        for g in vf_optimizer.param_groups:
+            learning_rate_vf = g['lr']
 
-            if proc_id() == 0:
-                writer.add_scalar("ARews", np.mean(rewbuffer), epoch)
-                writer.add_scalar("ALens", np.mean(lenbuffer), epoch)
-                writer.add_scalar("Stds", np.mean(ac.pi.std.data.numpy()), epoch)
-                writer.add_scalar("RAM", process.memory_info().rss/(1024.0 ** 3)*num_procs(), epoch)
-                writer.add_scalar("Lr_pi", learning_rate_pi, epoch)
-                writer.add_scalar("Lr_vf", learning_rate_vf, epoch)
-                writer.add_scalar("time_per_rollout", time.time() - t1, epoch)
+        if proc_id() == 0:
+            writer.add_scalar("ARews", np.mean(rewbuffer), epoch)
+            writer.add_scalar("ALens", np.mean(lenbuffer), epoch)
+            writer.add_scalar("Stds", np.mean(ac.pi.std.data.numpy()), epoch)
+            writer.add_scalar("RAM", process.memory_info().rss/(1024.0 ** 3)*num_procs(), epoch)
+            writer.add_scalar("Lr_pi", learning_rate_pi, epoch)
+            writer.add_scalar("Lr_vf", learning_rate_vf, epoch)
+            writer.add_scalar("time_per_rollout", time.time() - t1, epoch)
 
-            local_lens = []
-            local_rews = []
+        local_lens = []
+        local_rews = []
 
-            # Log info about epoch
-            logger.log_tabular('Epoch', epoch)
-            logger.log_tabular('Rews', np.mean(rewbuffer))
-            logger.log_tabular('Lens', np.mean(lenbuffer))
+        # Log info about epoch
+        logger.log_tabular('Epoch', epoch)
+        logger.log_tabular('Rews', np.mean(rewbuffer))
+        logger.log_tabular('Lens', np.mean(lenbuffer))
 
-            env.log_stuff(logger, writer, epoch)
+        env.log_stuff(logger, writer, epoch)
 
-            logger.log_tabular("RAM", process.memory_info().rss/(1024.0 ** 3)*num_procs())
-            logger.log_tabular('Std', np.mean(ac.pi.std.data.numpy()))
-            logger.log_tabular('Lr_pi', learning_rate_pi)
-            logger.log_tabular('Lr_vf', learning_rate_vf)
-            logger.log_tabular('Time per ep', time.time() - t1)
-            logger.log_tabular('Time', time.time()-start_time)
-            logger.dump_tabular()
-            t1 = time.time()
+        logger.log_tabular("RAM", process.memory_info().rss/(1024.0 ** 3)*num_procs())
+        logger.log_tabular('Std', np.mean(ac.pi.std.data.numpy()))
+        logger.log_tabular('Lr_pi', learning_rate_pi)
+        logger.log_tabular('Lr_vf', learning_rate_vf)
+        logger.log_tabular('Time per ep', time.time() - t1)
+        logger.log_tabular('Time', time.time()-start_time)
+        logger.dump_tabular()
+        t1 = time.time()
 
 def run_test(env, model, use_perception=False):
     # Test policy without any randomness
