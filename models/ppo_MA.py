@@ -521,7 +521,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     local_rews = []
     t1 = time.time()
     #print("os",np.array(o))
-
+    #ep_ret_list=[]
     # Main loop: collect experience in env and update/log each epoch
     for epoch in range(epochs):
         for t in range(local_steps_per_epoch):
@@ -539,11 +539,25 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             
             # if robot_number > 1:
 
-            #     ep_ret += r.pop() 
+            #ep_ret += sum(r) / len(r)
+
+            
             
             # else:
-            ep_ret += r #sum(r) / len(r)
-            
+            # for single_r in r:
+            #     ep_ret += [single_r] #sum(r) / len(r)
+            #     ep_ret_list.append(ep_ret)
+
+            for i in range(len(r)):
+                ep_ret[i] += r[i]
+
+            #print(ep_ret)
+
+                
+            #print(ep_ret_list, len(ep_ret_list))
+            #print(len(ep_ret_list),(ep_ret_list))
+
+            #print(len(r_list), r_list)
 
 
             ep_len += 1
@@ -594,9 +608,13 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 if terminal:
                     # only save EpRet / EpLen if trajectory finished
                     logger.store(EpRet=ep_ret, EpLen=ep_len)
-                    #print(len(ep_ret))
-                    local_rews.append(ep_ret[int(len(ep_ret)/1)-1])
+                    # print(len(ep_ret),type(ep_ret))
+                    # print(ep_ret)
+                    #local_rews.append(ep_ret[int(len(ep_ret)/1)-1])
+                    local_rews.append(ep_ret)
                     local_lens.append(ep_len)
+                    #print("LR",local_rews)
+
                     #print("local",len(local_rews.append(ep_ret[int(len(ep_ret)/2)])))
                 
                 o, ep_ret, ep_len = env.reset(), [0] * robot_number, 0
@@ -624,15 +642,18 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         # Perform PPO update!
         data_list= buf.get(robot_number)
 
-        for data in data_list:
+        for data,local_rew in zip(data_list,local_rews[0]):
             # print("data",data)
             # print("datalist",data_list)
 
             update(data,epoch)
-
-            lrlocal = (local_rews, local_lens) # local values
+            #print("localrew",local_rew,"ep",ep_ret)
+            lrlocal = ([local_rew], local_lens) # local values
             listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal) # list of tuples
             rews, lens = map(flatten_lists, zip(*listoflrpairs))
+            #print(len(rews),type(rews))
+            print("rews",rews)
+            print("localrew",local_rews[0],type(local_rews[0]))
             rewbuffer.extend(rews)
             lenbuffer.extend(lens)
             process = psutil.Process(os.getpid())
@@ -643,7 +664,10 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             for g in vf_optimizer.param_groups:
                 learning_rate_vf = g['lr']
 
+            
+
             if proc_id() == 0:
+                print(rewbuffer)
                 writer.add_scalar("ARews", np.mean(rewbuffer), epoch)
                 writer.add_scalar("ALens", np.mean(lenbuffer), epoch)
                 writer.add_scalar("Stds", np.mean(ac.pi.std.data.numpy()), epoch)

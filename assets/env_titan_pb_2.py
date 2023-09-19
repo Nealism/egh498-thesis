@@ -549,7 +549,7 @@ class Env(EnvBasePB):
         robot1_pos=(initial_x, initial_y)
         state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, random.randint(0, 360))
         dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
-        # print(dist)
+        #print(dist)
         # print(self.initial_goal_dist)
         while dist < 3:
             state_object=self.find_position_B(robot1_pos, 8, random.randint(0, 360))

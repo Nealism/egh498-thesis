@@ -141,17 +141,17 @@ class PPOBuffer:
         This allows us to bootstrap the reward-to-go calculation to account
         for timesteps beyond the arbitrary episode horizon (or epoch cutoff).
         """
-        print("rw buf",self.rew_buf,type(self.rew_buf))
+        #print("rw buf",self.rew_buf,type(self.rew_buf))
 
 
         path_slice = slice(self.path_start_idx, self.ptr)
         #print("path_slice_shape",type(path_slice), path_slice, "adv_buff",self.adv_buf,self.adv_buf.shape)
-        print("last_val",last_val)
+        #print("last_val",last_val)
 
 
         rews = np.append(self.rew_buf[path_slice], last_val)
         vals = np.append(self.val_buf[path_slice], last_val)
-        print("owch",self,rews,rews.shape,vals,vals.shape)
+        #print("owch",self,rews,rews.shape,vals,vals.shape)
         
         # the next two lines implement GAE-Lambda advantage calculation
         deltas = rews[:-1] + self.gamma * vals[1:] - vals[:-1]
@@ -390,7 +390,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     def update(epoch):
 
         data = buf.get()
-        print("buffer get",data)
+        #print("buffer get",data)
         pi_l_old, pi_info_old = compute_loss_pi(data)
         pi_l_old = pi_l_old.item()
         v_l_old = compute_loss_v(data).item()
@@ -489,8 +489,11 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 if terminal:
                     # only save EpRet / EpLen if trajectory finished
                     logger.store(EpRet=ep_ret, EpLen=ep_len)
+                    #print("ep_ret",ep_ret)
                     local_rews.append(ep_ret)
                     local_lens.append(ep_len)
+                    #print("local_rews",local_rews)
+
                 o, ep_ret, ep_len = env.reset(), 0, 0
                 if use_perception:
                     im = env.get_image()
@@ -515,7 +518,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
         # Perform PPO update!
         update(epoch)
-
+        #print("localoca", local_rews)
         lrlocal = (local_rews, local_lens) # local values
         listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal) # list of tuples
         rews, lens = map(flatten_lists, zip(*listoflrpairs))
@@ -530,6 +533,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             learning_rate_vf = g['lr']
 
         if proc_id() == 0:
+            print("rb",rewbuffer)
             writer.add_scalar("ARews", np.mean(rewbuffer), epoch)
             writer.add_scalar("ALens", np.mean(lenbuffer), epoch)
             writer.add_scalar("Stds", np.mean(ac.pi.std.data.numpy()), epoch)
