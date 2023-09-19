@@ -19,6 +19,7 @@ class Env(EnvBasePB):
         self.master = True
         super().__init__(PATH)
 
+        self.all_log_things = [{} for _ in range(args.num_robots)]
 
         if "pumpkin" in self.args.env:
             self.ac_size = 22
@@ -73,3 +74,14 @@ class Env(EnvBasePB):
         p.stepSimulation()
 
         return obs, rews, dones, self.ob_dict
+    
+    def log_stuff(self, logger, num, writer, iters_so_far):
+        log_things = self.robots[num].get_log_things()
+        for thing in log_things:
+            if isinstance(log_things[thing], int) or isinstance(log_things[thing], float):
+                self.robots[num].all_log_things["all_" + thing + str(num)] = MPI.COMM_WORLD.allgather(log_things[thing])
+            else:
+                self.robots[num].all_log_things["all_" + thing + str(num)] = MPI.COMM_WORLD.allgather(np.mean(log_things[thing]))
+            if self.rank == 0:
+                print(thing, self.robots[num].all_log_things["all_" + thing + str(num)])
+                writer.add_scalar(thing + "/" + str(num), np.mean(self.robots[num].all_log_things["all_" + thing + str(num)]), iters_so_far)
