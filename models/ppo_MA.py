@@ -236,7 +236,7 @@ class MA_PPOBuffer:
             buffer_list=[]
             robot_id_number=tuple(range(num_robots))
             for buffer,Robot in zip(self.buffers,robot_id_number):
-                print("g_buf",buffer,"type1",type(buffer), "r", Robot)
+                #print("g_buf",buffer,"type1",type(buffer), "r", Robot)
                 #print("buf_get",buffer.get())
                 #print("self",self,"buf",buffer, "self buf",self.buffers)
                 #print("buf_get",buffer.get())
@@ -530,7 +530,11 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
             next_o, r, d, _ = env.step(a)
             #print(r)
-
+            print(d)
+            print(v)
+            # v = [0 if collision else value for collision, value in zip(d, v)]
+            # v=torch.tensor(v, dtype=torch.float32)
+            # print("after v",v)
             #print("DONE",d)
             if use_perception:
                 next_im = env.get_image()
@@ -550,7 +554,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 ep_rets[i] += r[i]
                 ep_lens[i] += 1
 
-                
+            #print(ep_rets)
             #print(ep_ret_list, len(ep_ret_list))
             #print(len(ep_ret_list),(ep_ret_list))
 
@@ -574,20 +578,22 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             o = next_o
             if use_perception:
                 im = next_im
-
+            #print(ep_lens)
             #print(d)
             timeout = ep_lens[0] == env.args.max_ep_len
             #print(d)
-            if any(d):
+            if all(d):
                 terminal = True
             else:
                 terminal = timeout
+            #print("terminal",terminal)
+            
             #print(terminal)                      #CHECK that Part
             epoch_ended = t==local_steps_per_epoch-1
-
+            
             if terminal or epoch_ended:
                 # if trajectory didn't reach terminal state, bootstrap value target
-                if (timeout or epoch_ended) and not any(d):
+                if (timeout or epoch_ended) and not all(d):
                     if use_perception:
                         _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                     else:
@@ -597,6 +603,12 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 else:
                     #v = 0
                     v=np.zeros(robot_number)
+                    
+
+                #print("complete v",v)
+                
+
+                
 
                 #print("what is v",v, type(v))
                 buf.finish_path(v)
@@ -606,7 +618,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                     for logger, ep_ret, ep_len, local_rew, local_len in zip(loggers, ep_rets, ep_lens, local_rews, local_lens):
                         logger.store(EpRet=ep_ret, EpLen=ep_len)
                     #local_rews.append(ep_ret[int(len(ep_ret)/1)-1])
-                        print(ep_ret)
+                        #print(ep_ret)
                         local_rew.append(ep_ret)
                         local_len.append(ep_len)
                     #print("LR",local_rews)
@@ -648,16 +660,16 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
 
             if proc_id() == 0:
-                print()
-                print("Robot ", num)
-                print("="*20)
-                writer.add_scalar("ARews/" + str(num), np.mean(rewbuffer), epoch)
-                writer.add_scalar("ALens/" + str(num), np.mean(lenbuffer), epoch)
-                writer.add_scalar("Stds/" + str(num), np.mean(ac.pi.std.data.numpy()), epoch)
-                writer.add_scalar("RAM/" + str(num), process.memory_info().rss/(1024.0 ** 3)*num_procs(), epoch)
-                writer.add_scalar("Lr_pi/" + str(num), learning_rate_pi, epoch)
-                writer.add_scalar("Lr_vf/" + str(num), learning_rate_vf, epoch)
-                writer.add_scalar("time_per_rollout/" + str(num), time.time() - t1, epoch)
+                # print()
+                # print("Robot ", num)
+                # print("="*20)
+                writer.add_scalar("ARews/robot_" + str(num), np.mean(rewbuffer), epoch)
+                writer.add_scalar("ALens/robot_" + str(num), np.mean(lenbuffer), epoch)
+                writer.add_scalar("Stds/robot_" + str(num), np.mean(ac.pi.std.data.numpy()), epoch)
+                writer.add_scalar("RAM/robot_" + str(num), process.memory_info().rss/(1024.0 ** 3)*num_procs(), epoch)
+                writer.add_scalar("Lr_pi/robot_" + str(num), learning_rate_pi, epoch)
+                writer.add_scalar("Lr_vf/robot_" + str(num), learning_rate_vf, epoch)
+                writer.add_scalar("time_per_rollout/robot_" + str(num), time.time() - t1, epoch)
 
             local_len = []
             local_rew = []

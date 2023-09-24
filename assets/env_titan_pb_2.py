@@ -240,10 +240,10 @@ class Env(EnvBasePB):
     
 
     def get_success(self):
-        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        #dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
         #print("success_dist",dist_to_goal)
-        return dist_to_goal < 1.0
-        #return self.total_reward > 700
+        #return dist_to_goal < 1.0
+        return self.total_reward > 700
     
 
     def check_for_success(self):
@@ -266,7 +266,7 @@ class Env(EnvBasePB):
         if self.episodes > -1:
 
             self.success.append(self.get_success())
-            # print(self.success)
+            print("SUCCESS________________________________________",self.success)
             self.ep_success = self.get_success()
             #print("Episdoe_Succ", self.ep_success)			
             self.cur_success.append(self.ep_success)
@@ -671,9 +671,14 @@ class Env(EnvBasePB):
                 exp_actions[0] = 0.0
                 exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
        
-        elif self.args.obstacle_avoidance:
+        elif self.args.obstacle_avoidance :
         # ####################_______WayPoint System Inspired by Bug 2 algorithm______######################
-            if self.intersection_wp2G_obs == None or self.intersection_wp3G_obs == None or self.dist_R12G == None or self.dist_R13G == None or self.dist_R124G==None or self.dist_R134G==None:
+            if self.intersection_r1_box:
+                exp_actions[0] = 0
+                exp_actions[1] = 0
+                #print("MAMMMMAAAAAAAAAAAAAAAAAAAAAAA",exp_actions[0],exp_actions[1])
+
+            elif self.intersection_wp2G_obs == None or self.intersection_wp3G_obs == None or self.dist_R12G == None or self.dist_R13G == None or self.dist_R124G==None or self.dist_R134G==None:
                 if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
                     exp_actions[0] = 0.15
                 else:	
@@ -733,6 +738,8 @@ class Env(EnvBasePB):
                         if self.wp4_reach>0:
                             exp_actions[0] = 0.1
                             exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+
+            
                 
                     
 
@@ -785,12 +792,21 @@ class Env(EnvBasePB):
             exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
         
         if self.args.just_expert or (self.args.cur or self.args.expert_curr):
-            applied_actions = (self.Kp/self.initial_Kp) * np.array(exp_actions)
-            if not self.args.just_expert:
-                applied_actions += self.action_multiplier*actions
+            if self.intersection_r1_box:
+                applied_actions=[0]*self.args.num_robots
+            else:
+                applied_actions = (self.Kp/self.initial_Kp) * np.array(exp_actions)
+                if not self.args.just_expert:
+                    applied_actions += self.action_multiplier*actions
+            
         else:
-            applied_actions = self.action_multiplier*actions
+            if self.intersection_r1_box:
+                applied_actions=[0]*self.args.num_robots
+            else:
+                applied_actions = self.action_multiplier*actions
 
+        #print("action",applied_actions)
+        
         # Network now outputs a twist message
         track_actions = self.twist_to_tracks(applied_actions)
 
@@ -813,7 +829,8 @@ class Env(EnvBasePB):
             self.goal_success.append(True)
             #print(self.goal_success)
 
-        elif self.time_to_target < self.steps or done:
+        #elif self.time_to_target < self.steps or done:
+        elif self.time_to_target < self.steps:
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
             self.goal_success.append(False)
         #print(self.goal_success)
@@ -822,6 +839,7 @@ class Env(EnvBasePB):
         self.steps += 1
         self.total_steps += 1
         self.total_reward += reward
+        #print("total_reward",self.total_reward)
         #return np.array(self.robot1_bbox[0] +self.robot1_bbox[1] +self.robot1_bbox[2] +self.robot1_bbox[3] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3] + self.contacts + self.contacts2 + list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped]), reward, done, self.ob_dict
         # return np.array(list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped]), reward, done, self.ob_dict
 
@@ -936,7 +954,7 @@ class Env(EnvBasePB):
             print("Multi_Robot_Collision",done)
         if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
             done=True
-            print("Hit_Obstacle",done)
+            #print("Hit_Obstacle",done)
         if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
             done=True
             print("Hit_Gap_wall",done)
@@ -948,7 +966,7 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
 
-
+        
         return reward, done
 
     def get_reward_2(self):
@@ -1423,7 +1441,7 @@ class Env(EnvBasePB):
         if self.args.obstacle_avoidance:
             
             #generating obstacle
-            self.square_bbox=self.bbox_generator_box(0.35,0.011,self.pos2,self.orn2,self.lineId_box1)
+            self.square_bbox=self.bbox_generator_box(3,0.011,self.pos2,self.orn2,self.lineId_box1)
             self.square_bbox.append(self.square_bbox[0])
 
             #Generating Heading Mid line
