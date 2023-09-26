@@ -253,7 +253,7 @@ class Env(EnvBasePB):
         
         #self.load_simulator()
         #p.resetDebugVisualizerCamera(cameraDistance=10, cameraYaw=0, cameraPitch=-40, cameraTargetPosition=[0.55,-0.35,0.2])
-
+        self.intersection_r1_box= False
         Initial_distance_to_goal=0
         
         self.prev_dist_to_goal= Initial_distance_to_goal
@@ -1462,11 +1462,14 @@ class Env(EnvBasePB):
             # self.lineId=p.addUserDebugLine((self.robot1_safe_box[1][0], self.robot1_safe_box[1][1], 0.34), (self.side_line1_end[0], self.side_line1_end[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side2)
     
 
-
-
+            
+            
 
             # To set robot collision with obstacle
-            self.intersection_r1_box,_= self.intersection_check(self.robot1_bbox,self.square_bbox)
+            for obstacle in self.obstacles:
+                self.intersection_r1_box,_= self.intersection_check(self.robot1_bbox,obstacle)
+                if self.intersection_r1_box:
+                    break
    
    
             # check the intersection with heading corner lines of self bbox and the obstacle
@@ -1758,6 +1761,9 @@ class Env(EnvBasePB):
    
         #print(self.orn2)
   
+    def set_obstacles(self, list_of_obs_bbox):
+        self.obstacles=list_of_obs_bbox
+
 
 
     def world_to_robot(self, robot_yaw, robot, world):

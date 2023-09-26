@@ -49,8 +49,9 @@ class Env(EnvBasePB):
 
     def reset(self):
         res = []
+        self.obstacles=[]
         for Robot in self.robots:
-            
+            Robot.set_obstacles(self.obstacles)
             res.append(Robot.reset())
         #print("GREAAATTTTTT", res)
         return res
@@ -62,7 +63,13 @@ class Env(EnvBasePB):
         rews=[]
         dones=[]
         self.ob_dicts=[]
+
+        self.obstalces=[]
+        for Robot in self.robots:
+            self.obstacles.append(Robot.square_bbox)
         for action,Robot in zip(actions,self.robots):
+
+            Robot.set_obstacles(self.obstacles)
             ob,rew,done, self.ob_dict=Robot.step(action)
             
             # Robot.Id
