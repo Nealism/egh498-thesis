@@ -254,6 +254,7 @@ class Env(EnvBasePB):
         #self.load_simulator()
         #p.resetDebugVisualizerCamera(cameraDistance=10, cameraYaw=0, cameraPitch=-40, cameraTargetPosition=[0.55,-0.35,0.2])
         self.intersection_r1_box= False
+        self.intersection_r1_r= False
         Initial_distance_to_goal=0
         
         self.prev_dist_to_goal= Initial_distance_to_goal
@@ -266,7 +267,7 @@ class Env(EnvBasePB):
         if self.episodes > -1:
 
             self.success.append(self.get_success())
-            print("SUCCESS________________________________________",self.success)
+            #print("SUCCESS________________________________________",self.success)
             self.ep_success = self.get_success()
             #print("Episdoe_Succ", self.ep_success)			
             self.cur_success.append(self.ep_success)
@@ -357,7 +358,7 @@ class Env(EnvBasePB):
 
         #Robot1
         # initial_x, initial_y = np.random.uniform(-3, 3), np.random.uniform(3, 3.5) 
-        initial_x, initial_y = np.random.uniform(-4, 4), np.random.uniform(-4, 4) 
+        initial_x, initial_y = np.random.uniform(-6,6), np.random.uniform(-6, 6) 
         #initial_x, initial_y = -2, -2 
         self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
         self.initial_orn = p.getQuaternionFromEuler([0,0,self.initial_yaw])
@@ -673,7 +674,7 @@ class Env(EnvBasePB):
        
         elif self.args.obstacle_avoidance :
         # ####################_______WayPoint System Inspired by Bug 2 algorithm______######################
-            if self.intersection_r1_box:
+            if self.intersection_r1_box or self.intersection_r1_r:
                 exp_actions[0] = 0
                 exp_actions[1] = 0
                 #print("MAMMMMAAAAAAAAAAAAAAAAAAAAAAA",exp_actions[0],exp_actions[1])
@@ -792,7 +793,7 @@ class Env(EnvBasePB):
             exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
         
         if self.args.just_expert or (self.args.cur or self.args.expert_curr):
-            if self.intersection_r1_box:
+            if self.intersection_r1_box or self.intersection_r1_r:
                 applied_actions=[0]*self.args.num_robots
             else:
                 applied_actions = (self.Kp/self.initial_Kp) * np.array(exp_actions)
@@ -800,7 +801,7 @@ class Env(EnvBasePB):
                     applied_actions += self.action_multiplier*actions
             
         else:
-            if self.intersection_r1_box:
+            if self.intersection_r1_box or self.intersection_r1_r:
                 applied_actions=[0]*self.args.num_robots
             else:
                 applied_actions = self.action_multiplier*actions
@@ -949,6 +950,10 @@ class Env(EnvBasePB):
 
         #######################
         #uncomment this part if inlation radius is used
+
+        if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+            done=True
+            #print("MA Collision")
         if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
             done=True
             print("Multi_Robot_Collision",done)
@@ -1392,11 +1397,41 @@ class Env(EnvBasePB):
         #self.intersection = False
         # 	# #This part is for generating bounding box around any object except robots
         #self.square_bbox=self.bbox_generator(self.square, radius=2, height=0.5, lineId=[-1]*4)
+        # if str(self)==str(self):
+        #     print("True")
+        # print(str(self));exit()
+        
+        self.robot1_bbox=self.bbox_generator_titan1(0.075,self.pos,self.orn,self.lineId1) #0.075
+        self.robot1_bbox.append(self.robot1_bbox[0])
+        #self.intersection_r1_r1,_= self.intersection_check(self.robot1_bbox,self.robot1_bbox)
+        # To set robot collision with obstacle
+        for robot_bbox in self.robots_bbox:
+            # print("robot_bbox_number",robot_bbox[0])
+            # print("robot_bbox",robot_bbox)
+            # # print("num",num)
+            # # # print("self.robot1_bbox",self.robot1_bbox)
+            # print("self.robots_bbox",self.robots_bbox)
+            # # if robot_bbox==self.robot1_bbox:
+            # #     print("true")
+            # # if str(self.robot1_bbox)==str(robot_bbox):
+            # #     print("True");exit()
+            # print(str(robot_bbox[0]))
+            # print(str(self))
+            #if num!=robot_bbox[0]:
+            if str(robot_bbox[0])==str(self):
+                self.intersection_r1_r=False
+            elif str(robot_bbox[0]) != str(self):
+                self.intersection_r1_r,_= self.intersection_check(self.robot1_bbox,robot_bbox[1])
+                #print(num,robot_bbox[0]);exit()
+                if self.intersection_r1_r:
+                    break
+            # else:
+            #     self.intersection_r1_r=True
+
 
         
         if self.args.obstacle_avoidance or self.args.gap_avoidance:
-            self.robot1_bbox=self.bbox_generator_titan(0.075,self.pos,self.orn,self.lineId1)
-            self.robot1_bbox.append(self.robot1_bbox[0])
+            
             #print(self.robot1_bbox[0][1],self.robot1_bbox[0][2])
 
             # self.robot100_bbox=self.bbox_generator_titan2(0.075,self.pos,self.orn,self.lineId1bonus)
@@ -1441,7 +1476,7 @@ class Env(EnvBasePB):
         if self.args.obstacle_avoidance:
             
             #generating obstacle
-            self.square_bbox=self.bbox_generator_box(3,0.011,self.pos2,self.orn2,self.lineId_box1)
+            self.square_bbox=self.bbox_generator_box(0.35,0.011,self.pos2,self.orn2,self.lineId_box1)
             self.square_bbox.append(self.square_bbox[0])
 
             #Generating Heading Mid line
@@ -1763,6 +1798,10 @@ class Env(EnvBasePB):
   
     def set_obstacles(self, list_of_obs_bbox):
         self.obstacles=list_of_obs_bbox
+    
+    def set_robot_bbox(self, list_of_robot_bbox):
+        self.robots_bbox=list_of_robot_bbox
+        
 
 
 
@@ -1838,6 +1877,31 @@ class Env(EnvBasePB):
                     lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB, lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
         return robot_bbox
     
+    def bbox_generator_titan1(self,radius,pos,orn,lineId,lineColorRGB=[1, 0, 0]):
+     
+        x=(1.4/2)+radius
+        y=(0.78/2)+radius
+        z=0.235
+        # get the self.corners of the bounding box
+        corners = [(x, y, z),
+                  (x,-y,z),
+                  (-x,-y,z),
+                  (-x,y,z),
+                  (x,y,z)]
+     
+        robot_bbox=[]
+
+        for i in range(len(corners)-1):
+                
+            start1 = p.multiplyTransforms(pos, orn, corners[i], [0, 0, 0, 1])[0]
+
+            robot_bbox.append(list(start1))
+
+            end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
+            #if self.args.debug:
+            lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB, lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+        return robot_bbox
+    
     def bbox_generator_titan2(self,radius,pos,orn,lineId,lineColorRGB=[1, 0, 0]):
      
         x=(1.4/2)+radius
@@ -1885,8 +1949,8 @@ class Env(EnvBasePB):
             robot_bbox.append(list(start1))
 
             end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
-            if self.args.debug:
-                lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+            #if self.args.debug:
+            lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
         return robot_bbox
 
     def bbox_generator(self,object_id,radius,height,lineId):

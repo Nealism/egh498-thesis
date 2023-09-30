@@ -530,8 +530,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
             next_o, r, d, _ = env.step(a)
             #print(r)
-            print(d)
-            print(v)
+            # print(d)
+            # print(v)
             # v = [0 if collision else value for collision, value in zip(d, v)]
             # v=torch.tensor(v, dtype=torch.float32)
             # print("after v",v)
