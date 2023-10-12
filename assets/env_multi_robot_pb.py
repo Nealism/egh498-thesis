@@ -67,9 +67,9 @@ class Env(EnvBasePB):
         dones=[]
         self.ob_dicts=[]
 
-        self.obstalces=[]
+        self.obstacles=[]
         self.robots_bbox=[]
-        self.ns=[]
+        
         for Robot in self.robots:
             #print(Robot,"s",self.robots)
             #self.ns.append(n)
@@ -79,12 +79,19 @@ class Env(EnvBasePB):
         if self.args.obstacle_avoidance:
             for Robot in self.robots:
                 self.obstacles.append(Robot.square_bbox)
+
+        for action,Robot in zip(actions,self.robots):
+            
+            Robot.motor_action(action)
+
+        p.stepSimulation()
+
         for action,Robot in zip(actions,self.robots):
             
             Robot.set_robot_bbox(self.robots_bbox)
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
-            ob,rew,done, self.ob_dict=Robot.step(action)
+            ob,rew,done, self.ob_dict=Robot.return_step(action)
             
             # Robot.Id
             obs.append(ob)
@@ -92,8 +99,8 @@ class Env(EnvBasePB):
             dones.append(done)
 
             self.ob_dicts.append(self.ob_dict)
-        p.stepSimulation()
-
+        
+        #print("length",(self.robots_bbox))
         return obs, rews, dones, self.ob_dict
     
     def log_stuff(self, logger, num, writer, iters_so_far):

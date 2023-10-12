@@ -20,12 +20,53 @@ class EnvBasePB(EnvBase):
     loaded_sim = False
     terrain = np.zeros(terrain_size)
 
+    
+
     def load_robot(self):
             
         if self.args.env != "multi_robot_pb":
             self.load_simulator()
             
+         #____Heightmap_check__________________________________________________________________________
+        # useProgrammatic = 0
+        # useTerrainFromPNG = 1
+        # useDeepLocoCSV = 2
+        # updateHeightfield = False
 
+        # heightfieldSource = useProgrammatic
+        # import random
+        # # random.seed(10)
+        # #p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,0)
+        # #heightPerturbationRange = 3#0.05
+        # if heightfieldSource==useProgrammatic:
+        #     numHeightfieldRows = 1000
+        #     numHeightfieldColumns = 150
+        #     #heightfieldData = [0]*numHeightfieldRows*numHeightfieldColumns 
+        #     heightfieldData = [0]*numHeightfieldRows*numHeightfieldColumns 
+        #     for j in range (int(numHeightfieldColumns/2)):
+        #         for i in range (int(numHeightfieldRows/2) ):
+        #             print(range (int(numHeightfieldRows/2)))
+        #             print(i,j*2)
+        #             height = 4 #height = random.uniform(0,heightPerturbationRange)
+        #             #print("height",heightfieldData)
+        #             # heightfieldData[i+j]=height
+        #             # heightfieldData[i+j*10]=height
+                    
+        #             # heightfieldData[i*2+j]=height
+        #             heightfieldData[(i+j)]=height
+        #             #heightfieldData[2*i+2*j*numHeightfieldRows]=height
+        #             #print("heightfielddata",heightfieldData)
+        #             #heightfieldData[2*i+2*j*numHeightfieldRows]=height
+                    
+        #             # heightfieldData[2*i+1+2*j*numHeightfieldRows]=height
+        #             #heightfieldData[2*i+(2*j+1)*numHeightfieldRows]=height
+        #             # heightfieldData[2*i+1+(2*j+1)*numHeightfieldRows]=height
+            
+            
+        #     terrainShape = p.createCollisionShape(shapeType = p.GEOM_HEIGHTFIELD, meshScale=[0.05,0.05,2], heightfieldTextureScaling=(numHeightfieldRows-1)/2, heightfieldData=heightfieldData, numHeightfieldRows=numHeightfieldRows, numHeightfieldColumns=numHeightfieldColumns)
+        #     terrain  = p.createMultiBody(0, terrainShape)
+        #     p.resetBasePositionAndOrientation(terrain,[0,0,0], [0,0,0,1])
+        #____Heightmap_check________________________________________________
 
         if not self.args.test or not self.loaded_sim:
             self.load_specific_robot()
@@ -70,6 +111,8 @@ class EnvBasePB(EnvBase):
 
         #p.setTimeStep(self.simStep)
         p.setGravity(0,0,-9.8)
+        
+        
 
         
     def load_urdf_robot(self, model_path):
@@ -105,6 +148,9 @@ class EnvBasePB(EnvBase):
         if robot_id is None:
             robot_id = self.Id
         pos = [pos[0], pos[1], pos[2]]
+
+
+       
         p.resetBasePositionAndOrientation(robot_id, pos, orn)
         if joints is not None:
             if joint_vel is not None:

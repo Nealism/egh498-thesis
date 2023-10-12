@@ -145,6 +145,8 @@ class Env(EnvBasePB):
         self.qx, self.qy, self.qz, self.qw = self.orn
         self.roll, self.pitch, self.yaw = p.getEulerFromQuaternion(self.orn)
         self.body_vxyz, self.base_rot_vel = p.getBaseVelocity(self.Id)
+
+        
         
         self.roll_vel = self.base_rot_vel[0]
         self.pitch_vel = self.base_rot_vel[1]

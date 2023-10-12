@@ -381,7 +381,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
     ob_size = env.observation_space.shape
     ac_size = env.action_space.shape
-    print(ob_size,ac_size)
+    #print(ob_size,ac_size)
+    #print("obs",env.observation_space,"action",env.action_space)
     
 
     # Create actor-critic module
@@ -421,7 +422,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         buf = PPOBufferPerception(ob_size, im_size, ac_size, local_steps_per_epoch, gamma, lam)
     else:
         buf = MA_PPOBuffer(ob_size, ac_size, local_steps_per_epoch, gamma, lam, robot_number)
-
+    #print("buf",buf)
     # Set up function for computing PPO policy loss
     def compute_loss_pi(data):
         if use_perception:
@@ -508,10 +509,52 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                      KL=kl, Entropy=ent, ClipFrac=cf,
                      DeltaLossPi=(loss_pi.item() - pi_l_old),
                      DeltaLossV=(loss_v.item() - v_l_old))
+        
+    def print_results(env, writer, num, logger, data, epoch, local_rew, local_len, rewbuffer, lenbuffer, learning_rate_pi, learning_rate_vf, t1):
+            
+            update(data,epoch, logger)
+            lrlocal = (local_rew, local_len) # local values
+            listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal) # list of tuples
+            rews, lens = map(flatten_lists, zip(*listoflrpairs))
+            rewbuffer.extend(rews)
+            lenbuffer.extend(lens)
+            process = psutil.Process(os.getpid())
+
+
+            if proc_id() == 0:
+                # print()
+                # print("Robot ", num)
+                # print("="*20)
+                writer.add_scalar("ARews/robot_" + str(num), np.mean(rewbuffer), epoch)
+                writer.add_scalar("ALens/robot_" + str(num), np.mean(lenbuffer), epoch)
+                writer.add_scalar("Stds/robot_" + str(num), np.mean(ac.pi.std.data.numpy()), epoch)
+                writer.add_scalar("RAM/robot_" + str(num), process.memory_info().rss/(1024.0 ** 3)*num_procs(), epoch)
+                writer.add_scalar("Lr_pi/robot_" + str(num), learning_rate_pi, epoch)
+                writer.add_scalar("Lr_vf/robot_" + str(num), learning_rate_vf, epoch)
+                writer.add_scalar("time_per_rollout/robot_" + str(num), time.time() - t1, epoch)
+
+            local_len = []
+            local_rew = []
+
+            # Log info about epoch
+            logger.log_tabular('Epoch', epoch)
+            logger.log_tabular('Rews', np.mean(rewbuffer))
+            logger.log_tabular('Lens', np.mean(lenbuffer))
+
+            env.log_stuff(logger, num, writer, epoch)
+
+            logger.log_tabular("RAM", process.memory_info().rss/(1024.0 ** 3)*num_procs())
+            logger.log_tabular('Std', np.mean(ac.pi.std.data.numpy()))
+            # logger.log_tabular('Lr_pi', learning_rate_pi)
+            # logger.log_tabular('Lr_vf', learning_rate_vf)
+            logger.log_tabular('Time per ep', time.time() - t1)
+            logger.log_tabular('Time', time.time()-start_time)
+            logger.dump_tabular()
 
     # Prepare for interaction with environment
     start_time = time.time()
     o, ep_rets, ep_lens = env.reset(), [0] * robot_number, [0]*robot_number
+    #print("o",o)
     if use_perception:
         im = env.get_image()
 
@@ -531,7 +574,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             next_o, r, d, _ = env.step(a)
             #print(r)
             # print(d)
-            # print(v)
+            #print("Value_before",v)
             # v = [0 if collision else value for collision, value in zip(d, v)]
             # v=torch.tensor(v, dtype=torch.float32)
             # print("after v",v)
@@ -648,58 +691,22 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #     env.restore_env_state(save_state)
 
 
-        def print_results(env, writer, num, logger, data, epoch, local_rew, local_len, rewbuffer, lenbuffer, learning_rate_pi, learning_rate_vf, t1):
-            
-            update(data,epoch, logger)
-            lrlocal = (local_rew, local_len) # local values
-            listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal) # list of tuples
-            rews, lens = map(flatten_lists, zip(*listoflrpairs))
-            rewbuffer.extend(rews)
-            lenbuffer.extend(lens)
-            process = psutil.Process(os.getpid())
-
-
-            if proc_id() == 0:
-                # print()
-                # print("Robot ", num)
-                # print("="*20)
-                writer.add_scalar("ARews/robot_" + str(num), np.mean(rewbuffer), epoch)
-                writer.add_scalar("ALens/robot_" + str(num), np.mean(lenbuffer), epoch)
-                writer.add_scalar("Stds/robot_" + str(num), np.mean(ac.pi.std.data.numpy()), epoch)
-                writer.add_scalar("RAM/robot_" + str(num), process.memory_info().rss/(1024.0 ** 3)*num_procs(), epoch)
-                writer.add_scalar("Lr_pi/robot_" + str(num), learning_rate_pi, epoch)
-                writer.add_scalar("Lr_vf/robot_" + str(num), learning_rate_vf, epoch)
-                writer.add_scalar("time_per_rollout/robot_" + str(num), time.time() - t1, epoch)
-
-            local_len = []
-            local_rew = []
-
-            # Log info about epoch
-            logger.log_tabular('Epoch', epoch)
-            logger.log_tabular('Rews', np.mean(rewbuffer))
-            logger.log_tabular('Lens', np.mean(lenbuffer))
-
-            env.log_stuff(logger, num, writer, epoch)
-
-            logger.log_tabular("RAM", process.memory_info().rss/(1024.0 ** 3)*num_procs())
-            logger.log_tabular('Std', np.mean(ac.pi.std.data.numpy()))
-            # logger.log_tabular('Lr_pi', learning_rate_pi)
-            # logger.log_tabular('Lr_vf', learning_rate_vf)
-            logger.log_tabular('Time per ep', time.time() - t1)
-            logger.log_tabular('Time', time.time()-start_time)
-            logger.dump_tabular()
+        
 
         # Perform PPO update!
         data_list= buf.get(robot_number)
+        #print("datalist",data_list)
         for g in pi_optimizer.param_groups:
             learning_rate_pi = g['lr']
 
         for g in vf_optimizer.param_groups:
             learning_rate_vf = g['lr']
-  
+        
         for num, (data,logger, local_rew, local_len, rewbuffer,lenbuffer) in enumerate(zip(data_list, loggers, local_rews, local_lens, rewbuffers, lenbuffers)):
             print_results(env, writer, num, logger, data, epoch, local_rew, local_len, rewbuffer, lenbuffer, learning_rate_pi, learning_rate_vf, t1)
 
+
+        loggers = [EpochLogger(**logger_kwargs) for _ in range(robot_number)]
         t1 = time.time()
 
 

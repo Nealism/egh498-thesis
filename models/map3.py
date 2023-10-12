@@ -1,0 +1,174 @@
+import pybullet as p
+import numpy as np
+import cv2
+import time
+
+# Global map initialization
+global_map_size_x = 100.0
+global_map_size_y = 100.0
+global_resolution = 0.1  # 0.1 meters per row and column
+global_num_rows = int(global_map_size_y / global_resolution)
+global_num_cols = int(global_map_size_x / global_resolution)
+global_map = np.zeros((global_num_rows, global_num_cols), dtype=np.float32)
+
+# Local map initialization
+local_map_size_x = 8.0
+local_map_size_y = 8.0
+local_resolution = global_resolution
+local_num_rows = int(local_map_size_y / local_resolution)
+local_num_cols = int(local_map_size_x / local_resolution)
+local_map = np.zeros((local_num_rows, local_num_cols), dtype=np.float32)
+
+# Function to insert an obstacle into the global map
+def insert_obstacle(position_x, position_y, yaw, length, width, height):
+    # Convert obstacle position and dimensions to grid indices
+    grid_x_center = int((position_x + global_map_size_x / 2) / global_resolution)
+    grid_y_center = int((position_y + global_map_size_y / 2) / global_resolution)
+    
+    # Calculate half-length and half-width in grid cells
+    half_length_cells = int(length / (2 * global_resolution))
+    half_width_cells = int(width / (2 * global_resolution))
+    
+    # Set the obstacle region in the global map to occupied (1)
+    for i in range(grid_x_center - half_length_cells, grid_x_center + half_length_cells + 1):
+        for j in range(grid_y_center - half_width_cells, grid_y_center + half_width_cells + 1):
+            if 0 <= i < global_num_rows and 0 <= j < global_num_cols:
+                global_map[i, j] = 1.0  # Mark the obstacle as occupied
+
+# Function to get the local heightmap
+def get_heightmap(robot_position):
+    # Calculate the boundaries of the local map based on robot_position and local_map_size
+    local_x_min = robot_position[0] - local_map_size_x / 2
+    local_x_max = robot_position[0] + local_map_size_x / 2
+    local_y_min = robot_position[1] - local_map_size_y / 2
+    local_y_max = robot_position[1] + local_map_size_y / 2
+
+    # Calculate grid indices for the local map within the global map
+    local_x_indices = np.clip(
+        np.array(((local_x_min + global_map_size_x / 2) / global_resolution), dtype=int), 0, global_num_rows - 1
+    )
+    local_y_indices = np.clip(
+        np.array(((local_y_min + global_map_size_y / 2) / global_resolution), dtype=int), 0, global_num_cols - 1
+    )
+
+    # Extract the local heightmap from the global map
+    local_heightmap = global_map[
+        local_x_indices:local_x_indices + local_num_rows, local_y_indices:local_y_indices + local_num_cols
+    ]
+
+    # Calculate the position of the local heightmap within the local map
+    local_heightmap_x_min = local_x_min
+    local_heightmap_x_max = local_x_max
+    local_heightmap_y_min = local_y_min
+    local_heightmap_y_max = local_y_max
+
+    print("local_heightmap", local_heightmap)
+
+    return local_heightmap, (local_heightmap_x_min, local_heightmap_x_max, local_heightmap_y_min, local_heightmap_y_max)
+
+# Function to visualize the maps using OpenCV
+def visualize_maps(global_map, local_heightmap, local_heightmap_position):
+    # Scale the maps for visualization
+    scaled_global_map = (global_map - np.min(global_map)) / (np.max(global_map) - np.min(global_map)) * 200
+    scaled_heightmap = (local_heightmap - np.min(local_heightmap)) / (np.max(local_heightmap) - np.min(local_heightmap)) * 200
+
+    # Convert to uint8 and create color images
+    scaled_global_map = scaled_global_map.astype(np.uint8)
+    scaled_heightmap = scaled_heightmap.astype(np.uint8)
+
+    global_map_image = cv2.cvtColor(scaled_global_map, cv2.COLOR_GRAY2BGR)
+    heightmap_image = cv2.cvtColor(scaled_heightmap, cv2.COLOR_GRAY2BGR)
+
+    # Set colors: Blue for global map, Green for local heightmap
+    global_map_image[:, :, 0] = 255  # Blue channel to 255 for global map (blue color)
+
+    # Calculate the position of the local heightmap within the global map
+    local_map_x_min = local_heightmap_position[0]
+    local_map_x_max = local_heightmap_position[1]
+    local_map_y_min = local_heightmap_position[2]
+    local_map_y_max = local_heightmap_position[3]
+
+    local_map_x_min_index = int((local_map_x_min + global_map_size_x / 2) / global_resolution)
+    local_map_x_max_index = int((local_map_x_max + global_map_size_x / 2) / global_resolution)
+    local_map_y_min_index = int((local_map_y_min + global_map_size_y / 2) / global_resolution)
+    local_map_y_max_index = int((local_map_y_max + global_map_size_y / 2) / global_resolution)
+
+    # Overlay the local heightmap on the global map
+    global_map_image[
+        local_map_x_min_index:local_map_x_max_index,
+        local_map_y_min_index:local_map_y_max_index,
+    ] = heightmap_image
+
+    # Display the combined map with the turtlebot in the center
+    cv2.imshow("Global Map with Local Heightmap", global_map_image)
+    cv2.waitKey(1)
+
+# PyBullet simulation setup
+p.connect(p.GUI)
+p.setGravity(0, 0, -9.81)  # Set gravity
+p.setTimeStep(1 / 240)  # Set time step
+
+# Create a ground plane
+planeId = p.createCollisionShape(p.GEOM_PLANE)
+p.createMultiBody(0, planeId)
+
+# Create a turtlebot (you'll need to provide the model URDF file)
+turtlebotId = p.loadURDF("/home/kom018/pybullet_robots/data/turtlebot.urdf", [0, 0, 0.1])
+
+# Simulation loop
+robot_position = [0, 0]
+
+p.setRealTimeSimulation(1)
+for j in range (p.getNumJoints(turtlebotId)):
+    print(p.getJointInfo(turtlebotId,j))
+forward=0
+turn=0
+while (1):
+    p.setGravity(0,0,-10)
+    time.sleep(1./240.)
+    keys = p.getKeyboardEvents()
+    leftWheelVelocity=0
+    rightWheelVelocity=0
+    speed=10
+
+    insert_obstacle(2.0, 2.0, 0, 1.0, 1.0, 0.2)
+
+    # Get the turtlebot's position
+    pos, _ = p.getBasePositionAndOrientation(turtlebotId)
+    robot_position = pos[:2]
+
+    _,local_heightmap_position= get_heightmap(robot_position)
+    print("local_heightmap_position",local_heightmap_position)
+    # Get the local heightmap and its position within the local map
+    local_heightmap, local_heightmap_position = get_heightmap(robot_position)
+
+    # Visualize both global map and local heightmap
+    visualize_maps(global_map, local_heightmap, local_heightmap_position)
+
+    for k,v in keys.items():
+        if (k == p.B3G_RIGHT_ARROW and (v&p.KEY_WAS_TRIGGERED)):
+            turn = -0.5
+        if (k == p.B3G_RIGHT_ARROW and (v&p.KEY_WAS_RELEASED)):
+            turn = 0
+        if (k == p.B3G_LEFT_ARROW and (v&p.KEY_WAS_TRIGGERED)):
+            turn = 0.5
+        if (k == p.B3G_LEFT_ARROW and (v&p.KEY_WAS_RELEASED)):
+            turn = 0
+
+        if (k == p.B3G_UP_ARROW and (v&p.KEY_WAS_TRIGGERED)):
+            forward=1
+        if (k == p.B3G_UP_ARROW and (v&p.KEY_WAS_RELEASED)):
+            forward=0
+        if (k == p.B3G_DOWN_ARROW and (v&p.KEY_WAS_TRIGGERED)):
+            forward=-1
+        if (k == p.B3G_DOWN_ARROW and (v&p.KEY_WAS_RELEASED)):
+            forward=0
+
+    rightWheelVelocity += (forward + turn) * speed
+    leftWheelVelocity += (forward - turn) * speed
+
+    p.setJointMotorControl2(turtlebotId, 0, p.VELOCITY_CONTROL, targetVelocity=leftWheelVelocity, force=1000)
+    p.setJointMotorControl2(turtlebotId, 1, p.VELOCITY_CONTROL, targetVelocity=rightWheelVelocity, force=1000)
+
+# Close the PyBullet simulation
+p.disconnect()

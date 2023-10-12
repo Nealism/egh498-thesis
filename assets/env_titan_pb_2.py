@@ -628,7 +628,7 @@ class Env(EnvBasePB):
         w_l = (lin_vel - ang_vel*width)/radius
         return [w_l, w_r]
     
-    def step(self, actions):
+    #def step(self, actions):
         #print("AAA",actions)
         #print(self)
         # actions=[2.5,5]
@@ -637,6 +637,7 @@ class Env(EnvBasePB):
         # ===========================
         # This is an expert functionexper
         # ===========================
+    def motor_action(self,actions):
         exp_actions = [0.0]*2
         # ##########################__RAY_LINE___###################
         #if self.args.num_robots > 1:
@@ -671,7 +672,7 @@ class Env(EnvBasePB):
             else:	
                 exp_actions[0] = 0.0
                 exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
-       
+    
         elif self.args.obstacle_avoidance :
         # ####################_______WayPoint System Inspired by Bug 2 algorithm______######################
             if self.intersection_r1_box or self.intersection_r1_r:
@@ -771,9 +772,9 @@ class Env(EnvBasePB):
             # else:	
             #     exp_actions[0] = 0.0
             #     exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
-   
+
         ######################____OLD_IS_GOLD___#################################
-  
+
         # 	if abs(self.heading_error) < 0.5 and self.dist_r1_r2 >1.5 and self.dist_to_wp > 1.0:
         # 		exp_actions[0] = 0.25
         # 		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
@@ -784,7 +785,7 @@ class Env(EnvBasePB):
         # 	else:	
         # 		exp_actions[0] = 0.0
         # 		exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
-      
+    
         else:
             if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
                 exp_actions[0] = 0.25
@@ -815,7 +816,9 @@ class Env(EnvBasePB):
             for track in tracks:
                 p.setJointMotorControl2(self.Id, track, p.VELOCITY_CONTROL, targetVelocity=a*20, force=100)
         
-        p.stepSimulation()
+        # p.stepSimulation()
+
+    def return_step(self,actions):
         if self.args.render:
             time.sleep(self.args.sleep)
         self.get_observation()
@@ -840,11 +843,15 @@ class Env(EnvBasePB):
         self.steps += 1
         self.total_steps += 1
         self.total_reward += reward
+        return self.return_state(),reward,done,self.ob_dict
         #print("total_reward",self.total_reward)
         #return np.array(self.robot1_bbox[0] +self.robot1_bbox[1] +self.robot1_bbox[2] +self.robot1_bbox[3] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3] + self.contacts + self.contacts2 + list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped]), reward, done, self.ob_dict
         # return np.array(list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped]), reward, done, self.ob_dict
-
-        return self.return_state(), reward, done, self.ob_dict
+        
+        
+        # motor_action(actions)
+        # observation,reward,done=return_step(self)
+        # return observation, reward, done, self.ob_dict
 
     def return_state(self):
         #zeros_array = list(np.zeros((4,)))
@@ -1400,24 +1407,15 @@ class Env(EnvBasePB):
         # if str(self)==str(self):
         #     print("True")
         # print(str(self));exit()
+
+        textureId = -1
         
         self.robot1_bbox=self.bbox_generator_titan1(0.075,self.pos,self.orn,self.lineId1) #0.075
         self.robot1_bbox.append(self.robot1_bbox[0])
         #self.intersection_r1_r1,_= self.intersection_check(self.robot1_bbox,self.robot1_bbox)
         # To set robot collision with obstacle
         for robot_bbox in self.robots_bbox:
-            # print("robot_bbox_number",robot_bbox[0])
-            # print("robot_bbox",robot_bbox)
-            # # print("num",num)
-            # # # print("self.robot1_bbox",self.robot1_bbox)
-            # print("self.robots_bbox",self.robots_bbox)
-            # # if robot_bbox==self.robot1_bbox:
-            # #     print("true")
-            # # if str(self.robot1_bbox)==str(robot_bbox):
-            # #     print("True");exit()
-            # print(str(robot_bbox[0]))
-            # print(str(self))
-            #if num!=robot_bbox[0]:
+           
             if str(robot_bbox[0])==str(self):
                 self.intersection_r1_r=False
             elif str(robot_bbox[0]) != str(self):
