@@ -100,10 +100,10 @@ class Env(EnvBasePB):
 
         if self.args.cur or self.args.region_curr:
             self.initial_goal_dist=3	
-            self.max_goal_dist=20
+            self.max_goal_dist=10
         else:
-            self.initial_goal_dist=20
-            self.max_goal_dist=20
+            self.initial_goal_dist=10
+            self.max_goal_dist=10
         
         self.action_multiplier = 0.1 
 
@@ -358,7 +358,7 @@ class Env(EnvBasePB):
 
         #Robot1
         # initial_x, initial_y = np.random.uniform(-3, 3), np.random.uniform(3, 3.5) 
-        initial_x, initial_y = np.random.uniform(-6,6), np.random.uniform(-6, 6) 
+        initial_x, initial_y = np.random.uniform(0,4), np.random.uniform(0, 4) 
         #initial_x, initial_y = -2, -2 
         self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
         self.initial_orn = p.getQuaternionFromEuler([0,0,self.initial_yaw])
@@ -622,6 +622,7 @@ class Env(EnvBasePB):
     def twist_to_tracks(self, actions):
         radius = 0.14
         width = 0.78/2
+        #print(actions)
         lin_vel = actions[0]
         ang_vel = actions[1]
         w_r = (lin_vel + ang_vel*width)/radius
@@ -638,6 +639,7 @@ class Env(EnvBasePB):
         # This is an expert functionexper
         # ===========================
     def motor_action(self,actions):
+        #print("motor action",actions)
         exp_actions = [0.0]*2
         # ##########################__RAY_LINE___###################
         #if self.args.num_robots > 1:
@@ -795,7 +797,7 @@ class Env(EnvBasePB):
         
         if self.args.just_expert or (self.args.cur or self.args.expert_curr):
             if self.intersection_r1_box or self.intersection_r1_r:
-                applied_actions=[0]*self.args.num_robots
+                applied_actions=[0]*2
             else:
                 applied_actions = (self.Kp/self.initial_Kp) * np.array(exp_actions)
                 if not self.args.just_expert:
@@ -803,9 +805,15 @@ class Env(EnvBasePB):
             
         else:
             if self.intersection_r1_box or self.intersection_r1_r:
-                applied_actions=[0]*self.args.num_robots
+                applied_actions=[0]*2
+                #print("sss")
             else:
+                
                 applied_actions = self.action_multiplier*actions
+                
+                # applied_actions = (self.Kp/self.initial_Kp) * np.array(exp_actions)
+                # if not self.args.just_expert:
+                #     applied_actions += self.action_multiplier*actions
 
         #print("action",applied_actions)
         
@@ -816,6 +824,8 @@ class Env(EnvBasePB):
             for track in tracks:
                 p.setJointMotorControl2(self.Id, track, p.VELOCITY_CONTROL, targetVelocity=a*20, force=100)
         
+        self.prev_actions = actions
+
         # p.stepSimulation()
 
     def return_step(self,actions):
@@ -839,7 +849,6 @@ class Env(EnvBasePB):
             self.goal_success.append(False)
         #print(self.goal_success)
 
-        self.prev_actions = actions
         self.steps += 1
         self.total_steps += 1
         self.total_reward += reward
@@ -960,13 +969,13 @@ class Env(EnvBasePB):
 
         if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
             done=True
-            #print("MA Collision")
+            #print("MA Collision----------------")
         if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
             done=True
-            print("Multi_Robot_Collision",done)
+            print("Robot_hit_static_Robot",done)
         if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
             done=True
-            #print("Hit_Obstacle",done)
+            #print("Hit_Obstacle-------Hit_Hit",done)
         if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
             done=True
             print("Hit_Gap_wall",done)
@@ -974,9 +983,10 @@ class Env(EnvBasePB):
         
         if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
             done=True
-            #print("Hit_Wall",done)
+            #print("Hit_Wall/Contact",done)
         if self.tipped == True:
             done = True
+            #print("Tipped",done)
 
         
         return reward, done
@@ -1896,8 +1906,8 @@ class Env(EnvBasePB):
             robot_bbox.append(list(start1))
 
             end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
-            #if self.args.debug:
-            lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB, lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+            if self.args.debug:
+                lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB, lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
         return robot_bbox
     
     def bbox_generator_titan2(self,radius,pos,orn,lineId,lineColorRGB=[1, 0, 0]):
@@ -1947,8 +1957,8 @@ class Env(EnvBasePB):
             robot_bbox.append(list(start1))
 
             end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
-            #if self.args.debug:
-            lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+            if self.args.debug:
+                lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
         return robot_bbox
 
     def bbox_generator(self,object_id,radius,height,lineId):

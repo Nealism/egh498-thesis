@@ -32,9 +32,9 @@ def run(args):
         writer = None
 
     env = Env(PATH=PATH, args=args, writer=writer)
-    env.reset()
+    #env.reset()
     #print("reset",env.reset())
-    env.step(np.zeros(2))
+    #env.step(np.zeros(2))
     # Need to import Torch after Isaac (for isaac "is" envs) 
     from utils.run_utils import setup_logger_kwargs
 

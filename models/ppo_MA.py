@@ -570,7 +570,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
             else:
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
-
+            #print("a",a)
             next_o, r, d, _ = env.step(a)
             #print(r)
             # print(d)
@@ -624,7 +624,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #print(ep_lens)
             #print(d)
             timeout = ep_lens[0] == env.args.max_ep_len
-            #print(d)
+            #print("Done",d)
             if all(d):
                 terminal = True
             else:
