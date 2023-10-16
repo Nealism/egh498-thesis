@@ -1,6 +1,7 @@
 from cmath import e
 from copy import deepcopy
 import numpy as np
+
 import pybullet as p
 import time
 from gym import spaces
@@ -146,6 +147,8 @@ class Env(EnvBasePB):
         #self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Diffficulty": self.terrain_difficulty}
 
         self.load_robot()
+
+        
 
 
     # def load_terrains(self):
@@ -1801,8 +1804,7 @@ class Env(EnvBasePB):
         # #print(hits[0])
         #     self.hit = [hits[0][0] > 0, hits[1][0] > 0]
             #print(self.hit)
-   
-        #print(self.orn2)
+        
   
     def set_obstacles(self, list_of_obs_bbox):
         self.obstacles=list_of_obs_bbox
@@ -2152,3 +2154,5 @@ class Env(EnvBasePB):
                     
                 
                     return pm[0],pm[1],pm[2]
+                
+    

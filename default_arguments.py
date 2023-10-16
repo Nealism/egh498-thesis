@@ -130,6 +130,12 @@ def get_defaults():
     parser.add_argument('--hm_size', type=int, default=8)
 
     # ========================================================================
+    # Occupancy map
+    # ========================================================================
+    parser.add_argument('--occupancy_map', default=False, action="store_true")
+    
+
+    # ========================================================================
     # Way point
     # ========================================================================
     parser.add_argument("--wp_time_scalar", type=float, default=2.0)
