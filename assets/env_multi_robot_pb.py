@@ -30,11 +30,22 @@ class Env(EnvBasePB):
             if self.args.static_robots > 1:
                 self.ob_size = 18
             elif self.args.obstacle_avoidance:
-                self.ob_size = 10
+                if self.args.return_fn==1:
+                    self.ob_size = 14
+                elif self.args.return_fn==2:
+                    self.ob_size = 8
+                elif self.args.return_fn==3:
+                    self.ob_size = 16
+                elif self.args.return_fn==4:
+                    self.ob_size = 9
+                elif self.args.return_fn==5:
+                    self.ob_size = 17
             else:
                 self.ob_size = 6
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
+
+        self.steps = -1
 
         self.load_simulator()
         
@@ -69,6 +80,7 @@ class Env(EnvBasePB):
         res = []
         self.obstacles=[]
         self.robots_bbox=[]
+        self.steps = 0
         for Robot in self.robots:
             Robot.set_robot_bbox(self.robots_bbox)
             if self.args.obstacle_avoidance:
@@ -90,14 +102,17 @@ class Env(EnvBasePB):
         self.robots_pos=[]
         self.local_heightmaps=[]
         self.local_heightmap_positions=[]
-        
+        self.Goals_pos=[]
+        self.Obstacles_pos=[]
         for Robot in self.robots:
             #print(Robot,"s",self.robots)
             #self.ns.append(n)
             #self.ns.append(n)
             self.robots_bbox.append((Robot,Robot.robot1_bbox))
             self.robots_pos.append(Robot.pos[:2])
-        #print("robot_pos",self.robot_pos)
+            self.Goals_pos.append(Robot.state_goal[:2])
+            self.Obstacles_pos.append(Robot.pos2[:2])
+        #print("self.Goals_pos",self.Goals_pos)
         if self.args.obstacle_avoidance:
             for Robot in self.robots:
                 self.obstacles.append(Robot.square_bbox)
@@ -128,26 +143,40 @@ class Env(EnvBasePB):
 
             self.ob_dicts.append(self.ob_dict)
 
-        if self.args.occupancy_map:    
-            A=self.insert_obstacle_with_object(2.0, 2.0, 0, 1.0, 1.0, 0.2)  # Place the obstacle and a PyBullet object
-            B=self.insert_obstacle_with_object(4.0, 4.0, 0, 1.0, 1.0, 0.2)  # Place the obstacle and a PyBullet object
+        if self.args.occupancy_map: 
+            #print(self.Obstacles_pos)   
+            #A=self.insert_obstacle_with_object(self.Obstacles_pos[0][0], self.Obstacles_pos[0][1], 0, 1.0, 1.0, 0.2)  # Place the obstacle and a PyBullet object
+            for obstacle_pos in self.Obstacles_pos:
+                B=self.insert_obstacle_with_object(obstacle_pos[0], obstacle_pos[1], 0, 1.0, 1.0, 0.2)  # Place the obstacle and a PyBullet object
             # Get the local heightmap and its position within the local map
 
             #print(self.orn2)
+            turtlebot_data=[]
             for robot_pos in self.robots_pos:
                 local_heightmap, local_heightmap_position = self.get_heightmap(robot_pos)
                 self.local_heightmaps.append(local_heightmap)
                 self.local_heightmap_positions.append(local_heightmap_position)
-            # print("local_heightmap",local_heightmap,len(local_heightmap))
-            # print("all_local_heightmaps",self.local_heightmaps,len(self.local_heightmaps));exit()
+                turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
 
-            local_heightmapsA,local_heightmapsB=self.local_heightmaps[0],self.local_heightmaps[1]
-            local_heightmap_positionsA,local_heightmap_positionsB=self.local_heightmap_positions[0],self.local_heightmap_positions[1]
-            robots_posA,robots_posB=self.robots_pos[0],self.robots_pos[1]
-            # # Visualize both global map and local heightmap
-            M=self.visualize_maps(self.global_map, local_heightmapsA,local_heightmap_positionsA,robots_posA,local_heightmapsB, local_heightmap_positionsB, robots_posB)
-            # N=self.visualize_maps(self.global_map, local_heightmapB, local_heightmap_positionB, robotB_position)
-        
+            #print("local_heightmap1", self.local_heightmap_positions,len(self.local_heightmap_positions))
+            # np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
+            # np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
+            #     M=self.visualize_maps(self.global_map, local_heightmap,local_heightmap_position,robot_pos)
+            #     M_list.append(M)
+            # # print("local_heightmap",local_heightmap,len(local_heightmap))
+            # # print("all_local_heightmaps",self.local_heightmaps,len(self.local_heightmaps))
+            # MM=M_list[0]
+            # MM=M_list[1]
+            # self.imshow_map(M)
+            #print(self.robots_pos)
+            #turtlebot_data=self.local_heightmaps,self.local_heightmap_positions,self.robots_pos
+            #M=self.visualize_maps(self.global_map, turtlebot_data)
+            # print(self.robots_pos[1])
+            # print(self.Goals_pos[1])
+            M=self.visualize_maps(self.global_map, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos)
+            
+            
+        self.steps += 1
         #print("length",(self.robots_bbox))
         return obs, rews, dones, self.ob_dict
     
@@ -212,135 +241,137 @@ class Env(EnvBasePB):
         local_heightmap_y_min = local_y_min
         local_heightmap_y_max = local_y_max
 
-        #print("local_heightmap", local_heightmap)
-        #np.savetxt('local_heightmap.txt', local_heightmap) 
+        #print("local_heightmap", local_heightmap,local_heightmap.shape)
+         
 
         return local_heightmap, (local_heightmap_x_min, local_heightmap_x_max, local_heightmap_y_min, local_heightmap_y_max)
 
     # Function to visualize the maps using OpenCV
 
-
-    # Function to visualize the maps using OpenCV
-    # def visualize_maps(self,global_map, local_heightmap, local_heightmap_position, turtlebot_position):
-        
-    #     #print("global_map", global_map)
-    #     #np.savetxt('global_map.txt', global_map)
-    #     # Scale the maps for visualization
-    #     scaled_global_map = (global_map - np.min(global_map)) / (np.max(global_map) - np.min(global_map)) * 200
-    #     scaled_heightmap = (local_heightmap - np.min(local_heightmap)) / (np.max(local_heightmap) - np.min(local_heightmap)) * 200
-
-    #     # Convert to uint8 and create color images
-    #     scaled_global_map = scaled_global_map.astype(np.uint8)
-    #     scaled_heightmap = scaled_heightmap.astype(np.uint8)
-
-    #     global_map_image = cv2.cvtColor(scaled_global_map, cv2.COLOR_GRAY2BGR)
-    #     heightmap_image = cv2.cvtColor(scaled_heightmap, cv2.COLOR_GRAY2BGR)
-
-    #     # Set colors: Blue for global map, Green for local heightmap, Red for obstacles
-    #     global_map_image[:, :, 0] = 255  # Blue channel to 255 for global map (blue color)
-    #     heightmap_image[:, :, 1] = 255  # Green channel to 255 for local heightmap (green color)
-
-    #     # Find obstacle cells and mark them as red
-    #     obstacle_indices = np.where(global_map == 2.0)
-    #     for i, j in zip(obstacle_indices[0], obstacle_indices[1]):
-    #         global_map_image[i, j] = (0, 0, 0)  # Red color
-
-    #     # Calculate the position of the local heightmap within the global map
-    #     local_map_x_min = local_heightmap_position[0]
-    #     local_map_x_max = local_heightmap_position[1]
-    #     local_map_y_min = local_heightmap_position[2]
-    #     local_map_y_max = local_heightmap_position[3]
-
-    #     local_map_x_min_index = int((local_map_x_min + self.global_map_size_x / 2) / self.global_resolution)
-    #     local_map_x_max_index = int((local_map_x_max + self.global_map_size_x / 2) / self.global_resolution)
-    #     local_map_y_min_index = int((local_map_y_min + self.global_map_size_y / 2) / self.global_resolution)
-    #     local_map_y_max_index = int((local_map_y_max + self.global_map_size_y / 2) / self.global_resolution)
-
-    #     # Overlay the local heightmap on the global map
-    #     global_map_image[
-    #         local_map_x_min_index:local_map_x_max_index,
-    #         local_map_y_min_index:local_map_y_max_index,
-    #     ] = heightmap_image
-
-    #     # Draw a blue dot for the turtlebot's position
-    #     turtlebot_x_index = int((turtlebot_position[0] + self.global_map_size_x / 2) / self.global_resolution)
-    #     turtlebot_y_index = int((turtlebot_position[1] + self.global_map_size_y / 2) / self.global_resolution)
-    #     global_map_image = cv2.circle(global_map_image, (turtlebot_y_index, turtlebot_x_index), 5, (255, 0, 255), -1)
-
-    #     # Display the combined map with the turtlebot in the center
-    #     cv2.imshow("Global Map with Local Heightmap", global_map_image)
-    #     cv2.waitKey(1)
-
-
-    def visualize_maps(self,global_map, local_heightmap1, local_heightmap_position1, robot_position1,
-                   local_heightmap2, local_heightmap_position2, robot_position2):
-    
-        # Scale the maps for visualization
+    def visualize_maps(self,global_map, local_heightmaps, local_heightmap_positions, robot_positions,goal_positions):
+        #Scale the maps for visualization
         scaled_global_map = (global_map - np.min(global_map)) / (np.max(global_map) - np.min(global_map)) * 200
-        scaled_heightmap1 = (local_heightmap1 - np.min(local_heightmap1)) / (np.max(local_heightmap1) - np.min(local_heightmap1)) * 200
-        scaled_heightmap2 = (local_heightmap2 - np.min(local_heightmap2)) / (np.max(local_heightmap2) - np.min(local_heightmap2)) * 200
-
         # Convert to uint8 and create color images
         scaled_global_map = scaled_global_map.astype(np.uint8)
-        scaled_heightmap1 = scaled_heightmap1.astype(np.uint8)
-        scaled_heightmap2 = scaled_heightmap2.astype(np.uint8)
-
         global_map_image = cv2.cvtColor(scaled_global_map, cv2.COLOR_GRAY2BGR)
-        heightmap_image1 = cv2.cvtColor(scaled_heightmap1, cv2.COLOR_GRAY2BGR)
-        heightmap_image2 = cv2.cvtColor(scaled_heightmap2, cv2.COLOR_GRAY2BGR)
-
-        # Set colors: Blue for global map, Green for local heightmaps, Red for obstacles
+        # Set colors: Blue for global map, Green for local heightmap, Red for obstacles
         global_map_image[:, :, 0] = 255  # Blue channel to 255 for global map (blue color)
-        heightmap_image1[:, :, 1] = 255  # Green channel to 255 for local heightmap (green color)
-        heightmap_image2[:, :, 1] = 255  # Green channel to 255 for local heightmap (green color)
 
+        
+        #print("len",len(self.robots_pos))
         # Find obstacle cells and mark them as red
         obstacle_indices = np.where(global_map == 2.0)
         for i, j in zip(obstacle_indices[0], obstacle_indices[1]):
             global_map_image[i, j] = (0, 0, 255)  # Red color
 
-        # Calculate the position of the local heightmap within the global map
-        local_map_x_min1 = local_heightmap_position1[0]
-        local_map_x_max1 = local_heightmap_position1[1]
-        local_map_y_min1 = local_heightmap_position1[2]
-        local_map_y_max1 = local_heightmap_position1[3]
-        
-        local_map_x_min2 = local_heightmap_position2[0]
-        local_map_x_max2 = local_heightmap_position2[1]
-        local_map_y_min2 = local_heightmap_position2[2]
-        local_map_y_max2 = local_heightmap_position2[3]
+        x_min,x_max,y_min,y_max=[],[],[],[]
+        turtlebots_x_index,turtlebots_y_index=[],[]
+        Goals_x_index,Goals_y_index=[],[]
+        #prev_positions=[(0,0),(0,0)]
+        heightmap_images=[]
+        #print(robot_positions)
+        for robot_position, goal_position,local_heightmap,local_heightmap_position in zip(robot_positions,goal_positions, local_heightmaps,local_heightmap_positions):
+            #print("WEW",local_heightmaps,len(local_heightmaps), local_heightmap_positions,len(local_heightmap_positions))
+            scaled_heightmap = (local_heightmap - np.min(local_heightmap)) / (np.max(local_heightmap) - np.min(local_heightmap)) * 200
+            scaled_heightmap = scaled_heightmap.astype(np.uint8)
+            heightmap_image = cv2.cvtColor(scaled_heightmap, cv2.COLOR_GRAY2BGR)
+            heightmap_image[:, :, 1] = 155  # Green channel to 255 for local heightmap (green color)
+            #print("HP",heightmap_image)
+            # Calculate the position of the local heightmap within the global map
+            local_map_x_min = local_heightmap_position[0]
+            local_map_x_max = local_heightmap_position[1]
+            local_map_y_min = local_heightmap_position[2]
+            local_map_y_max = local_heightmap_position[3]
 
-        local_map_x_min_index1 = int((local_map_x_min1 + self.global_map_size_x / 2) / self.global_resolution)
-        local_map_x_max_index1 = int((local_map_x_max1 + self.global_map_size_x / 2) / self.global_resolution)
-        local_map_y_min_index1 = int((local_map_y_min1 + self.global_map_size_y / 2) / self.global_resolution)
-        local_map_y_max_index1 = int((local_map_y_max1 + self.global_map_size_y / 2) / self.global_resolution)
-        
-        local_map_x_min_index2 = int((local_map_x_min2 + self.global_map_size_x / 2) / self.global_resolution)
-        local_map_x_max_index2 = int((local_map_x_max2 + self.global_map_size_x / 2) / self.global_resolution)
-        local_map_y_min_index2 = int((local_map_y_min2 + self.global_map_size_y / 2) / self.global_resolution)
-        local_map_y_max_index2 = int((local_map_y_max2 + self.global_map_size_y / 2) / self.global_resolution)
+            local_map_x_min_index = int((local_map_x_min + self.global_map_size_x / 2) / self.global_resolution)
+            local_map_x_max_index = int((local_map_x_max + self.global_map_size_x / 2) / self.global_resolution)
+            local_map_y_min_index = int((local_map_y_min + self.global_map_size_y / 2) / self.global_resolution)
+            local_map_y_max_index = int((local_map_y_max + self.global_map_size_y / 2) / self.global_resolution)
 
-        # Overlay the local heightmaps on the global map
-        global_map_image[
-            local_map_x_min_index1:local_map_x_max_index1,
-            local_map_y_min_index1:local_map_y_max_index1,
-        ] = heightmap_image1
-        
-        global_map_image[
-            local_map_x_min_index2:local_map_x_max_index2,
-            local_map_y_min_index2:local_map_y_max_index2,
-        ] = heightmap_image2
+            turtlebot_x_index = int((robot_position[0] + self.global_map_size_x / 2) / self.global_resolution)
+            turtlebot_y_index = int((robot_position[1] + self.global_map_size_y / 2) / self.global_resolution)
+            
+            
+            Goal_x_index = int((goal_position[0] + self.global_map_size_x / 2) / self.global_resolution)
+            Goal_y_index = int((goal_position[1] + self.global_map_size_y / 2) / self.global_resolution)
+            #print("P",prev_positions)
+            #print("C",robot_positions)
+            
+            
 
-        # Draw blue dots for both TurtleBots' positions
-        turtlebot_x_index1 = int((robot_position1[0] + self.global_map_size_x / 2) / self.global_resolution)
-        turtlebot_y_index1 = int((robot_position1[1] + self.global_map_size_y / 2) / self.global_resolution)
-        
-        turtlebot_x_index2 = int((robot_position2[0] + self.global_map_size_x / 2) / self.global_resolution)
-        turtlebot_y_index2 = int((robot_position2[1] + self.global_map_size_y / 2) / self.global_resolution)
+            # turtlebot_x_prev = int((prev_position[0] + self.global_map_size_x / 2) / self.global_resolution)
+            # turtlebot_y_prev = int((prev_position[1] + self.global_map_size_y / 2) / self.global_resolution)
+            # x_prev=turtlebot_x_prev
+            # y_prev=turtlebot_y_prev
+            
+            # # Set the obstacle region in the global map to a higher value for visualization
+            # for k in range(x_prev - half_length, x_prev + half_length + 1):
+            #     for l in range(y_prev - half_width, y_prev + half_width + 1):
+            #         if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
+            #             self.global_map[k, l] = 0.0  # Mark the obstacle as occupied with a value of 2
+            
+            # # Find obstacle cells and mark them as red
+            # robot_indices = np.where(global_map == 1.0)
+            # for m, n in zip(robot_indices[0], robot_indices[1]):
+            #     global_map_image[m, n] = (255, 0, 0)  # Blue color
 
-        global_map_image = cv2.circle(global_map_image, (turtlebot_y_index1, turtlebot_x_index1), 5, (255, 0, 0), -1)
-        global_map_image = cv2.circle(global_map_image, (turtlebot_y_index2, turtlebot_x_index2), 5, (255, 0, 0), -1)
+            # prev_positions=robot_positions
+            # print("PC",prev_positions)
+            x_min.append(local_map_x_min_index)
+            x_max.append(local_map_x_max_index)
+            y_min.append(local_map_y_min_index)
+            y_max.append(local_map_y_max_index)
+            turtlebots_x_index.append(turtlebot_x_index)
+            turtlebots_y_index.append(turtlebot_y_index)
 
-        # Display the combined map with the TurtleBots in the center
+            Goals_x_index.append(Goal_x_index)
+            Goals_y_index.append(Goal_y_index)
+
+            heightmap_images.append(heightmap_image)
+        #print("aa",heightmap_images)
+        for i in range(len(self.robots_pos)):
+            
+            global_map_image[
+            x_min[i]:x_max[i],
+            y_min[i]:y_max[i],] = heightmap_images[i]
+
+        for i in range(len(self.robots_pos)):
+            global_map_image = cv2.circle(global_map_image, (turtlebots_y_index[i], turtlebots_x_index[i]), 5, (255, 0, 0), -1)
+            global_map_image = cv2.circle(global_map_image, (Goals_y_index[i], Goals_x_index[i]), 5, (0, 255, 0), -1)
+            
+
+        for i in range(len(self.robots_pos)):
+            # Calculate half-length and half-width in grid cells
+            half_length = int(1.4 / (2 * self.global_resolution))
+            half_width = int(0.7 / (2 * self.global_resolution))
+            x_index=turtlebots_x_index[i]
+            y_index=turtlebots_y_index[i]
+            
+            # Set the obstacle region in the global map to a higher value for visualization
+            for k in range(x_index - half_length, x_index + half_length + 1):
+                for l in range(y_index - half_width, y_index + half_width + 1):
+                    if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
+                        self.global_map[k, l] = 1.0  # Mark the obstacle as occupied with a value of 2
+
+            # Find obstacle cells and mark them as red
+            robot_indices = np.where(global_map == 1.0)
+            for m, n in zip(robot_indices[0], robot_indices[1]):
+                global_map_image[m, n] = (255, 255, 255)  # Blue color
+
+
         cv2.imshow("Global Map with Local Heightmaps", global_map_image)
         cv2.waitKey(10)
+
+
+    
+
+
+
+
+
+
+
+
+
+
+

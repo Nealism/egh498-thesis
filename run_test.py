@@ -43,8 +43,11 @@ def run(args):
     while True:
         action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
         obs, _, done, _ = env.step(action)
-        if done or env.steps > args.max_ep_len:
+        print(done)
+
+        if done==[True] or env.steps > args.max_ep_len:
             obs = env.reset()
+            #print(obs)
 
 if __name__== "__main__":
     args = default_arguments.get_defaults() 

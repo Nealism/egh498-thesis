@@ -103,11 +103,14 @@ def get_defaults():
     parser.add_argument('--cpu', type=int, default=1)
     parser.add_argument('--episodes', type=int, default=100)
     parser.add_argument('--reward_fn', type=int, default=1)
+    parser.add_argument('--cur_succ', type=int, default=1)
+    parser.add_argument('--return_fn', type=int, default=1)
     parser.add_argument('--obs_fn', type=int, default=1)
     parser.add_argument('--reset_fn', type=int, default=1)
     parser.add_argument('--step_fn', type=int, default=1)
     parser.add_argument('--cmd_scaling', type=float, default=1.0)
     parser.add_argument('--load_path', default="")
+    parser.add_argument('--detect_distance', type=int, default=4)
 
     # ========================================================================
     # Terrain
