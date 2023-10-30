@@ -3381,6 +3381,9 @@ class Env(EnvBasePB):
             #generating obstacle
             self.square_bbox=self.bbox_generator_box(0.35,0.011,self.pos2,self.orn2,self.lineId_box1)
             self.square_bbox.append(self.square_bbox[0])
+            # d1=self.distance(self.square_bbox[0],self.square_bbox[1])
+            # d2=self.distance(self.square_bbox[1],self.square_bbox[2])
+            # print(d1,d2)
 
             #Generating Heading Mid line
             self.heading_line_end=self.find_position_B(self.pos,distance_d=self.args.detect_distance,angle_degrees=math.degrees(self.yaw))

@@ -147,7 +147,7 @@ class Env(EnvBasePB):
             #print(self.Obstacles_pos)   
             #A=self.insert_obstacle_with_object(self.Obstacles_pos[0][0], self.Obstacles_pos[0][1], 0, 1.0, 1.0, 0.2)  # Place the obstacle and a PyBullet object
             for obstacle_pos in self.Obstacles_pos:
-                B=self.insert_obstacle_with_object(obstacle_pos[0], obstacle_pos[1], 0, 1.0, 1.0, 0.2)  # Place the obstacle and a PyBullet object
+                B=self.insert_obstacle_with_object(obstacle_pos[0], obstacle_pos[1], 0, length=1.2, width=1.2, height=0.11)  # Place the obstacle and a PyBullet object
             # Get the local heightmap and its position within the local map
 
             #print(self.orn2)
@@ -159,8 +159,7 @@ class Env(EnvBasePB):
                 turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
 
             #print("local_heightmap1", self.local_heightmap_positions,len(self.local_heightmap_positions))
-            # np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
-            # np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
+            
             #     M=self.visualize_maps(self.global_map, local_heightmap,local_heightmap_position,robot_pos)
             #     M_list.append(M)
             # # print("local_heightmap",local_heightmap,len(local_heightmap))
@@ -174,6 +173,9 @@ class Env(EnvBasePB):
             # print(self.robots_pos[1])
             # print(self.Goals_pos[1])
             M=self.visualize_maps(self.global_map, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos)
+            self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
+            self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
+            self.global_map = np.zeros((self.global_num_rows, self.global_num_cols), dtype=np.float32)
             
             
         self.steps += 1
@@ -204,7 +206,7 @@ class Env(EnvBasePB):
         for i in range(grid_x_center - half_length_cells, grid_x_center + half_length_cells + 1):
             for j in range(grid_y_center - half_width_cells, grid_y_center + half_width_cells + 1):
                 if 0 <= i < self.global_num_rows and 0 <= j < self.global_num_cols:
-                    self.global_map[i, j] = 2.0  # Mark the obstacle as occupied with a value of 2
+                    self.global_map[i, j] = 1.0  # Mark the obstacle as occupied with a value of 2
 
         # # Create a PyBullet box object to represent the obstacle
         # p.createMultiBody(
@@ -260,7 +262,7 @@ class Env(EnvBasePB):
         
         #print("len",len(self.robots_pos))
         # Find obstacle cells and mark them as red
-        obstacle_indices = np.where(global_map == 2.0)
+        obstacle_indices = np.where(global_map == 1.0)
         for i, j in zip(obstacle_indices[0], obstacle_indices[1]):
             global_map_image[i, j] = (0, 0, 255)  # Red color
 
@@ -351,16 +353,23 @@ class Env(EnvBasePB):
             for k in range(x_index - half_length, x_index + half_length + 1):
                 for l in range(y_index - half_width, y_index + half_width + 1):
                     if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
-                        self.global_map[k, l] = 1.0  # Mark the obstacle as occupied with a value of 2
+                        self.global_map[k, l] = 2.0  # Mark the obstacle as occupied with a value of 1
 
             # Find obstacle cells and mark them as red
             robot_indices = np.where(global_map == 1.0)
             for m, n in zip(robot_indices[0], robot_indices[1]):
-                global_map_image[m, n] = (255, 255, 255)  # Blue color
+                global_map_image[m, n] = (0, 0, 255)  # Blue color
+            
+            # Find obstacle cells and mark them as red
+            robot_indices = np.where(global_map == 2.0)
+            for m, n in zip(robot_indices[0], robot_indices[1]):
+                global_map_image[m, n] = (150, 0, 150)  # Blue color
 
 
         cv2.imshow("Global Map with Local Heightmaps", global_map_image)
         cv2.waitKey(10)
+        #self.global_map = np.zeros((self.global_num_rows, self.global_num_cols), dtype=np.float32)
+
 
 
     
