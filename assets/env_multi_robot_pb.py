@@ -6,6 +6,7 @@ comm = MPI.COMM_WORLD
 from gym import spaces
 import numpy as np
 import cv2
+import math
 
 
 
@@ -100,6 +101,7 @@ class Env(EnvBasePB):
         self.obstacles=[]
         self.robots_bbox=[]
         self.robots_pos=[]
+        self.robots_orn=[]
         self.local_heightmaps=[]
         self.local_heightmap_positions=[]
         self.Goals_pos=[]
@@ -110,6 +112,7 @@ class Env(EnvBasePB):
             #self.ns.append(n)
             self.robots_bbox.append((Robot,Robot.robot1_bbox))
             self.robots_pos.append(Robot.pos[:2])
+            self.robots_orn.append(Robot.yaw)
             self.Goals_pos.append(Robot.state_goal[:2])
             self.Obstacles_pos.append(Robot.pos2[:2])
         #print("self.Goals_pos",self.Goals_pos)
@@ -152,8 +155,8 @@ class Env(EnvBasePB):
 
             #print(self.orn2)
             turtlebot_data=[]
-            for robot_pos in self.robots_pos:
-                local_heightmap, local_heightmap_position = self.get_heightmap(robot_pos)
+            for robot_pos,robot_orn in zip(self.robots_pos,self.robots_orn):
+                local_heightmap, local_heightmap_position = self.get_heightmap(robot_pos,robot_orn)
                 self.local_heightmaps.append(local_heightmap)
                 self.local_heightmap_positions.append(local_heightmap_position)
                 turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
@@ -175,6 +178,7 @@ class Env(EnvBasePB):
             M=self.visualize_maps(self.global_map, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos)
             self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
             self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
+            
             self.global_map = np.zeros((self.global_num_rows, self.global_num_cols), dtype=np.float32)
             
             
@@ -217,7 +221,7 @@ class Env(EnvBasePB):
         # )
 
     # Function to get the local heightmap
-    def get_heightmap(self,robot_position):
+    def get_heightmap(self,robot_position,robot_orientation):
         # Calculate the boundaries of the local map based on robot_position and local_map_size
         local_x_min = robot_position[0] - self.local_map_size_x / 2
         local_x_max = robot_position[0] + self.local_map_size_x / 2
@@ -237,6 +241,9 @@ class Env(EnvBasePB):
             local_x_indices:local_x_indices + self.local_num_rows, local_y_indices:local_y_indices + self.local_num_cols
         ]
 
+
+        
+
         # Calculate the position of the local heightmap within the local map
         local_heightmap_x_min = local_x_min
         local_heightmap_x_max = local_x_max
@@ -244,6 +251,8 @@ class Env(EnvBasePB):
         local_heightmap_y_max = local_y_max
 
         #print("local_heightmap", local_heightmap,local_heightmap.shape)
+        # Rotate the local heightmap based on the robot's orientation
+        local_heightmap = np.rot90(local_heightmap, k=int(math.degrees(robot_orientation) / 90))
          
 
         return local_heightmap, (local_heightmap_x_min, local_heightmap_x_max, local_heightmap_y_min, local_heightmap_y_max)

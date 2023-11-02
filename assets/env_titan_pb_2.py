@@ -3357,7 +3357,9 @@ class Env(EnvBasePB):
             # print(self.line_orn)
             # print(self.orn)
             
-            self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,orn=self.line_orn,wall_length = 100,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
+            self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,orn=self.line_orn,wall_length = 100,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
+            
+            self.gap_point1,self.gap_point2=self.gap[2],self.gap[3]
             # To set robot collision with gap walls
             self.intersection_r1_gapwall1,_= self.intersection_check(self.robot1_bbox,self.gap[0])
             self.intersection_r1_gapwall2,_= self.intersection_check(self.robot1_bbox,self.gap[1])
@@ -3940,8 +3942,10 @@ class Env(EnvBasePB):
                             intersection_p.append(intersection_point)
         return intersection, intersection_p
 
-    def gap_generator(self,width, depth,height,pos,orn,wall_length,lineId,lineIdgap,lineIdA,lineIdB):
-     
+    def gap_generator(self,width, depth,height,pos,orn,wall_length,goal_pos,lineId,lineIdgap,lineIdA,lineIdB):
+        
+        
+        #------------------------------------
         x=width+wall_length
         y=depth
         z=height
@@ -3952,7 +3956,7 @@ class Env(EnvBasePB):
                   (-x,y,z),
                   (x,y,z)]
      
-        robot_bbox=[]
+        robot_bbox=[] #bbox of big obstacles including gap
 
         for i in range(len(corners)-1):
                 
@@ -3962,7 +3966,8 @@ class Env(EnvBasePB):
 
             end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
             # if self.args.debug:
-            # 		lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[0, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+            # 	lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[0, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+        
         x=width
         cornersgap = [(x, y, z),
                   (x,-y,z),
@@ -3970,7 +3975,7 @@ class Env(EnvBasePB):
                   (-x,y,z),
                   (x,y,z)]
      
-        robot1_bbox=[]
+        robot1_bbox=[] #bbox of middle gap box
 
         # if self.args.debug:
         #         lineIdgap[i]=p.addUserDebugLine((cornersgap[0][0]/2,cornersgap[0][1],.2),(-cornersgap[0][0]/2,-cornersgap[0][1],.2), lineColorRGB=[0, 0, 0], lineWidth=100, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
@@ -3982,18 +3987,41 @@ class Env(EnvBasePB):
             robot1_bbox.append(list(start1))
 
             end1 = p.multiplyTransforms((pos), orn, cornersgap[i+1], [0, 0, 0, 1])[0]
-            if self.args.debug:
-                lineIdgap[i]=p.addUserDebugLine(robot1_bbox[0], robot1_bbox[1], lineColorRGB=[0.2, 0.5, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+            #if self.args.debug:
+                #lineIdgap[i]=p.addUserDebugLine(robot1_bbox[0], robot1_bbox[1], lineColorRGB=[0.2, 0.5, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+            	#lineIdgap[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[0.2, 0.5, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+        
+        # lineIdgap_A=p.addUserDebugLine(robot1_bbox[1], robot1_bbox[2], lineColorRGB=[0.2, 0.5, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+        # lineIdgap_B=p.addUserDebugLine(robot1_bbox[3], robot1_bbox[0], lineColorRGB=[0, 1, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+        #print(robot1_bbox[1])
+        PP1=self.calculate_midpoint(robot1_bbox[1], robot1_bbox[2])
+        PP2=self.calculate_midpoint(robot1_bbox[3], robot1_bbox[0])
+        #lineIdgap_C=p.addUserDebugLine(P1, P2, lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+        P1=self.calculate_opposite_point(PP1,PP2,distance=1)
+        P2=self.calculate_opposite_point(PP2,PP1,distance=1)
+        #lineIdgap_D=p.addUserDebugLine(P1, P2, lineColorRGB=[0, 1, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
 
-            # 		lineIdgap[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[0.2, 0.5, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
-     
+        dist_p1_goal=self.distance(P1,goal_pos)
+        dist_p2_goal=self.distance(P2,goal_pos)
+        #print(dist_Wp1_goal,dist_Wp2_goal)
+        if dist_p1_goal>dist_p2_goal:
+            WP1=P1
+            WP2=P2
+        elif dist_p2_goal>dist_p1_goal:
+            WP1=P2
+            WP2=P1
+        # #print(tuple(pos),WP1)
+        # lineIdgap_D=p.addUserDebugLine(WP1, goal_pos, lineColorRGB=[0, 1, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+        # lineIdgap_E=p.addUserDebugLine(WP2, goal_pos, lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+
+
         cornersA = [robot1_bbox[1],
                   robot1_bbox[0],
                   robot_bbox[0],
                   robot_bbox[1],
                   robot1_bbox[1]]
         
-        robot2_bbox=[]
+        robot2_bbox=[] #bbox of one side obstacle
 
         for i in range(len(cornersA)-1):
                 
@@ -4011,7 +4039,7 @@ class Env(EnvBasePB):
                   robot_bbox[2],
                   robot1_bbox[2]]
         
-        robot3_bbox=[]
+        robot3_bbox=[]  #bbox of other side obstacle
 
         for i in range(len(cornersB)-1):
                 
@@ -4022,7 +4050,7 @@ class Env(EnvBasePB):
             end1 = cornersB[i+1]
             if self.args.debug:
                     lineIdB[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdB[i])
-        return robot2_bbox,robot3_bbox
+        return robot2_bbox,robot3_bbox,WP1,WP2
 
     def find_position_B(self,position_a, distance_d, angle_degrees):
         # Convert the angle from degrees to radians
@@ -4067,5 +4095,34 @@ class Env(EnvBasePB):
                     
                 
                     return pm[0],pm[1],pm[2]
+                
+    def calculate_midpoint(self,point1, point2):
+        x1, y1, z1 = point1
+        x2, y2, z1 = point2
+
+        # Calculate the midpoint
+        midpoint_x = (x1 + x2) / 2
+        midpoint_y = (y1 + y2) / 2
+
+        midpoint = (midpoint_x, midpoint_y,z1)
+        return midpoint
+    
+    def calculate_opposite_point(self,pointA, pointB, distance):
+        x1, y1,z1 = pointA
+        x2, y2,z1 = pointB
+
+        # Calculate the direction vector from A to B
+        direction_vector = (x2 - x1, y2 - y1)
+
+        # Normalize the direction vector (make it a unit vector)
+        length = (direction_vector[0] ** 2 + direction_vector[1] ** 2) ** 0.5
+        normalized_vector = (direction_vector[0] / length, direction_vector[1] / length)
+
+        # Calculate the coordinates of pointC
+        pointC_x = x1 + normalized_vector[0] * distance
+        pointC_y = y1 + normalized_vector[1] * distance
+
+        pointC = (pointC_x, pointC_y,z1)
+        return pointC
                 
     
