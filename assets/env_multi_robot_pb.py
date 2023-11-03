@@ -41,6 +41,13 @@ class Env(EnvBasePB):
                     self.ob_size = 9
                 elif self.args.return_fn==5:
                     self.ob_size = 17
+            elif self.args.gap_avoidance:
+                if self.args.return_fn==1:
+                    self.ob_size = 14
+                elif self.args.return_fn==2:
+                    self.ob_size = 8
+                elif self.args.return_fn==3:
+                    self.ob_size = 26
             else:
                 self.ob_size = 6
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
