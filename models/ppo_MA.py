@@ -381,7 +381,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
     ob_size = env.observation_space.shape
     ac_size = env.action_space.shape
-    #print(ob_size,ac_size)
+    print(ob_size,ac_size)
     #print("obs",env.observation_space,"action",env.action_space)
     
 

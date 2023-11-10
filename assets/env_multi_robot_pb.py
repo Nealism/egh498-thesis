@@ -31,25 +31,11 @@ class Env(EnvBasePB):
             if self.args.static_robots > 1:
                 self.ob_size = 18
             elif self.args.obstacle_avoidance:
-                if self.args.return_fn==1:
-                    self.ob_size = 14
-                elif self.args.return_fn==2:
-                    self.ob_size = 8
-                elif self.args.return_fn==3:
-                    self.ob_size = 16
-                elif self.args.return_fn==4:
-                    self.ob_size = 9
-                elif self.args.return_fn==5:
-                    self.ob_size = 17
+                self.ob_size = 16+3*(self.args.num_robots-1)
             elif self.args.gap_avoidance:
-                if self.args.return_fn==1:
-                    self.ob_size = 14
-                elif self.args.return_fn==2:
-                    self.ob_size = 8
-                elif self.args.return_fn==3:
-                    self.ob_size = 26
+                self.ob_size = 26+3*(self.args.num_robots-1)
             else:
-                self.ob_size = 6
+                self.ob_size = 6+3*(self.args.num_robots-1)
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
 
@@ -88,9 +74,12 @@ class Env(EnvBasePB):
         res = []
         self.obstacles=[]
         self.robots_bbox=[]
+        self.robots_pos=[]
+        self.robots_pos_with_IDx=[]
         self.steps = 0
         for Robot in self.robots:
             Robot.set_robot_bbox(self.robots_bbox)
+            Robot.set_allrobot_positions(self.robots_pos_with_IDx)
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
             res.append(Robot.reset())
@@ -113,15 +102,17 @@ class Env(EnvBasePB):
         self.local_heightmap_positions=[]
         self.Goals_pos=[]
         self.Obstacles_pos=[]
+        self.robots_pos_with_IDx=[]
         for Robot in self.robots:
             #print(Robot,"s",self.robots)
             #self.ns.append(n)
             #self.ns.append(n)
             self.robots_bbox.append((Robot,Robot.robot1_bbox))
-            self.robots_pos.append(Robot.pos[:2])
+            self.robots_pos_with_IDx.append((Robot,list(Robot.pos)))
+            self.robots_pos.append(Robot.pos)
             self.robots_orn.append(Robot.yaw)
-            self.Goals_pos.append(Robot.state_goal[:2])
-            self.Obstacles_pos.append(Robot.pos2[:2])
+            self.Goals_pos.append(Robot.state_goal)
+            self.Obstacles_pos.append(Robot.pos2)
         #print("self.Goals_pos",self.Goals_pos)
         if self.args.obstacle_avoidance:
             for Robot in self.robots:
@@ -136,6 +127,7 @@ class Env(EnvBasePB):
         for action,Robot in zip(actions,self.robots):
             
             Robot.set_robot_bbox(self.robots_bbox)
+            Robot.set_allrobot_positions(self.robots_pos_with_IDx)
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
             ob,rew,done, self.ob_dict=Robot.return_step(action)
@@ -156,13 +148,16 @@ class Env(EnvBasePB):
         if self.args.occupancy_map: 
             #print(self.Obstacles_pos)   
             #A=self.insert_obstacle_with_object(self.Obstacles_pos[0][0], self.Obstacles_pos[0][1], 0, 1.0, 1.0, 0.2)  # Place the obstacle and a PyBullet object
-            for obstacle_pos in self.Obstacles_pos:
-                B=self.insert_obstacle_with_object(obstacle_pos[0], obstacle_pos[1], 0, length=1.2, width=1.2, height=0.11)  # Place the obstacle and a PyBullet object
+            # for obstacle_pos in self.Obstacles_pos:
+            #     B=self.insert_obstacle_with_object(obstacle_pos[0], obstacle_pos[1], 0, length=1.2, width=1.2, height=0.11)  # Place the obstacle and a PyBullet object
             # Get the local heightmap and its position within the local map
 
             #print(self.orn2)
             turtlebot_data=[]
-            for robot_pos,robot_orn in zip(self.robots_pos,self.robots_orn):
+            for robot_pos,robot_orn, obstacle_pos in zip(self.robots_pos,self.robots_orn,self.Obstacles_pos):
+
+                B=self.insert_obstacle_with_object(obstacle_pos[0], obstacle_pos[1], 0, length=1.2, width=1.2, height=0.11)  # Place the obstacle and a PyBullet object
+
                 local_heightmap, local_heightmap_position = self.get_heightmap(robot_pos,robot_orn)
                 self.local_heightmaps.append(local_heightmap)
                 self.local_heightmap_positions.append(local_heightmap_position)
@@ -184,10 +179,10 @@ class Env(EnvBasePB):
             # print(self.Goals_pos[1])
             M=self.visualize_maps(self.global_map, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos)
             self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
-            self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
+            #self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
             
             self.global_map = np.zeros((self.global_num_rows, self.global_num_cols), dtype=np.float32)
-            
+            #self.local_map = np.zeros((self.local_num_rows, self.local_num_cols), dtype=np.float32)
             
         self.steps += 1
         #print("length",(self.robots_bbox))
@@ -203,7 +198,7 @@ class Env(EnvBasePB):
             if self.rank == 0:
                 print(thing, self.robots[num].all_log_things["all_" + thing + str(num)])
                 writer.add_scalar(thing + "/" + str(num), np.mean(self.robots[num].all_log_things["all_" + thing + str(num)]), iters_so_far)
-
+    
     def insert_obstacle_with_object(self,position_x, position_y, yaw, length, width, height):
         # Convert obstacle position and dimensions to grid indices
         grid_x_center = int((position_x + self.global_map_size_x / 2) / self.global_resolution)
@@ -277,10 +272,7 @@ class Env(EnvBasePB):
 
         
         #print("len",len(self.robots_pos))
-        # Find obstacle cells and mark them as red
-        obstacle_indices = np.where(global_map == 1.0)
-        for i, j in zip(obstacle_indices[0], obstacle_indices[1]):
-            global_map_image[i, j] = (0, 0, 255)  # Red color
+        
 
         x_min,x_max,y_min,y_max=[],[],[],[]
         turtlebots_x_index,turtlebots_y_index=[],[]
@@ -348,39 +340,44 @@ class Env(EnvBasePB):
             heightmap_images.append(heightmap_image)
         #print("aa",heightmap_images)
         for i in range(len(self.robots_pos)):
-            
             global_map_image[
             x_min[i]:x_max[i],
             y_min[i]:y_max[i],] = heightmap_images[i]
+        #print(i)
+        # Find obstacle cells and mark them as red
+        
 
-        for i in range(len(self.robots_pos)):
+        #for i in range(len(self.robots_pos)):
             global_map_image = cv2.circle(global_map_image, (turtlebots_y_index[i], turtlebots_x_index[i]), 5, (255, 0, 0), -1)
             global_map_image = cv2.circle(global_map_image, (Goals_y_index[i], Goals_x_index[i]), 5, (0, 255, 0), -1)
             
 
-        for i in range(len(self.robots_pos)):
-            # Calculate half-length and half-width in grid cells
-            half_length = int(1.4 / (2 * self.global_resolution))
-            half_width = int(0.7 / (2 * self.global_resolution))
+        
+            # Calculate robot-length and robot-width in grid cells
+            robot_length = int(1.4 / (2 * self.global_resolution))
+            robot_width = int(0.7 / (2 * self.global_resolution))
             x_index=turtlebots_x_index[i]
             y_index=turtlebots_y_index[i]
             
             # Set the obstacle region in the global map to a higher value for visualization
-            for k in range(x_index - half_length, x_index + half_length + 1):
-                for l in range(y_index - half_width, y_index + half_width + 1):
+            for k in range(x_index - robot_length, x_index + robot_length + 1):
+                for l in range(y_index - robot_width, y_index + robot_width + 1):
                     if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
-                        self.global_map[k, l] = 2.0  # Mark the obstacle as occupied with a value of 1
+                        self.global_map[k, l] = 1.0  # Mark the obstacle as occupied with a value of 1
 
-            # Find obstacle cells and mark them as red
-            robot_indices = np.where(global_map == 1.0)
-            for m, n in zip(robot_indices[0], robot_indices[1]):
-                global_map_image[m, n] = (0, 0, 255)  # Blue color
+            # # Find obstacle cells and mark them as red
+            # robot_indices = np.where(global_map == 1.0)
+            # for m, n in zip(robot_indices[0], robot_indices[1]):
+            #     global_map_image[m, n] = (0, 0, 255)  # Blue color
             
             # Find obstacle cells and mark them as red
-            robot_indices = np.where(global_map == 2.0)
-            for m, n in zip(robot_indices[0], robot_indices[1]):
-                global_map_image[m, n] = (150, 0, 150)  # Blue color
+            # robot_indices = np.where(global_map == 2.0)
+            # for m, n in zip(robot_indices[0], robot_indices[1]):
+            #     global_map_image[m, n] = (150, 0, 150)  # Blue color
 
+            obstacle_indices = np.where(global_map == 1.0)
+            for f, g in zip(obstacle_indices[0], obstacle_indices[1]):
+                global_map_image[f, g] = (0, 0, 255)  # Red color
 
         cv2.imshow("Global Map with Local Heightmaps", global_map_image)
         cv2.waitKey(10)
