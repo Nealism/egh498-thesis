@@ -146,38 +146,17 @@ class Env(EnvBasePB):
             self.ob_dicts.append(self.ob_dict)
 
         if self.args.occupancy_map: 
-            #print(self.Obstacles_pos)   
-            #A=self.insert_obstacle_with_object(self.Obstacles_pos[0][0], self.Obstacles_pos[0][1], 0, 1.0, 1.0, 0.2)  # Place the obstacle and a PyBullet object
-            # for obstacle_pos in self.Obstacles_pos:
-            #     B=self.insert_obstacle_with_object(obstacle_pos[0], obstacle_pos[1], 0, length=1.2, width=1.2, height=0.11)  # Place the obstacle and a PyBullet object
-            # Get the local heightmap and its position within the local map
-
-            #print(self.orn2)
+            
             turtlebot_data=[]
-            for robot_pos,robot_orn, obstacle_pos in zip(self.robots_pos,self.robots_orn,self.Obstacles_pos):
-
-                B=self.insert_obstacle_with_object(obstacle_pos[0], obstacle_pos[1], 0, length=1.2, width=1.2, height=0.11)  # Place the obstacle and a PyBullet object
+            for robot_pos,robot_orn in zip(self.robots_pos,self.robots_orn):
 
                 local_heightmap, local_heightmap_position = self.get_heightmap(robot_pos,robot_orn)
                 self.local_heightmaps.append(local_heightmap)
                 self.local_heightmap_positions.append(local_heightmap_position)
                 turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
 
-            #print("local_heightmap1", self.local_heightmap_positions,len(self.local_heightmap_positions))
             
-            #     M=self.visualize_maps(self.global_map, local_heightmap,local_heightmap_position,robot_pos)
-            #     M_list.append(M)
-            # # print("local_heightmap",local_heightmap,len(local_heightmap))
-            # # print("all_local_heightmaps",self.local_heightmaps,len(self.local_heightmaps))
-            # MM=M_list[0]
-            # MM=M_list[1]
-            # self.imshow_map(M)
-            #print(self.robots_pos)
-            #turtlebot_data=self.local_heightmaps,self.local_heightmap_positions,self.robots_pos
-            #M=self.visualize_maps(self.global_map, turtlebot_data)
-            # print(self.robots_pos[1])
-            # print(self.Goals_pos[1])
-            M=self.visualize_maps(self.global_map, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos)
+            M=self.visualize_maps(self.global_map, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos)
             self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
             #self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
             
@@ -185,7 +164,7 @@ class Env(EnvBasePB):
             #self.local_map = np.zeros((self.local_num_rows, self.local_num_cols), dtype=np.float32)
             
         self.steps += 1
-        #print("length",(self.robots_bbox))
+        
         return obs, rews, dones, self.ob_dict
     
     def log_stuff(self, logger, num, writer, iters_so_far):
@@ -199,21 +178,7 @@ class Env(EnvBasePB):
                 print(thing, self.robots[num].all_log_things["all_" + thing + str(num)])
                 writer.add_scalar(thing + "/" + str(num), np.mean(self.robots[num].all_log_things["all_" + thing + str(num)]), iters_so_far)
     
-    def insert_obstacle_with_object(self,position_x, position_y, yaw, length, width, height):
-        # Convert obstacle position and dimensions to grid indices
-        grid_x_center = int((position_x + self.global_map_size_x / 2) / self.global_resolution)
-        grid_y_center = int((position_y + self.global_map_size_y / 2) / self.global_resolution)
-        
-        # Calculate half-length and half-width in grid cells
-        half_length_cells = int(length / (2 * self.global_resolution))
-        half_width_cells = int(width / (2 * self.global_resolution))
-        
-        # Set the obstacle region in the global map to a higher value for visualization
-        for i in range(grid_x_center - half_length_cells, grid_x_center + half_length_cells + 1):
-            for j in range(grid_y_center - half_width_cells, grid_y_center + half_width_cells + 1):
-                if 0 <= i < self.global_num_rows and 0 <= j < self.global_num_cols:
-                    self.global_map[i, j] = 1.0  # Mark the obstacle as occupied with a value of 2
-
+    
         # # Create a PyBullet box object to represent the obstacle
         # p.createMultiBody(
         #     baseMass=1,
@@ -261,7 +226,7 @@ class Env(EnvBasePB):
 
     # Function to visualize the maps using OpenCV
 
-    def visualize_maps(self,global_map, local_heightmaps, local_heightmap_positions, robot_positions,goal_positions):
+    def visualize_maps(self,global_map, local_heightmaps, local_heightmap_positions, robot_positions,goal_positions,obstalce_positions):
         #Scale the maps for visualization
         scaled_global_map = (global_map - np.min(global_map)) / (np.max(global_map) - np.min(global_map)) * 200
         # Convert to uint8 and create color images
@@ -276,11 +241,12 @@ class Env(EnvBasePB):
 
         x_min,x_max,y_min,y_max=[],[],[],[]
         turtlebots_x_index,turtlebots_y_index=[],[]
+        obstacles_x_index,obstacles_y_index=[],[]
         Goals_x_index,Goals_y_index=[],[]
         #prev_positions=[(0,0),(0,0)]
         heightmap_images=[]
         #print(robot_positions)
-        for robot_position, goal_position,local_heightmap,local_heightmap_position in zip(robot_positions,goal_positions, local_heightmaps,local_heightmap_positions):
+        for robot_position, goal_position,local_heightmap,local_heightmap_position, obstalce_position in zip(robot_positions,goal_positions, local_heightmaps,local_heightmap_positions,obstalce_positions):
             #print("WEW",local_heightmaps,len(local_heightmaps), local_heightmap_positions,len(local_heightmap_positions))
             scaled_heightmap = (local_heightmap - np.min(local_heightmap)) / (np.max(local_heightmap) - np.min(local_heightmap)) * 200
             scaled_heightmap = scaled_heightmap.astype(np.uint8)
@@ -304,29 +270,10 @@ class Env(EnvBasePB):
             
             Goal_x_index = int((goal_position[0] + self.global_map_size_x / 2) / self.global_resolution)
             Goal_y_index = int((goal_position[1] + self.global_map_size_y / 2) / self.global_resolution)
-            #print("P",prev_positions)
-            #print("C",robot_positions)
             
-            
+            obstacle_x_index = int((obstalce_position[0] + self.global_map_size_x / 2) / self.global_resolution)
+            obstacle_y_index = int((obstalce_position[1] + self.global_map_size_y / 2) / self.global_resolution)
 
-            # turtlebot_x_prev = int((prev_position[0] + self.global_map_size_x / 2) / self.global_resolution)
-            # turtlebot_y_prev = int((prev_position[1] + self.global_map_size_y / 2) / self.global_resolution)
-            # x_prev=turtlebot_x_prev
-            # y_prev=turtlebot_y_prev
-            
-            # # Set the obstacle region in the global map to a higher value for visualization
-            # for k in range(x_prev - half_length, x_prev + half_length + 1):
-            #     for l in range(y_prev - half_width, y_prev + half_width + 1):
-            #         if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
-            #             self.global_map[k, l] = 0.0  # Mark the obstacle as occupied with a value of 2
-            
-            # # Find obstacle cells and mark them as red
-            # robot_indices = np.where(global_map == 1.0)
-            # for m, n in zip(robot_indices[0], robot_indices[1]):
-            #     global_map_image[m, n] = (255, 0, 0)  # Blue color
-
-            # prev_positions=robot_positions
-            # print("PC",prev_positions)
             x_min.append(local_map_x_min_index)
             x_max.append(local_map_x_max_index)
             y_min.append(local_map_y_min_index)
@@ -337,6 +284,10 @@ class Env(EnvBasePB):
             Goals_x_index.append(Goal_x_index)
             Goals_y_index.append(Goal_y_index)
 
+            
+            obstacles_x_index.append(obstacle_x_index)
+            obstacles_y_index.append(obstacle_y_index)
+
             heightmap_images.append(heightmap_image)
         #print("aa",heightmap_images)
         for i in range(len(self.robots_pos)):
@@ -345,9 +296,23 @@ class Env(EnvBasePB):
             y_min[i]:y_max[i],] = heightmap_images[i]
         #print(i)
         # Find obstacle cells and mark them as red
-        
+        if self.args.obstacle_avoidance:
+            for i in range(len(self.Obstacles_pos)):
 
-        #for i in range(len(self.robots_pos)):
+                # Calculate half-length and half-width in grid cells
+                half_length_cells = int(1.2 / (2 * self.global_resolution))
+                half_width_cells = int(1.2 / (2 * self.global_resolution))
+                
+                grid_x_center=obstacles_x_index[i]
+                grid_y_center=obstacles_y_index[i]
+
+
+                # Set the obstacle region in the global map to a higher value for visualization
+                for i in range(grid_x_center - half_length_cells, grid_x_center + half_length_cells + 1):
+                    for j in range(grid_y_center - half_width_cells, grid_y_center + half_width_cells + 1):
+                        if 0 <= i < self.global_num_rows and 0 <= j < self.global_num_cols:
+                            self.global_map[i, j] = 1.0
+        for i in range(len(self.robots_pos)):
             global_map_image = cv2.circle(global_map_image, (turtlebots_y_index[i], turtlebots_x_index[i]), 5, (255, 0, 0), -1)
             global_map_image = cv2.circle(global_map_image, (Goals_y_index[i], Goals_x_index[i]), 5, (0, 255, 0), -1)
             
@@ -365,6 +330,9 @@ class Env(EnvBasePB):
                     if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
                         self.global_map[k, l] = 1.0  # Mark the obstacle as occupied with a value of 1
 
+            obstacle_indices = np.where(global_map == 1.0)
+            for f, g in zip(obstacle_indices[0], obstacle_indices[1]):
+                global_map_image[f, g] = (0, 0, 255)  # Red color
             # # Find obstacle cells and mark them as red
             # robot_indices = np.where(global_map == 1.0)
             # for m, n in zip(robot_indices[0], robot_indices[1]):
@@ -375,13 +343,10 @@ class Env(EnvBasePB):
             # for m, n in zip(robot_indices[0], robot_indices[1]):
             #     global_map_image[m, n] = (150, 0, 150)  # Blue color
 
-            obstacle_indices = np.where(global_map == 1.0)
-            for f, g in zip(obstacle_indices[0], obstacle_indices[1]):
-                global_map_image[f, g] = (0, 0, 255)  # Red color
+            
 
         cv2.imshow("Global Map with Local Heightmaps", global_map_image)
         cv2.waitKey(10)
-        #self.global_map = np.zeros((self.global_num_rows, self.global_num_cols), dtype=np.float32)
 
 
 

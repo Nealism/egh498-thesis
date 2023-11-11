@@ -240,6 +240,8 @@ class Env(EnvBasePB):
         # print("What the ", self.ep_goal_success); exit()
         if self.args.obstacle_avoidance and self.args.gap_avoidance:
             return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "GC: Gap Width":self.max_gap_width-self.decrease_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth,"CLC: distance between obstacle and path": self.a-self.b, "EC: Kp": self.Kp }
+        elif self.args.gap_avoidance:
+            return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "EC: Kp": self.Kp, "GC: Gap Width":self.max_gap_width-self.decrease_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth}
         else:
             return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "EC: Kp": self.Kp }
 
@@ -526,7 +528,7 @@ class Env(EnvBasePB):
             self.line1_start=(pos[0], pos[1])
             self.line1_end=(self.state_goal[0], self.state_goal[1])
             self.line1_angle=self.perpendicular_angle(self.line1_start,self.line1_end)
-            print("angle",self.line1_angle)
+            #print("angle",self.line1_angle)
             self.line_orn=(0.0,0.0, self.line1_angle,0.1)
             
             #Set the Gap width taken from the gap curriculum in reset
@@ -916,11 +918,13 @@ class Env(EnvBasePB):
         self.Other_Robots_pos_list=[]
         for robot_pos_with_IDx in self.robots_pos_with_IDx:
             if str(robot_pos_with_IDx[0])!=str(self):
-                self.Other_Robots_pos_list.append(robot_pos_with_IDx[1])
+                other_robot_egocentric_pos = self.world_to_robot(self.yaw, self.pos, robot_pos_with_IDx[1])
+
+                self.Other_Robots_pos_list.append(other_robot_egocentric_pos)
         # print("eject",self.Robots_pos_list,"whole",self.pos)
         # print("ENTIRE",self.robots_pos_with_IDx)
         #print(len(self.Other_Robots_pos_list),"robot_num",self.args.num_robots)
-        
+        #print(self.Other_Robots_pos_list)
 
         if self.args.static_robots > 1:
             return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3])
@@ -1463,6 +1467,7 @@ class Env(EnvBasePB):
         if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
             collision= -10000
             done=True
+            print("Hit_Obstacle-------Hit_Hit",done)
 
         reward = goal + neg + heading + collision +reach
         
@@ -2641,7 +2646,7 @@ class Env(EnvBasePB):
 
         # print(self.pos2)
         # print(self.obs_pos_robot)
-
+        #print(self.Other_Robots_pos_list)
         #Converting Obstacle Obstacle BBOX Corners position to egocentric position based on Robot 1
         if self.args.gap_avoidance:
             #wall1 corners in egocentric view
