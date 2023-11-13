@@ -111,6 +111,8 @@ def get_defaults():
     parser.add_argument('--cmd_scaling', type=float, default=1.0)
     parser.add_argument('--load_path', default="")
     parser.add_argument('--detect_distance', type=int, default=4)
+    parser.add_argument('--gap_decrease', default=0.5, type=float)
+
 
     # ========================================================================
     # Terrain
