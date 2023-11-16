@@ -413,17 +413,7 @@ class Env(EnvBasePB):
             self.cur_success = deque([0.0], maxlen=5)
                 #print("cur_success", self.cur_success)			
             
-        if self.args.gap_avoidance and (self.args.cur or self.args.gap_curr) and self.check_for_success():
-            #if self.max_gap_width-self.decrease_gap_width - self.final_gap_width == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
-                #self.decrease_gap_width = self.max_gap_width
-            if self.max_gap_width-self.decrease_gap_width == self.final_gap_width:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
-                self.decrease_gap_width = 0
-                self.cur_success = deque([0.0], maxlen=5)
-                #print("cur_success", self.cur_success)			
-            else:
-                self.decrease_gap_width += self.args.gap_decrease			
-                
-                self.cur_success = deque([0.0], maxlen=5)
+        
 
         #GAP_CUrriculum: Reducing Gap Width Gradually
         if self.args.gap_avoidance and (self.args.cur or self.args.gap_curr) and self.check_for_success():
@@ -434,7 +424,7 @@ class Env(EnvBasePB):
                 self.cur_success = deque([0.0], maxlen=5)
                 #print("cur_success", self.cur_success)			
             else:
-                self.decrease_gap_width += 0.5			
+                self.decrease_gap_width += self.args.gap_decrease			
                 
                 self.cur_success = deque([0.0], maxlen=5)
                 
@@ -452,7 +442,7 @@ class Env(EnvBasePB):
         
     
         
-        #########____OBSTACLE_AVOIDANCE_CURRICULUM/STATIC_ROBOT_CURR__########
+        #########____OBSTACLE_AVOIDANCE_CURRICULUM/Collision_likelihood_Curriculum__########
         # self.a is the fixed value of unit ( how far from the line) and self.b is the step size ( Here, step size is 0.5 unit)
         #print("static robot distance from trajectory",self.a-self.b,"and cur_success", self.cur_success)
         #print("cur_success", self.cur_success)	
@@ -909,6 +899,7 @@ class Env(EnvBasePB):
         if self.dist_to_wp < 1.0:
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
             self.goal_success.append(True)
+            self.time_to_goal=self.steps
             #print("True_goal",self.goal_success)
 
         #elif self.time_to_target < self.steps or done:
@@ -2246,24 +2237,27 @@ class Env(EnvBasePB):
             #Distance to waypoints:
             self.dist_gapwp1=self.distance(self.pos,self.gap_point1)
             self.dist_gapwp2=self.distance(self.pos,self.gap_point2)
-            # TT1= self.steps * self.timeStep + 1
-            # T=False
-            # time=None
-            # if self.dist_gapwp1<1:
-            #     time=TT1
-            #     T=time==TT1
-            #     #T = True
+            TT1= self.steps * self.timeStep + 1
+            T=False
+            time=None
+            if self.dist_gapwp1<1:
+                time=TT1
+                T=time==TT1
+                #T = True
 
             
             # print("time",time)
             # print("T",T)
-
+            self.time_to_wp1=0
             if self.dist_gapwp1<2:
+                    self.time_to_wp1=self.steps
                     self.gapwp1_reach=self.gapwp1_reach + 1
-
+            self.time_to_wp2=0
             if self.dist_gapwp2<2:
+                    self.time_to_wp2=self.steps
                     self.gapwp2_reach=self.gapwp2_reach + 1
 
+            # print("self.time_to_wp1",self.time_to_wp1,"self.time_to_wp2",self.time_to_wp2)
             # To set robot collision with gap walls
             self.intersection_r1_gapwall1,_= self.intersection_check(self.robot1_bbox,self.gap[0])
             self.intersection_r1_gapwall2,_= self.intersection_check(self.robot1_bbox,self.gap[1])

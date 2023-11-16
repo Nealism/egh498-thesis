@@ -7,6 +7,7 @@ from gym import spaces
 import numpy as np
 import cv2
 import math
+from copy import deepcopy
 
 
 
@@ -19,6 +20,7 @@ class Env(EnvBasePB):
         self.PATH = PATH
         self.writer = writer
         self.master = True
+        
         super().__init__(PATH)
 
         self.all_log_things = [{} for _ in range(args.num_robots)]
@@ -68,27 +70,111 @@ class Env(EnvBasePB):
             self.local_num_rows = int(self.local_map_size_y / self.local_resolution)
             self.local_num_cols = int(self.local_map_size_x / self.local_resolution)
             self.local_map = np.zeros((self.local_num_rows, self.local_num_cols), dtype=np.float32)
-
-
+            #if self.args.use_perception:
+            self.im_size = [1,self.local_map.shape[0],self.local_map.shape[1]]
+            #print("Im",self.im_size,"local",self.local_map.shape);exit()
     def reset(self):
         res = []
-        self.obstacles=[]
+        #self.obstacles=[]
         self.robots_bbox=[]
         self.robots_pos=[]
         self.robots_pos_with_IDx=[]
         self.steps = 0
+        self.occupancy_maps=[]
         for Robot in self.robots:
             Robot.set_robot_bbox(self.robots_bbox)
             Robot.set_allrobot_positions(self.robots_pos_with_IDx)
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
             res.append(Robot.reset())
-        #print("GREAAATTTTTT", res)
+        self.get_observation()
+        #print("GREAAATTTTTT", res);exit()
         return res
 
 
 
     def step(self,actions):
+        obs = []
+        rews=[]
+        dones=[]
+        # self.ob_dicts=[]
+
+        # self.obstacles=[]
+        # self.robots_bbox=[]
+        # self.robots_pos=[]
+        # self.robots_orn=[]
+        # self.local_heightmaps=[]
+        # self.local_heightmap_positions=[]
+        # self.Goals_pos=[]
+        # self.Obstacles_pos=[]
+        # self.robots_pos_with_IDx=[]
+        # for Robot in self.robots:
+        #     #print(Robot,"s",self.robots)
+        #     #self.ns.append(n)
+        #     #self.ns.append(n)
+        #     self.robots_bbox.append((Robot,Robot.robot1_bbox))
+        #     self.robots_pos_with_IDx.append((Robot,list(Robot.pos)))
+        #     self.robots_pos.append(Robot.pos)
+        #     self.robots_orn.append(Robot.yaw)
+        #     self.Goals_pos.append(Robot.state_goal)
+        #     self.Obstacles_pos.append(Robot.pos2)
+        # #print("self.Goals_pos",self.Goals_pos)
+        # if self.args.obstacle_avoidance:
+        #     for Robot in self.robots:
+        #         self.obstacles.append(Robot.square_bbox)
+
+        for action,Robot in zip(actions,self.robots):
+            
+            Robot.motor_action(action)
+
+        p.stepSimulation()
+
+        for action,Robot in zip(actions,self.robots):
+            
+            Robot.set_robot_bbox(self.robots_bbox)
+            Robot.set_allrobot_positions(self.robots_pos_with_IDx)
+            if self.args.obstacle_avoidance:
+                Robot.set_obstacles(self.obstacles)
+            ob,rew,done, self.ob_dict=Robot.return_step(action)
+
+            obs.append(ob)
+            rews.append(rew)
+            dones.append(done)
+
+            self.ob_dicts.append(self.ob_dict)
+
+        
+            #self.local_map = np.zeros((self.local_num_rows, self.local_num_cols), dtype=np.float32)
+            
+        self.steps += 1
+        self.get_observation()
+        return obs, rews, dones, self.ob_dict
+    
+    def get_image(self):
+
+        if self.args.occupancy_map: 
+            
+            #self.occupancy_maps=[]
+            turtlebot_data=[]
+            for robot_pos,robot_orn in zip(self.robots_pos,self.robots_orn):
+
+                local_heightmap, local_heightmap_position = self.get_heightmap(robot_pos,robot_orn)
+                self.local_heightmaps.append(local_heightmap)
+                self.local_heightmap_positions.append(local_heightmap_position)
+                turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
+
+            
+            M=self.visualize_maps(self.global_map, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos)
+            self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
+            #self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
+            self.occupancy_maps=deepcopy(self.local_heightmaps)
+            #print(self.occupancy_maps)
+            self.global_map = np.zeros((self.global_num_rows, self.global_num_cols), dtype=np.float32)
+        #print(self.occupancy_maps);exit()
+        return self.occupancy_maps
+    
+    def get_observation(self):
+
         obs = []
         rews=[]
         dones=[]
@@ -118,54 +204,6 @@ class Env(EnvBasePB):
             for Robot in self.robots:
                 self.obstacles.append(Robot.square_bbox)
 
-        for action,Robot in zip(actions,self.robots):
-            
-            Robot.motor_action(action)
-
-        p.stepSimulation()
-
-        for action,Robot in zip(actions,self.robots):
-            
-            Robot.set_robot_bbox(self.robots_bbox)
-            Robot.set_allrobot_positions(self.robots_pos_with_IDx)
-            if self.args.obstacle_avoidance:
-                Robot.set_obstacles(self.obstacles)
-            ob,rew,done, self.ob_dict=Robot.return_step(action)
-            
-
-            #Occupancy Map actions:
-            
-                
-        
-
-            # Robot.Id
-            obs.append(ob)
-            rews.append(rew)
-            dones.append(done)
-
-            self.ob_dicts.append(self.ob_dict)
-
-        if self.args.occupancy_map: 
-            
-            turtlebot_data=[]
-            for robot_pos,robot_orn in zip(self.robots_pos,self.robots_orn):
-
-                local_heightmap, local_heightmap_position = self.get_heightmap(robot_pos,robot_orn)
-                self.local_heightmaps.append(local_heightmap)
-                self.local_heightmap_positions.append(local_heightmap_position)
-                turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
-
-            
-            M=self.visualize_maps(self.global_map, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos)
-            self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
-            #self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
-            
-            self.global_map = np.zeros((self.global_num_rows, self.global_num_cols), dtype=np.float32)
-            #self.local_map = np.zeros((self.local_num_rows, self.local_num_cols), dtype=np.float32)
-            
-        self.steps += 1
-        
-        return obs, rews, dones, self.ob_dict
     
     def log_stuff(self, logger, num, writer, iters_so_far):
         log_things = self.robots[num].get_log_things()

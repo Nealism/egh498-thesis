@@ -22,7 +22,9 @@ class PPOBufferPerception:
 
     def __init__(self, ob_size, im_size, ac_size, size, gamma=0.99, lam=0.95):
         self.obs_buf = np.zeros(core.combined_shape(size, ob_size), dtype=np.float32)
+        #print("im_size",type(im_size))
         self.im_buf = np.zeros(core.combined_shape(size, im_size), dtype=np.float32)
+        #print("im_size_after",self.im_buf)
         self.act_buf = np.zeros(core.combined_shape(size, ac_size), dtype=np.float32)
         self.adv_buf = np.zeros(size, dtype=np.float32)
         self.rew_buf = np.zeros(size, dtype=np.float32)
@@ -37,6 +39,8 @@ class PPOBufferPerception:
         Append one timestep of agent-environment interaction to the buffer.
         """
         assert self.ptr < self.max_size     # buffer has to have room so you can store
+        #print("store_im",im)
+        
         self.obs_buf[self.ptr] = obs
         self.im_buf[self.ptr] = im
         self.act_buf[self.ptr] = act
@@ -248,6 +252,70 @@ class MA_PPOBuffer:
                 #print(p)
                 #print("getting list", get_list)
             return get_list
+                
+
+class MA_PPOBufferPerception:
+        def __init__(self, ob_size,im_size, ac_size, size, gamma=0.99, lam=0.95, num_robots=None):
+            #self.args = args
+            #self.ptr, self.path_start_idx, self.max_size = 0, 0, size
+            #self.ptr, self.path_start_idx, self.max_size = 0, 0, size
+            #print("im",type(im_size))
+            self.buffers=tuple([PPOBufferPerception(ob_size,im_size, ac_size, size, gamma=gamma, lam=lam) for Robot in range(num_robots)])
+
+            #print("b",tuple(self.buffers), type(self.buffers))
+            
+            
+        def store(self, obs,im, acts, rews, vals, logps):
+            
+            #num_robots=tuple(range(num_robots))
+            #print(num_robots,type(num_robots))
+            #for Robot in range(num_robots):
+            #robot_id_number=tuple(range(num_robots))
+            for buffer, ob,im, act,rew,val,logp in zip(self.buffers, tuple(obs),tuple(im),tuple(acts),tuple(rews),tuple(vals.tolist()),tuple(logps.tolist())):
+                    #self.ptr += 1
+                #print("store buffer.ptr",buffer.ptr)
+                #print(buffer,Robot,rew)
+                #print("bf",buffer,"ob", ob, "act",act,"rw",rew,"vl",val,"lgp",logp)
+                #print("buffer store",buffer.store(ob,act,rew,val,logp))
+                #print("ob_size_mabuf",len(tuple(obs)))
+                buffer.store(ob,im,act,rew,val,logp)
+            
+
+        def finish_path(self, last_vals=()):
+            #print("initial_lastval",[last_vals],type([last_vals]))
+            #robot_id_number=tuple(range(num_robots))
+            #print("early last vals v",tuple(last_vals), type(last_vals))
+            #print("Life is full of problems,",last_vals.detach().numpy())
+
+            for buffer, last_val in zip(self.buffers,last_vals):
+                #print(buffer,Robot,rew)
+                #print("MA",self.buffers,last_vals)
+                #print("MA_Single",buffer, last_val,Robot)
+                #print("f_buf",buffer, "type1",type(buffer), "f_self_buf",self.buffers)
+
+
+                #print("fininsh path",buffer.finish_path(last_val))
+                buffer.finish_path(last_val)
+
+        
+        def get(self,num_robots=None):
+            
+            get_list=[]
+            buffer_list=[]
+            robot_id_number=tuple(range(num_robots))
+            for buffer,Robot in zip(self.buffers,robot_id_number):
+                #print("g_buf",buffer,"type1",type(buffer), "r", Robot)
+                #print("buf_get",buffer.get())
+                #print("self",self,"buf",buffer, "self buf",self.buffers)
+                #print("buf_get",buffer.get())
+                #print(buffer)
+                b=buffer
+                p=buffer.get()
+                get_list.append(p)
+                buffer_list.append(b)
+                #print(p)
+                #print("getting list", get_list)
+            return get_list
                 # getting=getting.append(buffer.get())
                 # #print("buf_get",buffer.get())
                 # #return buffer.get()
@@ -419,7 +487,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     #print(local_steps_per_epoch)
     steps_per_epoch = local_epoch_len * num_procs()
     if use_perception:
-        buf = PPOBufferPerception(ob_size, im_size, ac_size, local_steps_per_epoch, gamma, lam)
+        buf = MA_PPOBufferPerception(ob_size, im_size, ac_size, local_steps_per_epoch, gamma, lam)
     else:
         buf = MA_PPOBuffer(ob_size, ac_size, local_steps_per_epoch, gamma, lam, robot_number)
     #print("buf",buf)
@@ -557,6 +625,9 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     #print("o",o)
     if use_perception:
         im = env.get_image()
+        #print(im);exit()
+
+        
 
     local_lens = [[] for _ in range(robot_number)]
     local_rews = [[] for _ in range(robot_number)]
