@@ -3032,8 +3032,8 @@ class Env(EnvBasePB):
         # print("r2",robot2_bbox)
         corners=robot2_bbox
         
-        rectangle_id1=self.create_rectangle(robot2_bbox,wall_length,depth,0.34/2,orn)
-        rectangle_id2=self.create_rectangle(robot3_bbox,wall_length,depth,0.34/2,orn)
+        rectangle_id1=self.create_rectangle(robot2_bbox,wall_length,depth,0.5,orn)
+        rectangle_id2=self.create_rectangle(robot3_bbox,wall_length,depth,0.5,orn)
         # p.createMultiBody(
         #     baseMass=1,
         #     baseCollisionShapeIndex=p.createCollisionShape(p.GEOM_BOX, halfExtents=[length/2, width/2, height/2]),

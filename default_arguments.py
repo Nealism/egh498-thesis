@@ -53,6 +53,7 @@ def get_defaults():
     parser.add_argument('--tunnel_curr', default=False, action="store_true")
     parser.add_argument('--collision_likelihood_curr', default=False, action="store_true")
     parser.add_argument('--expert_curr', default=False, action="store_true")
+    parser.add_argument('--map_show', default=False, action="store_true")
     
 
     # ========================================================================

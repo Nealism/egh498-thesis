@@ -628,6 +628,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     #print("o",o)
     if use_perception:
         im = env.get_image()
+        
         #print(im);exit()
 
         
@@ -655,6 +656,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #print("DONE",d)
             if use_perception:
                 next_im = env.get_image()
+                #print(len(im))
+                np.savetxt('im1.txt', im[0])
             
             # if robot_number > 1:
 
