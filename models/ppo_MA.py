@@ -261,7 +261,7 @@ class MA_PPOBufferPerception:
             #self.ptr, self.path_start_idx, self.max_size = 0, 0, size
             #print("im",type(im_size))
             self.buffers=tuple([PPOBufferPerception(ob_size,im_size, ac_size, size, gamma=gamma, lam=lam) for Robot in range(num_robots)])
-
+            
             #print("b",tuple(self.buffers), type(self.buffers))
             
             
@@ -457,6 +457,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     if use_perception:
         actor_critic=core.MLPActorCriticPerception
         im_size = env.im_size
+        
         if load_path != "":
             ac = torch.load(load_path)
             print("Loading saved weights: ", load_path)
@@ -487,7 +488,9 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     #print(local_steps_per_epoch)
     steps_per_epoch = local_epoch_len * num_procs()
     if use_perception:
-        buf = MA_PPOBufferPerception(ob_size, im_size, ac_size, local_steps_per_epoch, gamma, lam)
+        #print("type",im_size)
+
+        buf = MA_PPOBufferPerception(ob_size, im_size, ac_size, local_steps_per_epoch, gamma, lam, robot_number)
     else:
         buf = MA_PPOBuffer(ob_size, ac_size, local_steps_per_epoch, gamma, lam, robot_number)
     #print("buf",buf)
@@ -694,6 +697,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 im = next_im
             #print(ep_lens)
             #print(d)
+            #print("im",im)
             timeout = ep_lens[0] == env.args.max_ep_len
             #print("Done",d)
             if all(d):
@@ -707,6 +711,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             
             if terminal or epoch_ended:
                 # if trajectory didn't reach terminal state, bootstrap value target
+                #if (timeout or epoch_ended) and not all(d):
                 if (timeout or epoch_ended) and not all(d):
                     if use_perception:
                         _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))

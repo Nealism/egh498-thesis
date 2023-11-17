@@ -89,7 +89,7 @@ class Env(EnvBasePB):
             
             
         elif self.args.gap_avoidance:
-            self.max_gap_width=1
+            self.max_gap_width=0.6
             self.decrease_gap_width=0
             self.max_tunnel_depth = 0.1
             self.increase_tunnel_depth = 0.1
@@ -1474,8 +1474,8 @@ class Env(EnvBasePB):
             #print("Hit_Obstacle-------Hit_Hit",done)
         if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
             collision= -10000
-            done=True
-            #print("Hit_Obstacle-------Hit_Hit",done)
+            #done=True
+            print("Hit_GAP_WALL-------Hit_Hit",done)
 
         reward = goal + neg + heading + collision +reach
         
@@ -3028,7 +3028,37 @@ class Env(EnvBasePB):
             end1 = cornersB[i+1]
             if self.args.debug:
                lineIdB[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdB[i])
+        # print("r1",robot1_bbox)
+        # print("r2",robot2_bbox)
+        corners=robot2_bbox
+        
+        rectangle_id1=self.create_rectangle(robot2_bbox,wall_length,depth,0.34/2,orn)
+        rectangle_id2=self.create_rectangle(robot3_bbox,wall_length,depth,0.34/2,orn)
+        # p.createMultiBody(
+        #     baseMass=1,
+        #     baseCollisionShapeIndex=p.createCollisionShape(p.GEOM_BOX, halfExtents=[length/2, width/2, height/2]),
+        #     basePosition=[position_x, position_y, height / 2],
+        #     baseOrientation=p.getQuaternionFromEuler([0, 0, yaw]),
+        # )
+
         return robot2_bbox,robot3_bbox,WP1,WP2
+    
+    def create_rectangle(self,corners,wall_length,wall_width,wall_height,orientation):
+
+        # Calculate the center and half extents of the rectangle
+        #half_extents = [(corners[2][i] - corners[0][i])/2 for i in range(3)]
+        
+        center = [(corners[0][i] + corners[2][i]) / 2 for i in range(3)]
+        half_extents=[((wall_length/2)), wall_width, wall_height/2]
+        # Create a collision shape for the rectangle
+        box_collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_extents)
+
+        # Create the rectangle using createMultiBody and attach the collision shape
+        box_id = p.createMultiBody(baseMass=0,
+                                baseCollisionShapeIndex=box_collision_shape_id,
+                                basePosition=center,baseOrientation=orientation)
+
+        return box_id
 
     def find_position_B(self,position_a, distance_d, angle_degrees):
         # Convert the angle from degrees to radians
