@@ -674,7 +674,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 ep_rets[i] += r[i]
                 ep_lens[i] += 1
 
-            #print(ep_rets)
+            #print(ep_rets,ep_lens)
             #print(ep_ret_list, len(ep_ret_list))
             #print(len(ep_ret_list),(ep_ret_list))
 

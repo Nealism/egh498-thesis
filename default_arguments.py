@@ -46,6 +46,7 @@ def get_defaults():
     parser.add_argument('--one_wp_per_ep', default=False, action="store_true")
     parser.add_argument('--insert_robot2', default=False, action="store_true")
     parser.add_argument('--insert_box', default=False, action="store_true")
+    parser.add_argument('--insert_wall', default=False, action="store_true")
     parser.add_argument('--obstacle_avoidance', default=False, action="store_true")
     parser.add_argument('--gap_avoidance', default=False, action="store_true")
     parser.add_argument('--region_curr', default=False, action="store_true")
