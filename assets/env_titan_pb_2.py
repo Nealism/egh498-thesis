@@ -547,6 +547,13 @@ class Env(EnvBasePB):
             #Set the Tunnel/Gap Depth from the Tunnel Curriculum in reset
             self.tunnel_depth= self.increase_tunnel_depth
 
+            
+            
+            self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
+            Boolian=False
+            self.gap_point_moving = self.gap[2]
+            self.dist_gapwp_mv = self.distance(self.pos, self.gap[2])
+
         
             
 
@@ -661,7 +668,9 @@ class Env(EnvBasePB):
         if self.args.insert_box:
             self.set_position(self.pos2, self.orn2, robot_id=self.square)
             self.state_box, self.orn_box = p.getBasePositionAndOrientation(self.square)
+            
 
+        
 
     def twist_to_tracks(self, actions):
         radius = 0.14
@@ -906,6 +915,11 @@ class Env(EnvBasePB):
         #print("time_step",self.steps)
         if self.dist_to_wp < 1.0:
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
+            if self.args.gap_avoidance:
+                self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
+                Boolian=False
+                self.gap_point_moving = self.gap[2]
+                self.dist_gapwp_mv = self.distance(self.pos, self.gap[2])
             self.goal_success.append(True)
             self.time_to_goal=self.steps
             #print("True_goal",self.goal_success,"ttg",self.time_to_goal)
@@ -923,7 +937,7 @@ class Env(EnvBasePB):
         #     if self.dist_gapwp1<1:
         #     self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
 
-
+        #print("self.steps",self.steps)
         self.steps += 1
         self.total_steps += 1
         self.total_reward += reward
@@ -2327,7 +2341,7 @@ class Env(EnvBasePB):
             # print(self.line_orn)
             # print(self.orn)
             
-            self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
+            #self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
             
             self.gap_point1,self.gap_point2=self.gap[2],self.gap[3]
             
@@ -2348,14 +2362,13 @@ class Env(EnvBasePB):
             #     T=time==TT1
                 #T = True
             
-            # self.gap_point_moving = self.gap_point1
-            # self.dist_gapwp_mv = self.distance(self.pos, self.gap_point1)
 
-            # if self.dist_gapwp_mv < 1:
-            #     self.dist_gapwp_mv = self.distance(self.pos, self.gap_point2)
-            #     self.gap_point_moving = self.gap_point2
+            if not Boolian and self.dist_gapwp_mv < 1:
+                self.dist_gapwp_mv = self.distance(self.pos, self.gap_point2)
+                self.gap_point_moving = self.gap_point2
+                Boolian =True
 
-            # print(self.gap_point_moving, self.gap_point1, self.gap_point2)
+            print(self.gap_point_moving, self.gap_point1, self.gap_point2)
             
 
 

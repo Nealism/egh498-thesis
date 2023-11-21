@@ -645,7 +645,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
             else:
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
-            #print("a",a)
+
+            #print("a",a,"O-shape",np.array(o).shape,"im-shape",np.array(im).shape)
             next_o, r, d, _ = env.step(a)
             #print(r)
             # print(d)
@@ -657,7 +658,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             if use_perception:
                 next_im = env.get_image()
                 #print(len(im))
-                np.savetxt('im1.txt', im[0])
+                #np.savetxt('im1.txt', im[0])
             
             # if robot_number > 1:
 
@@ -670,8 +671,13 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #     ep_ret += [single_r] #sum(r) / len(r)
             #     ep_ret_list.append(ep_ret)
 
+            # print("reward",r)
+            # print("robot_number",robot_number)
             for i in range(robot_number):
+                #print("ep_ret_before",ep_rets)
                 ep_rets[i] += r[i]
+                #print("ep_ret",ep_rets)
+
                 ep_lens[i] += 1
 
             #print(ep_rets,ep_lens)

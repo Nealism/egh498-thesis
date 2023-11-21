@@ -28,8 +28,11 @@ class CNN(nn.Module):
     def __init__(self, im_dim):
         super().__init__()
         self.im_dim = list(im_dim)
-        self.conv1 = nn.Conv2d(in_channels=1,out_channels=8,kernel_size=8,stride=4,padding='valid')
-        self.conv2 = nn.Conv2d(in_channels=8,out_channels=16,kernel_size=4,stride=2,padding='valid')
+        self.conv1 = nn.Conv2d(in_channels=1,out_channels=4,kernel_size=8,stride=4,padding='valid')
+        self.conv2 = nn.Conv2d(in_channels=4,out_channels=8,kernel_size=4,stride=2,padding='valid')
+        # #original
+        # self.conv1 = nn.Conv2d(in_channels=1,out_channels=8,kernel_size=8,stride=4,padding='valid')
+        # self.conv2 = nn.Conv2d(in_channels=8,out_channels=16,kernel_size=4,stride=2,padding='valid')
 
         # Lazy initialisation of linear layer without knowing input dimensions. Requires a 'dry' run to initialise the size
         self.fc = nn.LazyLinear(64)
@@ -147,7 +150,7 @@ class MLPActorCriticPerception(nn.Module):
 
         # Memory leak happens here somewhere. Copying the arrays seem to help??
         v_copy = v.cpu().detach().data.numpy().copy()
-        a_copy = a.cpu().detach().data.numpy().copy()[0]
+        a_copy = a.cpu().detach().data.numpy().copy()
         logp_a_copy = logp_a.cpu().detach().data.numpy().copy()
         return a_copy, v_copy, logp_a_copy
 

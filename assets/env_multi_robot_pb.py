@@ -137,7 +137,7 @@ class Env(EnvBasePB):
             Robot.motor_action(action)
 
         p.stepSimulation()
-
+        #print("action_length",actions,"robot",self.robots)
         for action,Robot in zip(actions,self.robots):
             
             Robot.set_robot_bbox(self.robots_bbox)
@@ -145,10 +145,12 @@ class Env(EnvBasePB):
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
             ob,rew,done, self.ob_dict=Robot.return_step(action)
+            #print("action_length",action,"robot",Robot)
 
             obs.append(ob)
             rews.append(rew)
             dones.append(done)
+            #print("inside_rewards",rews)
 
             self.ob_dicts.append(self.ob_dict)
 
@@ -187,7 +189,7 @@ class Env(EnvBasePB):
             #     self.global_map = np.zeros((self.global_num_rows, self.global_num_cols), dtype=np.float32)
             #     self.global_map_list.append(self.global_map)
         #print(self.occupancy_maps);exit()
-        return self.occupancy_maps
+        return np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size)
     
     def get_observation(self):
 
@@ -409,7 +411,7 @@ class Env(EnvBasePB):
 
         for (global_map_image,global_map) in zip(globalmap_images,global_map_list):
             obstacle_indices = np.where(global_map == 1.0)
-            # obstacle_indices2 = np.where(global_map == 2.0)
+            # obstacle_indices2 = np.wherdee(global_map == 2.0)
             for f, g in zip(obstacle_indices[0], obstacle_indices[1]):
                 global_map_image[f, g] = (0, 0, 255)  # Red color
             # for f, g in zip(obstacle_indices2[0], obstacle_indices2[1]):
