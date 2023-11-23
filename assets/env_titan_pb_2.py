@@ -67,7 +67,11 @@ class Env(EnvBasePB):
                 self.ob_size = 6+3*(self.args.num_robots-1)
         self.Kp = 400
         self.initial_Kp = self.Kp
-        self.time_to_goal=None
+        self.time_to_goal=0
+        self.time_to_gapwp1=0
+        self.time_to_gapwp2=0
+        self.rectangle_id1=0
+        self.rectangle_id2=0
         
 
         
@@ -112,8 +116,8 @@ class Env(EnvBasePB):
             self.initial_goal_dist=3	
             self.max_goal_dist=10
         else:
-            self.initial_goal_dist=15
-            self.max_goal_dist=15
+            self.initial_goal_dist=10
+            self.max_goal_dist=10
         
         self.action_multiplier = 0.1 
 
@@ -125,7 +129,9 @@ class Env(EnvBasePB):
         
         self.reward_names = ["Reward/goal", "Reward/heading", "Reward/heading_obs", "Reward/neg"]
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
-        self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
+        self.ep_reward_dict = {reward:0 for reward in self.reward_names}
+
+        
     
         self.env_exp = None
         self.target_speed = 1.0
@@ -191,9 +197,13 @@ class Env(EnvBasePB):
             if self.args.insert_box:
                 wall_dir= "Wall_URDF/"
                 self.square = p.loadURDF(wall_dir + "square.urdf", [0,2,0.5], useFixedBase=True)
+
+            
             #robot2=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
             self.contact_list2 = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
             wall_dir= "Wall_URDF/"
+            #self.square = p.loadURDF(wall_dir + "square.urdf", [0,2,0.5], useFixedBase=True)
+
             # wallA = p.loadURDF(wall_dir + "Wall.urdf", [11.25,0,0], useFixedBase=True)
             # wallB = p.loadURDF(wall_dir + "Wall.urdf", [-11.25,0,0], useFixedBase=True)
             # wall2A = p.loadURDF(wall_dir + "Wall2.urdf", [0,11.25,0], useFixedBase=True)
@@ -244,7 +254,7 @@ class Env(EnvBasePB):
         if self.args.obstacle_avoidance and self.args.gap_avoidance:
             return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "GC: Gap Width":self.max_gap_width-self.decrease_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth,"CLC: distance between obstacle and path": self.a-self.b, "EC: Kp": self.Kp }
         elif self.args.gap_avoidance:
-            return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "EC: Kp": self.Kp, "GC: Gap Width":self.max_gap_width-self.decrease_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth}
+            return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "EC: Kp": self.Kp, "GC: Gap Width":self.max_gap_width-self.decrease_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth,"Time_to_Goal":self.time_to_goal,"Time_to_gapwp1":self.time_to_gapwp1,"Time_gapwp1_gapwp2":self.time_to_gapwp2-self.time_to_gapwp1,"Time_gapwp2_goal":self.time_to_goal-self.time_to_gapwp2}
         else:
             return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "EC: Kp": self.Kp }
 
@@ -345,6 +355,9 @@ class Env(EnvBasePB):
 
 
         p.removeBody(self.Goal)
+        if self.args.gap_avoidance and self.args.insert_wall:
+            p.removeBody(self.rectangle_id1)
+            p.removeBody(self.rectangle_id2)
         # p.removeBody(self.Goal2)
         # p.removeBody(self.Goal3)
         
@@ -550,9 +563,30 @@ class Env(EnvBasePB):
             
             
             self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
-            Boolian=False
+
+            self.gap_orn=self.gap[4]
+
+            if self.args.insert_wall:
+                # self.rectangle_id1=self.square
+                # self.rectangle_id2=self.square
+
+
+                self.rectangle_id1=self.create_rectangle(corners=self.gap[0],wall_length=20,wall_width=self.tunnel_depth,wall_height=0.5,orientation=self.gap_orn)
+                self.rectangle_id2=self.create_rectangle(corners=self.gap[1],wall_length=20,wall_width=self.tunnel_depth,wall_height=0.5,orientation=self.gap_orn)
+            
+            self.Boolian=False
+            self.Boolian2=False
+
+            self.dist_gapwp1 = self.distance(pos, self.gap[2])
+            self.dist_gapwp2 = self.distance(pos, self.gap[3])
             self.gap_point_moving = self.gap[2]
-            self.dist_gapwp_mv = self.distance(self.pos, self.gap[2])
+            self.dist_gapwp_mv = self.distance(pos, self.gap[2])
+
+            
+
+        # if self.args.gap_avoidance and self.args.insert_wall:
+        #     p.removeBody(self.rectangle_id1)
+        #     p.removeBody(self.rectangle_id2)
 
         
             
@@ -913,25 +947,83 @@ class Env(EnvBasePB):
         # Move the waypoint and static robot if close the waypoint
         # print(self.ep_goal_success, self.time_to_target, self.steps, self.dist_to_wp)
         #print("time_step",self.steps)
+        #print("self.dist_to_wp",self.dist_to_wp)
+        
+        
         if self.dist_to_wp < 1.0:
+                
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
             if self.args.gap_avoidance:
                 self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
-                Boolian=False
+
+                self.gap_orn=self.gap[4]
+
+                self.wall1_pos=self.gap[5]
+                self.wall2_pos=self.gap[6]
+
+                self.Boolian=False
+                self.Boolian2=False
+                self.dist_gapwp1 = self.distance(self.pos, self.gap[2])
+                self.dist_gapwp2 = self.distance(self.pos, self.gap[3])
+
                 self.gap_point_moving = self.gap[2]
                 self.dist_gapwp_mv = self.distance(self.pos, self.gap[2])
+
+                # self.time_to_goal=0
+                # self.time_to_gapwp1=0
+                # self.time_to_gapwp2=0
+
+                # if  self.args.gap_avoidance:
+                #     if not self.Boolian and self.dist_gapwp1 < 2:
+                #         self.time_to_gapwp1=self.steps       
+                #         self.Boolian =True
+
+                #     if not self.Boolian2 and self.dist_gapwp2 < 2:
+                #         self.time_to_gapwp2=self.steps       
+                #         self.Boolian2 =True
             self.goal_success.append(True)
             self.time_to_goal=self.steps
-            #print("True_goal",self.goal_success,"ttg",self.time_to_goal)
+
+            if self.args.insert_wall:
+                self.set_position(self.wall1_pos, self.gap_orn, robot_id=self.rectangle_id1)
+                self.set_position(self.wall2_pos, self.gap_orn, robot_id=self.rectangle_id2)
+                # self.state_box, self.orn_box = p.getBasePositionAndOrientation(self.square)
+                # self.rectangle_id1=self.create_rectangle(corners=self.gap[0],wall_length=20,wall_width=self.tunnel_depth,wall_height=0.5,orientation=self.gap_orn)
+                # self.rectangle_id2=self.create_rectangle(corners=self.gap[1],wall_length=20,wall_width=self.tunnel_depth,wall_height=0.5,orientation=self.gap_orn)
+
+
+                
+        #     print("ttg",self.time_to_goal)
+        # print(self.state_goal)
+        # print(self.dist_gapwp_mv)
+        if  self.args.gap_avoidance:
+            if not self.Boolian and self.dist_gapwp1 < 2:
+                self.time_to_gapwp1=self.steps       
+                self.Boolian =True
+
+            if not self.Boolian2 and self.dist_gapwp2 < 2:
+                self.time_to_gapwp2=self.steps       
+                self.Boolian2 =True
+                
+
+            # print(self.gap_point_moving, self.gap_point1, self.gap_point2)
+            # #print("True_goal",self.goal_success,"ttg",self.time_to_goal)
             
-            #print("ttg",self.time_to_goal)
 
         #elif self.time_to_target < self.steps or done:
         elif self.time_to_target < self.steps:
             self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
             self.goal_success.append(False)
             #print(self.goal_success)
-        #print("ttg",self.time_to_goal)
+        # print("another",self.time_to_gapwp1)
+        # print("time_wp2",self.time_to_gapwp2)
+        # print("Time_to_gapWp1",self.time_to_gapwp1)
+        # print("Time_to_gapWp2",self.time_to_gapwp2)
+        # print("gapWp1_to_gapWp2",self.time_to_gapwp2-self.time_to_gapwp1)
+        # print("Time_to_goal",self.time_to_goal)
+        # print("gapWp2_to_goal",self.time_to_goal-self.time_to_gapwp2)
+
+
 
         # if self.args.gap_avoidance:
         #     if self.dist_gapwp1<1:
@@ -939,6 +1031,7 @@ class Env(EnvBasePB):
 
         #print("self.steps",self.steps)
         self.steps += 1
+        
         self.total_steps += 1
         self.total_reward += reward
         return self.return_state(),reward,done,self.ob_dict
@@ -2354,6 +2447,8 @@ class Env(EnvBasePB):
             #Distance to waypoints:
             self.dist_gapwp1=self.distance(self.pos,self.gap_point1)
             self.dist_gapwp2=self.distance(self.pos,self.gap_point2)
+            #self.gap_point_moving = self.gap[2]
+            self.dist_gapwp_mv=self.distance(self.pos,self.gap_point1)
             # TT1= self.steps * self.timeStep + 1
             # T=False
             # time=None
@@ -2363,12 +2458,7 @@ class Env(EnvBasePB):
                 #T = True
             
 
-            if not Boolian and self.dist_gapwp_mv < 1:
-                self.dist_gapwp_mv = self.distance(self.pos, self.gap_point2)
-                self.gap_point_moving = self.gap_point2
-                Boolian =True
-
-            print(self.gap_point_moving, self.gap_point1, self.gap_point2)
+            
             
 
 
@@ -3154,12 +3244,17 @@ class Env(EnvBasePB):
             end1 = cornersB[i+1]
             if self.args.debug:
                lineIdB[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdB[i])
+        
+        Wall1_rectangle=robot2_bbox
+        Wall2_rectangle=robot3_bbox
+        
+
+        Wall1_centre=[(Wall1_rectangle[0][i] + Wall1_rectangle[2][i]) / 2 for i in range(3)]
+        Wall2_centre=[(Wall2_rectangle[0][i] + Wall2_rectangle[2][i]) / 2 for i in range(3)]
         # print("r1",robot1_bbox)
         # print("r2",robot2_bbox)
         #corners=robot2_bbox
-        if self.args.insert_wall:
-            rectangle_id1=self.create_rectangle(robot2_bbox,wall_length,depth,0.5,orn)
-            rectangle_id2=self.create_rectangle(robot3_bbox,wall_length,depth,0.5,orn)
+        
         # p.createMultiBody(
         #     baseMass=1,
         #     baseCollisionShapeIndex=p.createCollisionShape(p.GEOM_BOX, halfExtents=[length/2, width/2, height/2]),
@@ -3167,7 +3262,7 @@ class Env(EnvBasePB):
         #     baseOrientation=p.getQuaternionFromEuler([0, 0, yaw]),
         # )
 
-        return robot2_bbox,robot3_bbox,WP1,WP2
+        return Wall1_rectangle,Wall2_rectangle,WP1,WP2,orn,Wall1_centre,Wall2_centre
     
     def create_rectangle(self,corners,wall_length,wall_width,wall_height,orientation):
 

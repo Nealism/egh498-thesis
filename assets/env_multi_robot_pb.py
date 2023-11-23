@@ -319,6 +319,7 @@ class Env(EnvBasePB):
             local_map_y_min = local_heightmap_position[2]
             local_map_y_max = local_heightmap_position[3]
 
+            
             local_map_x_min_index = int((local_map_x_min + self.global_map_size_x / 2) / self.global_resolution)
             local_map_x_max_index = int((local_map_x_max + self.global_map_size_x / 2) / self.global_resolution)
             local_map_y_min_index = int((local_map_y_min + self.global_map_size_y / 2) / self.global_resolution)
