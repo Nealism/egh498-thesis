@@ -20,6 +20,8 @@ class Env(EnvBasePB):
         self.PATH = PATH
         self.writer = writer
         self.master = True
+        #self.robottogoal_angles=[(200),(250)]
+
         
         super().__init__(PATH)
 
@@ -47,6 +49,7 @@ class Env(EnvBasePB):
         
         objects = p.loadMJCF("./assets/xmls/ground.xml")
         self.worldId = objects[0]
+        
         self.robots=[RobotEnv(PATH=PATH, args=args, writer=writer) for n in range(args.num_robots)]
         # for Robot in self.robots:
 
@@ -88,6 +91,17 @@ class Env(EnvBasePB):
         self.robots_bbox=[]
         self.robots_pos=[]
         self.robots_pos_with_IDx=[]
+        if self.args.num_robots ==3:
+            self.robottogoal_angles=[(self.robots[0],[10]),(self.robots[1],[30]),(self.robots[2],[50])]
+            self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[3,3,0.31]),(self.robots[2],[5,5,0.31])]
+        elif self.args.num_robots ==2:
+            self.robottogoal_angles=[(self.robots[0],[10]),(self.robots[1],[40])]
+            self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[4,4,0.31])]
+        else:
+            self.robottogoal_angles=[(self.robots[0],[10])]
+            self.external_robots_pos=[(self.robots[0],[1,1,0.31])]
+        
+
         self.steps = 0
         self.occupancy_maps=[]
         for Robot in self.robots:
@@ -95,6 +109,9 @@ class Env(EnvBasePB):
             Robot.set_allrobot_positions(self.robots_pos_with_IDx)
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
+            if self.args.gap_avoidance:
+                Robot.set_robottogoal_angle(self.robottogoal_angles)
+                Robot.set_external_robots_pos(self.external_robots_pos)
             res.append(Robot.reset())
         self.get_observation()
         #print("GREAAATTTTTT", res);exit()
@@ -144,6 +161,9 @@ class Env(EnvBasePB):
             Robot.set_allrobot_positions(self.robots_pos_with_IDx)
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
+            if self.args.gap_avoidance:
+                Robot.set_robottogoal_angle(self.robottogoal_angles)
+                Robot.set_external_robots_pos(self.external_robots_pos)
             ob,rew,done, self.ob_dict=Robot.return_step(action)
             #print("action_length",action,"robot",Robot)
 
@@ -206,6 +226,18 @@ class Env(EnvBasePB):
         self.Goals_pos=[]
         self.Obstacles_pos=[]
         self.robots_pos_with_IDx=[]
+
+        if self.args.num_robots ==3:
+            self.robottogoal_angles=[(self.robots[0],[10]),(self.robots[1],[30]),(self.robots[2],[50])]
+            self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[3,3,0.31]),(self.robots[2],[5,5,0.31])]
+        elif self.args.num_robots ==2:
+            self.robottogoal_angles=[(self.robots[0],[10]),(self.robots[1],[40])]
+            self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[4,4,0.31])]
+        else:
+            self.robottogoal_angles=[(self.robots[0],[10])]
+            self.external_robots_pos=[(self.robots[0],[1,1,0.31])]
+
+
         for Robot in self.robots:
             #print(Robot,"s",self.robots)
             #self.ns.append(n)
@@ -216,7 +248,8 @@ class Env(EnvBasePB):
             self.robots_orn.append(Robot.yaw)
             self.Goals_pos.append(Robot.state_goal)
             self.Obstacles_pos.append(Robot.pos2)
-        #print("self.Goals_pos",self.Goals_pos)
+        #print(self.robots_pos_with_IDx)
+        print("self.Goals_pos",self.Goals_pos)
         if self.args.obstacle_avoidance:
             for Robot in self.robots:
                 self.obstacles.append(Robot.square_bbox)
