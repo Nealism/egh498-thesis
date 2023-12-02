@@ -72,6 +72,7 @@ class Env(EnvBasePB):
         self.time_to_gapwp2=0
         self.rectangle_id1=0
         self.rectangle_id2=0
+        self.opposite_angle=0
         
 
         
@@ -86,7 +87,7 @@ class Env(EnvBasePB):
             
         if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
             #parameters for gap curr
-            self.max_gap_width=2.5
+            self.max_gap_width=1#2.5
             #self.max_gap_width=2.5
             self.decrease_gap_width=self.args.gap_decrease
             self.final_gap_width=1
@@ -117,8 +118,8 @@ class Env(EnvBasePB):
             self.initial_goal_dist=3	
             self.max_goal_dist=10
         else:
-            self.initial_goal_dist=10
-            self.max_goal_dist=10
+            self.initial_goal_dist=15
+            self.max_goal_dist=15
         
         self.action_multiplier = 0.1 
 
@@ -512,22 +513,37 @@ class Env(EnvBasePB):
             self.set_position(pos, orn, robot_id=self.Id)
             #self.h=0
 
-        # Function to move the goal and the static robot
+        self.robottogoal_angle=None
+        self.external_goals_states=[]
+        self.external_robots_states=[]
+        
+        for robot,goal in self.external_goals_states_with_IDx:
+            self.external_goals_states.append(goal)
+        
+        for robot,r_position in self.external_robots_pos:
+            self.external_robots_states.append(r_position)
 
+        self.mid_point_of_goals=self.calculate_midpoint(self.external_goals_states[0],self.external_goals_states[-1])
+
+        self.mid_point_of_robots=self.calculate_midpoint(self.external_robots_states[0],self.external_robots_states[-1])
+
+        # Function to move the goal and the static robot
+        for robot, angles in self.robottogoal_angles:
+            if robot == self:
+                # Assuming there's only one value in the angles list for simplicity
+                self.robottogoal_angle = angles#[0]
+                break
+            else:
+                # If the robot_name is not found, handle it accordingly
+                print(f"Robot {self} not found in robottogoal_angles.")
+            #print(self.robottogoal_angle)
         if self.args.gap_avoidance:
-            self.robottogoal_angle=None
-            for robot, angles in self.robottogoal_angles:
-                if robot == self:
-                    # Assuming there's only one value in the angles list for simplicity
-                    self.robottogoal_angle = angles[0]
-                    break
-                else:
-                    # If the robot_name is not found, handle it accordingly
-                    print(f"Robot {self} not found in robottogoal_angles.")
-            print(self.robottogoal_angle)
-            self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle)
+            
+
+            
+            self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
         else:
-            self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=random.randint(0, 360))
+            self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
         
         
         # print("robot_positions", pos2)
@@ -584,16 +600,23 @@ class Env(EnvBasePB):
             
             #Set the Gap width taken from the gap curriculum in reset
             self.gap_width=self.max_gap_width-self.decrease_gap_width
+            print("self.gap_width",self.gap_width)
             #print("Gap_Width",self.gap_width,"Decrease_gap",self.decrease_gap_width)
             
             #Set the Tunnel/Gap Depth from the Tunnel Curriculum in reset
             self.tunnel_depth= self.increase_tunnel_depth
 
+            self.each_wall_length=10-(self.gap_width/2)
             
-            
-            self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
+            self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.mid_point_of_goals,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
+
+            self.gap_point1,self.gap_point2=self.gap[2],self.gap[3]
 
             self.gap_orn=self.gap[4]
+
+            self.rectangle1_centre = [(self.gap[0][0][i] + self.gap[0][2][i]) / 2 for i in range(3)]
+            #print("r",self.rectangle1_centre)
+            self.rectangle2_centre = [(self.gap[1][0][i] + self.gap[1][2][i]) / 2 for i in range(3)]
 
             if self.args.insert_wall:
                 # self.rectangle_id1=self.square
@@ -656,25 +679,38 @@ class Env(EnvBasePB):
         return self.return_state()
 
 
-    def move_goal_and_static_robot(self, initial_x, initial_y, yaw,robottogoal_angle):
+    def move_goal_and_static_robot(self, initial_x, initial_y, yaw,robottogoal_angle,mid_point_goals,mid_point_robots):
 
         # Get a new goal position, make sure it is far enough away from the robot. 
         #state_object=[np.random.uniform(-7, 7), np.random.uniform(-8, -6), 0.00]
+        print("self.external_goals_states",self.external_goals_states)
         robot1_pos=(initial_x, initial_y)
+        
         
         # if self.args.gap_avoidance:
         #     for self.robottogoal_angle in self.robottogoal_angles:
         #         state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, self.robottogoal_angle)
         # else:
         # state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, random.randint(0, 360))
-        state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, robottogoal_angle)
-        #print(self.robottogoal_angle);exit()
-        dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
-        #print(dist)
-        # print(self.initial_goal_dist)
-        while dist < 3:
-            state_object=self.find_position_B(robot1_pos, 8, random.randint(0, 360))
+        if self.args.gap_avoidance:
+            
+            state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, robottogoal_angle)
+            #print(self.robottogoal_angle);exit()
             dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
+            #print(dist)
+            # print(self.initial_goal_dist)
+            while dist < 3:
+                state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, robottogoal_angle)
+                dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
+        else:
+            state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, random.randint(0, 360))
+            #print(self.robottogoal_angle);exit()
+            dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
+            #print(dist)
+            # print(self.initial_goal_dist)
+            while dist < 3:
+                state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, random.randint(0, 360))
+                dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
 
         # Estimate time to target, velocity in steps + time to turn + current steps + buffer for going around a robot / acceleration
         # Keep an eye on this, need to make sure there's enough time to get to the goal
@@ -682,28 +718,58 @@ class Env(EnvBasePB):
         self.time_to_target = dist / self.timeStep + abs(self.heading_error) / self.timeStep + self.steps + 500000
         #print(self.time_to_target)
         
-        #Equation of the line trajectory from moving robot to goal
-        if (initial_x-state_object[0])==0:
-            initial_x=state_object[0]+0.01
-            print("DENOM_ZERO")
+        if self.args.gap_avoidance:
+                #Equation of the line trajectory from moving robot to goal
+            if (mid_point_robots[0]-mid_point_goals[0])==0:
+                mid_point_robots[0]=mid_point_goals[0]+0.01
+                print("DENOM_ZERO")
 
-        #Slope
-        M = (initial_y-state_object[1])/(initial_x-state_object[0])
+            #Slope
+            M = (mid_point_robots[1]-mid_point_goals[1])/(mid_point_robots[0]-mid_point_goals[0])
 
-        #Y-Intercept
-        C = initial_y - (M * initial_x)
-        
-        #Robot2
+            #Y-Intercept
+            C = mid_point_robots[1] - (M * mid_point_robots[0])
+            
+            #Robot2
 
-        # initial_y2 = np.random.uniform(-2.5, 2.5)  # y position of static robot
+            # initial_y2 = np.random.uniform(-2.5, 2.5)  # y position of static robot
 
-        # Start from the midpoint:
-        rand_x = (initial_x + state_object[0]) / 2
-        rand_y = (initial_y + state_object[1]) / 2
+            # Start from the midpoint:
+            rand_x = (mid_point_robots[0] + mid_point_goals[0]) / 2
+            rand_y = (mid_point_robots[1] + mid_point_goals[1]) / 2
+            
+        else:
+            #Equation of the line trajectory from moving robot to goal
+            if (initial_x-state_object[0])==0:
+                initial_x=state_object[0]+0.01
+                print("DENOM_ZERO")
+
+            #Slope
+            M = (initial_y-state_object[1])/(initial_x-state_object[0])
+
+            #Y-Intercept
+            C = initial_y - (M * initial_x)
+            
+            #Robot2
+
+            # initial_y2 = np.random.uniform(-2.5, 2.5)  # y position of static robot
+
+            # Start from the midpoint:
+            rand_x = (initial_x + state_object[0]) / 2
+            rand_y = (initial_y + state_object[1]) / 2
 
         target_dist = self.a-self.b
+        # print("g",self.Goals_pos)
+        # mid_point_goals=self.calculate_midpoint(self.Goals_pos[0],self.Goals_pos[1])
 
-        angle = np.arctan2((initial_y-state_object[1]), (initial_x-state_object[0]))
+        # if self.args.gap_avoidance:
+        #     angle = np.arctan2((initial_y-mid_point_goals[1]), (initial_x-mid_point_goals[0]))
+        # else:
+        #print("state_obj",state_object)
+        if self.args.gap_avoidance:
+            angle = np.arctan2((mid_point_robots[1]-mid_point_goals[1]), (mid_point_robots[0]-mid_point_goals[0]))
+        else:
+            angle = np.arctan2((initial_y-state_object[1]), (initial_x-state_object[0]))
         # target_angle = angle - 90 
         target_angle = random.choice([90 + angle, angle - 90 ])
         initial_x2 = target_dist * np.cos(target_angle) + rand_x
@@ -720,6 +786,7 @@ class Env(EnvBasePB):
         self.initial_orn2 = p.getQuaternionFromEuler([0,0,self.initial_yaw2])
         self.z_offset = 0
         self.pos2, self.orn2 = [initial_x2, initial_y2, self.z_offset+0.31],self.initial_orn2
+        print("self.pos2",self.pos2)
         
         self.state_robot2 = self.pos2
         self.orn_robot2 = self.orn2
@@ -805,10 +872,10 @@ class Env(EnvBasePB):
             #     exp_actions[0] = 0
             #     exp_actions[1] = 0
             # else:
-            exp_actions[0] = 0.08
+            exp_actions[0] = 0.07
             exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp1, -1, 1)
             if self.gapwp1_reach>0.5:
-                exp_actions[0] = 0.08
+                exp_actions[0] = 0.09
                 exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp2, -1, 1)
                 if self.gapwp2_reach>1:
                     exp_actions[0] = 0.08
@@ -984,78 +1051,83 @@ class Env(EnvBasePB):
         # print(self.ep_goal_success, self.time_to_target, self.steps, self.dist_to_wp)
         #print("time_step",self.steps)
         #print("self.dist_to_wp",self.dist_to_wp)
-        
-        
+        #self.Goal_pos,Goal_orn = p.getBasePositionAndOrientation(self.Goal)
+        #print("self.Goal_pos",self.Goal_pos)
+        #print("before",self.gap_point1,self.gap_point2,self.dist_gapwp1,self.dist_gapwp2)
         if self.dist_to_wp < 1.0:
+            #print("self.Goal_pos",self.Goal_pos)
+            self.opposite_angle +=180
 
-            for robottogoal_angle in self.robottogoal_angles: 
-                print(robottogoal_angle)   
+            
+            #for robottogoal_angle in self.robottogoal_angles: 
+                #print(robottogoal_angle)   
                 # self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw,robottogoal_angle=robottogoal_angle)
-                if self.args.gap_avoidance:
-                    self.robottogoal_angle=None
-                    for robot, angles in self.robottogoal_angles:
-                        if robot == self:
-                            # Assuming there's only one value in the angles list for simplicity
-                            self.robottogoal_angle = angles[0]
-                            break
-                        else:
-                            # If the robot_name is not found, handle it accordingly
-                            print(f"Robot {self} not found in robottogoal_angles.")
-                    print(self.robottogoal_angle)
-                    self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw,robottogoal_angle=self.robottogoal_angle)
+            exp_actions = [0.0]*2
+            self.robottogoal_angle=None
+
+            for robot, angles in self.robottogoal_angles:
+                if robot == self:
+                    # Assuming there's only one value in the angles list for simplicity
+                    self.robottogoal_angle = angles
+                    break
                 else:
-                    self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw,robottogoal_angle=random.randint(0, 360))
-                if self.args.gap_avoidance:
-                    self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
-
-                    self.gap_orn=self.gap[4]
-
-                    self.wall1_pos=self.gap[5]
-                    self.wall2_pos=self.gap[6]
-
-                    self.Boolian=False
-                    self.Boolian2=False
+                    # If the robot_name is not found, handle it accordingly
+                    print(f"Robot {self} not found in robottogoal_angles.")
+                
+            if self.args.gap_avoidance:
+                
+                
+                self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.opposite_angle-self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
+                if self.dist_gapwp1>self.dist_gapwp2:
+                    self.gap_point1=self.gap[3]
+                    self.gap_point2=self.gap[2]
+                    self.dist_gapwp1 = self.distance(self.pos, self.gap[3])
+                    self.dist_gapwp2 = self.distance(self.pos, self.gap[2])
+                elif self.dist_gapwp2>self.dist_gapwp1:
+                    self.gap_point1=self.gap[2]
+                    self.gap_point2=self.gap[3]
                     self.dist_gapwp1 = self.distance(self.pos, self.gap[2])
                     self.dist_gapwp2 = self.distance(self.pos, self.gap[3])
 
-                    self.gap_point_moving = self.gap[2]
-                    self.dist_gapwp_mv = self.distance(self.pos, self.gap[2])
 
-                    # self.time_to_goal=0
-                    # self.time_to_gapwp1=0
-                    # self.time_to_gapwp2=0
+                exp_actions[0] = 0.07
+                exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp1, -1, 1)
+                if self.gapwp1_reach>0.5:
+                    exp_actions[0] = 0.09
+                    exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp2, -1, 1)
+                    if self.gapwp2_reach>1:
+                        exp_actions[0] = 0.08
+                        exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+                print("after",self.gap_point1,self.gap_point2,self.dist_gapwp1,self.dist_gapwp2)
+            else:
+                self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
+                # if self.args.gap_avoidance:
+                #     self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.mid_point_of_goals,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
 
-                    # if  self.args.gap_avoidance:
-                    #     if not self.Boolian and self.dist_gapwp1 < 2:
-                    #         self.time_to_gapwp1=self.steps       
-                    #         self.Boolian =True
+                #     self.gap_orn=self.gap[4]
 
-                    #     if not self.Boolian2 and self.dist_gapwp2 < 2:
-                    #         self.time_to_gapwp2=self.steps       
-                    #         self.Boolian2 =True
+                #     self.wall1_pos=self.gap[5]
+                #     self.wall2_pos=self.gap[6]
+
+                #     self.Boolian=False
+                #     self.Boolian2=False
+                #     self.dist_gapwp1 = self.distance(self.pos, self.gap[2])
+                #     self.dist_gapwp2 = self.distance(self.pos, self.gap[3])
+
+                #     self.gap_point_moving = self.gap[2]
+                #     self.dist_gapwp_mv = self.distance(self.pos, self.gap[2])
+
+
                 self.goal_success.append(True)
                 self.time_to_goal=self.steps
 
 
-                if self.args.insert_wall:
-                    self.set_position(self.wall1_pos, self.gap_orn, robot_id=self.rectangle_id1)
-                    self.set_position(self.wall2_pos, self.gap_orn, robot_id=self.rectangle_id2)
-                    # self.state_box, self.orn_box = p.getBasePositionAndOrientation(self.square)
-                    # self.rectangle_id1=self.create_rectangle(corners=self.gap[0],wall_length=20,wall_width=self.tunnel_depth,wall_height=0.5,orientation=self.gap_orn)
-                    # self.rectangle_id2=self.create_rectangle(corners=self.gap[1],wall_length=20,wall_width=self.tunnel_depth,wall_height=0.5,orientation=self.gap_orn)
-
-
-                
-        #     print("ttg",self.time_to_goal)
-        # print(self.state_goal)
-        # print(self.dist_gapwp_mv)
-        
-            #print("True_goal",self.goal_success,"ttg",self.time_to_goal)
-            
-
-        #elif self.time_to_target < self.steps or done:
+ 
         elif self.time_to_target < self.steps:
-            self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw)
+            if self.args.gap_avoidance:
+                self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.opposite_angle-self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
+            else:
+                self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
             self.goal_success.append(False)
             #print(self.goal_success)
         # print("another",self.time_to_gapwp1)
@@ -2330,7 +2402,9 @@ class Env(EnvBasePB):
 
 
     def get_observation(self):
-        
+
+        #self.opposite_angle += 180
+        #print(self.Goals_pos)
         self.body_xyz, orn = p.getBasePositionAndOrientation(self.Id)
         self.pos = self.body_xyz
         self.Goal_pos,Goal_orn = p.getBasePositionAndOrientation(self.Goal)
@@ -2388,6 +2462,7 @@ class Env(EnvBasePB):
             #self.contacts.append(len(p.getContactPoints(self.Id2, -1, self.contact_dict[contact], -1))>0)
         #print(self.contacts, self.contacts2)
         self.vx, self.vy, self.vz = np.dot(rot_speed, (self.body_vxyz[0],self.body_vxyz[1],self.body_vxyz[2]))
+        #print("Just_vx",self.vx)
 
         if self.args.static_robots > 1 and self.args.insert_robot2:
             rot_speed2 = np.array(
@@ -2422,6 +2497,7 @@ class Env(EnvBasePB):
             [		0,			 0, 1]]
         )
         self.heading_vx, _, _ = np.dot(rot_speed, (self.body_vxyz[0],self.body_vxyz[1],self.body_vxyz[2]))
+        #print("self.heading_vx",self.heading_vx)
 
         
         ########################
@@ -2488,7 +2564,8 @@ class Env(EnvBasePB):
             # print(self.orn)
             
             #self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
-            
+            #print(self.pos2,"LL",self.mid_point_of_goals,"MM",self.Goals_pos);exit()
+            # self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.mid_point_of_goals,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
             self.gap_point1,self.gap_point2=self.gap[2],self.gap[3]
             
             
@@ -2518,11 +2595,11 @@ class Env(EnvBasePB):
 
 
 
-            if self.dist_gapwp1<2:
+            if self.dist_gapwp1<1:
                     # self.time_to_wp1=self.steps
                     self.gapwp1_reach=self.gapwp1_reach + 1
             # self.time_to_wp2=0
-            if self.dist_gapwp2<2:
+            if self.dist_gapwp2<1:
                     # self.time_to_wp2=self.steps
                     self.gapwp2_reach=self.gapwp2_reach + 1
 
@@ -2975,6 +3052,12 @@ class Env(EnvBasePB):
     def set_external_robots_pos(self, list_of_external_robots_pos):
         self.external_robots_pos=list_of_external_robots_pos
 
+    def set_all_goal_poses(self, list_of_goals_pos):
+        self.Goals_pos=list_of_goals_pos
+
+    def set_external_goals_state(self, list_of_external_goals_state):
+        self.external_goals_states_with_IDx=list_of_external_goals_state
+
     
         
         
@@ -3194,6 +3277,8 @@ class Env(EnvBasePB):
         return intersection, intersection_p
 
     def gap_generator(self,width, depth,height,pos,wall_length,goal_pos,lineId,lineIdgap,lineIdA,lineIdB):
+        # print("gap_pos",pos)
+        # print("gap_goal_pos",goal_pos)
 
         line_direction = [goal_pos[0] - pos[0], goal_pos[1] - pos[1], 0]
         perpendicular_direction = [line_direction[1], -line_direction[0], 0]
@@ -3333,6 +3418,8 @@ class Env(EnvBasePB):
         
         center = [(corners[0][i] + corners[2][i]) / 2 for i in range(3)]
         half_extents=[((wall_length/2)), wall_width, wall_height/2]
+
+        
         # Create a collision shape for the rectangle
         box_collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_extents)
 

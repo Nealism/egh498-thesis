@@ -8,6 +8,7 @@ import numpy as np
 import cv2
 import math
 from copy import deepcopy
+import random
 
 
 
@@ -91,30 +92,73 @@ class Env(EnvBasePB):
         self.robots_bbox=[]
         self.robots_pos=[]
         self.robots_pos_with_IDx=[]
+        self.Goals_pos=[]
+        self.initial_goal_distances=[]
+        self.gap_walls_thickness=[]
+        self.gap_walls_length=[]
+        self.external_goals_states_with_IDx=[]
+        self.gap_walls1_centre=[]
+        self.gap_walls2_centre=[]
+        random_0_10=random.uniform(0,10),random.uniform(0,10),0.31
+
+        for Robot in self.robots:
+            self.initial_goal_distances.append(Robot.initial_goal_dist)
+            
+            # self.gap_walls1_centre.append(Robot.rectangle1_centre)
+            # self.gap_walls2_centre.append(Robot.rectangle2_centre)
+            # self.gap_walls_thickness.append(Robot.tunnel_depth)
+            # self.gap_walls_length.append(Robot.each_wall_length)
+
+
+
         if self.args.num_robots ==3:
-            self.robottogoal_angles=[(self.robots[0],[10]),(self.robots[1],[30]),(self.robots[2],[50])]
-            self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[3,3,0.31]),(self.robots[2],[5,5,0.31])]
+            self.robottogoal_angles=[(self.robots[0],0),(self.robots[1],0),(self.robots[2],0)]
+            self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31]),(self.robots[2],[list(random_0_10)[0]+0,list(random_0_10)[1]-2,0.31])]
+            # self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[2.5,2.5,0.31]),(self.robots[2],[4,4,0.31])]
+            for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
+                self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+                self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         elif self.args.num_robots ==2:
-            self.robottogoal_angles=[(self.robots[0],[10]),(self.robots[1],[40])]
-            self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[4,4,0.31])]
+            self.robottogoal_angles=[(self.robots[0],0),(self.robots[1],0)]
+            self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31])]
+            #self.external_robots_pos=[(self.robots[0],[0,0,0.31]),(self.robots[1],[0,2.5,0.31])]
+            for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
+                self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+                self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         else:
-            self.robottogoal_angles=[(self.robots[0],[10])]
-            self.external_robots_pos=[(self.robots[0],[1,1,0.31])]
+            self.robottogoal_angles=[(self.robots[0],5)]
+            self.external_robots_pos=[(self.robots[0],list(random_0_10))]
+            #self.external_robots_pos=[(self.robots[0],[0,1,0.31])]
+            for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
+                self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+                self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
+            
         
 
         self.steps = 0
         self.occupancy_maps=[]
         for Robot in self.robots:
+            # self.Goals_pos.append(Robot.state_goal)
+            
             Robot.set_robot_bbox(self.robots_bbox)
             Robot.set_allrobot_positions(self.robots_pos_with_IDx)
+            Robot.set_external_goals_state(self.external_goals_states_with_IDx)
+            Robot.set_all_goal_poses(self.Goals_pos)
+            Robot.set_external_robots_pos(self.external_robots_pos)
+            Robot.set_robottogoal_angle(self.robottogoal_angles)
+
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
-            if self.args.gap_avoidance:
-                Robot.set_robottogoal_angle(self.robottogoal_angles)
-                Robot.set_external_robots_pos(self.external_robots_pos)
+            
             res.append(Robot.reset())
+
+            if self.args.gap_avoidance:
+                self.gap_walls1_centre.append(Robot.rectangle1_centre)
+                self.gap_walls2_centre.append(Robot.rectangle2_centre)
+                self.gap_walls_thickness.append(Robot.tunnel_depth)
+                self.gap_walls_length.append(Robot.each_wall_length)
         self.get_observation()
-        #print("GREAAATTTTTT", res);exit()
+        #print("GREAAATTTTTT", self.initial_goal_distances)
         return res
 
 
@@ -159,11 +203,13 @@ class Env(EnvBasePB):
             
             Robot.set_robot_bbox(self.robots_bbox)
             Robot.set_allrobot_positions(self.robots_pos_with_IDx)
+            Robot.set_all_goal_poses(self.Goals_pos)
+            Robot.set_robottogoal_angle(self.robottogoal_angles)
+            Robot.set_external_robots_pos(self.external_robots_pos)
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
-            if self.args.gap_avoidance:
-                Robot.set_robottogoal_angle(self.robottogoal_angles)
-                Robot.set_external_robots_pos(self.external_robots_pos)
+            
+                
             ob,rew,done, self.ob_dict=Robot.return_step(action)
             #print("action_length",action,"robot",Robot)
 
@@ -197,9 +243,9 @@ class Env(EnvBasePB):
                 turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
 
             
-            M=self.visualize_maps(self.global_map_list, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos)
+            M=self.visualize_maps(self.global_map_list, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos,self.gap_walls1_centre,self.gap_walls2_centre)
             #N=self.visualize_maps(self.global_map2, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos)
-            self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
+            #self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
             #self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
             self.occupancy_maps=deepcopy(self.local_heightmaps)
             #print(self.occupancy_maps)
@@ -217,6 +263,7 @@ class Env(EnvBasePB):
         rews=[]
         dones=[]
         self.ob_dicts=[]
+        #print("GREAAATTTTTT", self.initial_goal_distances)
 
         self.obstacles=[]
         self.robots_bbox=[]
@@ -226,16 +273,30 @@ class Env(EnvBasePB):
         self.Goals_pos=[]
         self.Obstacles_pos=[]
         self.robots_pos_with_IDx=[]
+        
 
-        if self.args.num_robots ==3:
-            self.robottogoal_angles=[(self.robots[0],[10]),(self.robots[1],[30]),(self.robots[2],[50])]
-            self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[3,3,0.31]),(self.robots[2],[5,5,0.31])]
-        elif self.args.num_robots ==2:
-            self.robottogoal_angles=[(self.robots[0],[10]),(self.robots[1],[40])]
-            self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[4,4,0.31])]
-        else:
-            self.robottogoal_angles=[(self.robots[0],[10])]
-            self.external_robots_pos=[(self.robots[0],[1,1,0.31])]
+        # self.rectangle_id3=self.create_rectangle(corners=self.gap[0],wall_length=20,wall_width=self.tunnel_depth,wall_height=0.5,orientation=self.gap_orn)
+        # for Robot in self.robots:
+        #     self.initial_goal_distances.append(Robot.initial_goal_dist)
+
+        # if self.args.num_robots ==3:
+        #     self.robottogoal_angles=[(self.robots[0],10),(self.robots[1],30),(self.robots[2],50)]
+        #     self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[2.5,2.5,0.31]),(self.robots[2],[4,4,0.31])]
+        #     for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
+        #         self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+        #         self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
+        # elif self.args.num_robots ==2:
+        #     self.robottogoal_angles=[(self.robots[0],0),(self.robots[1],0)]
+        #     self.external_robots_pos=[(self.robots[0],[0,0,0.31]),(self.robots[1],[0,2.5,0.31])]
+        #     for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
+        #         self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+        #         self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
+        # else:
+        #     self.robottogoal_angles=[(self.robots[0],0)]
+        #     self.external_robots_pos=[(self.robots[0],[1,1,0.31])]
+        #     for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
+        #         self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+        #         self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
 
 
         for Robot in self.robots:
@@ -249,10 +310,11 @@ class Env(EnvBasePB):
             self.Goals_pos.append(Robot.state_goal)
             self.Obstacles_pos.append(Robot.pos2)
         #print(self.robots_pos_with_IDx)
-        print("self.Goals_pos",self.Goals_pos)
+        #print("self.Goals_pos",self.Goals_pos)
         if self.args.obstacle_avoidance:
             for Robot in self.robots:
                 self.obstacles.append(Robot.square_bbox)
+
 
     
     def log_stuff(self, logger, num, writer, iters_so_far):
@@ -314,22 +376,43 @@ class Env(EnvBasePB):
         return local_heightmap, (local_heightmap_x_min, local_heightmap_x_max, local_heightmap_y_min, local_heightmap_y_max)
 
     # Function to visualize the maps using OpenCV
-
-    def visualize_maps(self,global_map_list, local_heightmaps, local_heightmap_positions, robot_positions,goal_positions,obstalce_positions):
+    
+    def visualize_maps(self,global_map_list, local_heightmaps, local_heightmap_positions, robot_positions,goal_positions,obstalce_positions,gap_walls1_centre,gap_walls2_centre):
         
 
-        
+        #
         #print("len",len(self.robots_pos))
         
 
         x_min,x_max,y_min,y_max=[],[],[],[]
         turtlebots_x_index,turtlebots_y_index=[],[]
+
         obstacles_x_index,obstacles_y_index=[],[]
+
+        gap_wall1s_x_index,gap_wall1s_y_index,gap_wall2s_x_index,gap_wall2s_y_index=[],[],[],[]
         Goals_x_index,Goals_y_index=[],[]
         #prev_positions=[(0,0),(0,0)]
         globalmap_images=[]
         heightmap_images=[]
         #print(robot_positions)
+        #print("a",obstalce_positions);exit()
+        # ,gap_wall1_centre,gap_wall2_centre
+        # ,gap_walls1_centre,gap_walls2_centre
+        if self.args.gap_avoidance:
+            for gap_wall1_centre,gap_wall2_centre in zip(gap_walls1_centre,gap_walls2_centre):
+                
+                gap_wall1_x_index = int((gap_wall1_centre[0] + self.global_map_size_x / 2) / self.global_resolution)
+                gap_wall1_y_index = int((gap_wall1_centre[1] + self.global_map_size_y / 2) / self.global_resolution)
+
+                gap_wall2_x_index = int((gap_wall2_centre[0] + self.global_map_size_x / 2) / self.global_resolution)
+                gap_wall2_y_index = int((gap_wall2_centre[1] + self.global_map_size_y / 2) / self.global_resolution)
+
+                gap_wall1s_x_index.append(gap_wall1_x_index)
+                gap_wall1s_y_index.append(gap_wall1_y_index)
+
+                gap_wall2s_x_index.append(gap_wall2_x_index)
+                gap_wall2s_y_index.append(gap_wall2_y_index)
+
         for robot_position, goal_position,local_heightmap,local_heightmap_position, obstalce_position,global_map in zip(robot_positions,goal_positions, local_heightmaps,local_heightmap_positions,obstalce_positions,global_map_list):
             #Scale the maps for visualization
             scaled_global_map = (global_map - np.min(global_map)) / (np.max(global_map) - np.min(global_map)) * 200
@@ -338,7 +421,6 @@ class Env(EnvBasePB):
             global_map_image = cv2.cvtColor(scaled_global_map, cv2.COLOR_GRAY2BGR)
             # Set colors: Blue for global map, Green for local heightmap, Red for obstacles
             global_map_image[:, :, :] = 128  # Blue channel to 255 for global map (blue color)
-            
             
             #print("WEW",local_heightmaps,len(local_heightmaps), local_heightmap_positions,len(local_heightmap_positions))
             scaled_heightmap = (local_heightmap - np.min(local_heightmap)) / (np.max(local_heightmap) - np.min(local_heightmap)) * 200
@@ -368,6 +450,8 @@ class Env(EnvBasePB):
             obstacle_x_index = int((obstalce_position[0] + self.global_map_size_x / 2) / self.global_resolution)
             obstacle_y_index = int((obstalce_position[1] + self.global_map_size_y / 2) / self.global_resolution)
 
+            
+
             x_min.append(local_map_x_min_index)
             x_max.append(local_map_x_max_index)
             y_min.append(local_map_y_min_index)
@@ -381,6 +465,8 @@ class Env(EnvBasePB):
             
             obstacles_x_index.append(obstacle_x_index)
             obstacles_y_index.append(obstacle_y_index)
+
+            
 
             globalmap_images.append(global_map_image)
             heightmap_images.append(heightmap_image)
@@ -401,6 +487,7 @@ class Env(EnvBasePB):
                     half_length_cells = int(1.2 / (2 * self.global_resolution))
                     half_width_cells = int(1.2 / (2 * self.global_resolution))
                     
+                    #print("o",obstacles_x_index);exit()
                     grid_x_center=obstacles_x_index[i]
                     grid_y_center=obstacles_y_index[i]
 
@@ -408,6 +495,34 @@ class Env(EnvBasePB):
                     # Set the obstacle region in the global map to a higher value for visualization
                     for p in range(grid_x_center - half_length_cells, grid_x_center + half_length_cells + 1):
                         for q in range(grid_y_center - half_width_cells, grid_y_center + half_width_cells + 1):
+                            if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
+                                global_map[p, q] = 1.0
+        
+        if self.args.gap_avoidance:
+            for global_map in global_map_list:
+                for i in range(len(self.gap_walls1_centre)):
+
+                    # Calculate half-length and half-width in grid cells
+                    half_length_cells = int(self.gap_walls_thickness[0] / (2 * self.global_resolution))
+                    half_width_cells = int(self.gap_walls_length[0] / (2 * self.global_resolution))
+                    
+                    #print("rr",self.gap_walls1_centre);exit
+                    wall1_x_center=gap_wall1s_x_index[i]
+                    wall1_y_center=gap_wall1s_y_index[i]
+
+                    wall2_x_center=gap_wall2s_x_index[i]
+                    wall2_y_center=gap_wall2s_y_index[i]
+
+
+                    # Set the obstacle region in the global map to a higher value for visualization
+                    for p in range(wall1_x_center - half_length_cells, wall1_x_center + half_length_cells + 1):
+                        for q in range(wall1_y_center - half_width_cells, wall1_y_center + half_width_cells + 1):
+                            if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
+                                global_map[p, q] = 1.0
+
+                    # Set the obstacle region in the global map to a higher value for visualization
+                    for p in range(wall2_x_center - half_length_cells, wall2_x_center + half_length_cells + 1):
+                        for q in range(wall2_y_center - half_width_cells, wall2_y_center + half_width_cells + 1):
                             if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
                                 global_map[p, q] = 1.0
         for index,(global_map,global_map_image) in enumerate(zip(global_map_list,globalmap_images)):
@@ -478,6 +593,37 @@ class Env(EnvBasePB):
             #cv2.imshow("Global Map with Local Heightmaps2", globalmap_images[1])
             cv2.waitKey(10)
                 #cv2.destroyAllWindows()
+
+
+    def create_rectangle(self,corners,wall_length,wall_width,wall_height,orientation):
+
+        # Calculate the center and half extents of the rectangle
+        #half_extents = [(corners[2][i] - corners[0][i])/2 for i in range(3)]
+        
+        center = [(corners[0][i] + corners[2][i]) / 2 for i in range(3)]
+        half_extents=[((wall_length/2)), wall_width, wall_height/2]
+        # Create a collision shape for the rectangle
+        box_collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_extents)
+
+        # Create the rectangle using createMultiBody and attach the collision shape
+        box_id = p.createMultiBody(baseMass=0,
+                                baseCollisionShapeIndex=box_collision_shape_id,
+                                basePosition=center,baseOrientation=orientation)
+
+        return box_id
+    
+    def find_position_B(self,position_a, distance_d, angle_degrees):
+        # Convert the angle from degrees to radians
+        #print(angle_degrees);exit()
+        angle_radians = math.radians(angle_degrees)
+        
+        print("position_a",position_a)
+        # Calculate the coordinates (x, y) of position B
+        x_b = position_a[0] + distance_d * math.cos(angle_radians)
+        y_b = position_a[1] + distance_d * math.sin(angle_radians)
+        z_b=0
+
+        return x_b, y_b,z_b
 
 
 
