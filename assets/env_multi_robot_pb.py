@@ -95,18 +95,19 @@ class Env(EnvBasePB):
         self.Goals_pos=[]
         self.initial_goal_distances=[]
         self.gap_walls_thickness=[]
-        self.gap_walls_length=[]
-        self.external_goals_states_with_IDx=[]
+        #self.gap_walls_length=[]
         self.gap_walls1_centre=[]
         self.gap_walls2_centre=[]
+        self.external_goals_states=[]
+        self.external_goals_states_with_IDx=[]
+        
         random_0_10=random.uniform(0,10),random.uniform(0,10),0.31
 
         for Robot in self.robots:
             self.initial_goal_distances.append(Robot.initial_goal_dist)
             
-            # self.gap_walls1_centre.append(Robot.rectangle1_centre)
-            # self.gap_walls2_centre.append(Robot.rectangle2_centre)
-            # self.gap_walls_thickness.append(Robot.tunnel_depth)
+            
+            # 
             # self.gap_walls_length.append(Robot.each_wall_length)
 
 
@@ -117,6 +118,7 @@ class Env(EnvBasePB):
             # self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[2.5,2.5,0.31]),(self.robots[2],[4,4,0.31])]
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
                 self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+                self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         elif self.args.num_robots ==2:
             self.robottogoal_angles=[(self.robots[0],0),(self.robots[1],0)]
@@ -124,14 +126,22 @@ class Env(EnvBasePB):
             #self.external_robots_pos=[(self.robots[0],[0,0,0.31]),(self.robots[1],[0,2.5,0.31])]
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
                 self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+                self.external_goals_states.append(self.external_goal_state)
+
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         else:
-            self.robottogoal_angles=[(self.robots[0],5)]
+            self.robottogoal_angles=[(self.robots[0],0)]
             self.external_robots_pos=[(self.robots[0],list(random_0_10))]
             #self.external_robots_pos=[(self.robots[0],[0,1,0.31])]
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
                 self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+                self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
+
+        # self.mid_point_of_goals=self.calculate_midpoint(self.external_goals_states[0],self.external_goals_states[-1])
+        #print("self.mid_point_of_goals",self.mid_point_of_goals)
+
+        
             
         
 
@@ -152,11 +162,25 @@ class Env(EnvBasePB):
             
             res.append(Robot.reset())
 
+
             if self.args.gap_avoidance:
                 self.gap_walls1_centre.append(Robot.rectangle1_centre)
                 self.gap_walls2_centre.append(Robot.rectangle2_centre)
                 self.gap_walls_thickness.append(Robot.tunnel_depth)
-                self.gap_walls_length.append(Robot.each_wall_length)
+
+                
+
+
+        if self.args.insert_wall:
+            # self.rectangle_id1=self.square
+            # self.rectangle_id2=self.square
+
+
+            self.rectangle_id1=self.create_rectangle(corners=Robot.gap[0],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=0.5,orientation=Robot.gap_orn)
+            self.rectangle_id2=Robot.create_rectangle(corners=Robot.gap[1],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=0.5,orientation=Robot.gap_orn)
+
+            
+                # self.gap_walls_length.append(Robot.each_wall_length)
         self.get_observation()
         #print("GREAAATTTTTT", self.initial_goal_distances)
         return res
@@ -504,7 +528,8 @@ class Env(EnvBasePB):
 
                     # Calculate half-length and half-width in grid cells
                     half_length_cells = int(self.gap_walls_thickness[0] / (2 * self.global_resolution))
-                    half_width_cells = int(self.gap_walls_length[0] / (2 * self.global_resolution))
+                    half_width_cells = int(20 / (2 * self.global_resolution))
+                    #half_width_cells = int(self.gap_walls_length[0] / (2 * self.global_resolution))
                     
                     #print("rr",self.gap_walls1_centre);exit
                     wall1_x_center=gap_wall1s_x_index[i]
@@ -595,6 +620,141 @@ class Env(EnvBasePB):
                 #cv2.destroyAllWindows()
 
 
+    def gap_generator(self,width, depth,height,pos,wall_length,goal_pos,lineId,lineIdgap,lineIdA,lineIdB):
+        # print("gap_pos",pos)
+        # print("gap_goal_pos",goal_pos)
+
+        line_direction = [goal_pos[0] - pos[0], goal_pos[1] - pos[1], 0]
+        perpendicular_direction = [line_direction[1], -line_direction[0], 0]
+        orn = p.getQuaternionFromEuler([0, 0, math.atan2(perpendicular_direction[1], perpendicular_direction[0])])
+        #------------------------------------
+        x=width+wall_length
+        y=depth
+        z=height
+        # get the self.corners of the bounding box
+        corners = [(x, y, z),
+                  (x,-y,z),
+                  (-x,-y,z),
+                  (-x,y,z),
+                  (x,y,z)]
+     
+        robot_bbox=[] #bbox of big obstacles including gap
+
+        for i in range(len(corners)-1):
+                
+            start1 = p.multiplyTransforms(pos, orn, corners[i], [0, 0, 0, 1])[0]
+
+            robot_bbox.append(list(start1))
+
+            end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
+            # if self.args.debug:
+            # 	lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[0, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+        
+        x=width
+        cornersgap = [(x, y, z),
+                  (x,-y,z),
+                  (-x,-y,z),
+                  (-x,y,z),
+                  (x,y,z)]
+     
+        robot1_bbox=[] #bbox of middle gap box
+
+        # if self.args.debug:
+        #         lineIdgap[i]=p.addUserDebugLine((cornersgap[0][0]/2,cornersgap[0][1],.2),(-cornersgap[0][0]/2,-cornersgap[0][1],.2), lineColorRGB=[0, 0, 0], lineWidth=100, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+
+        for i in range(len(cornersgap)-1):
+                
+            start1 = p.multiplyTransforms(pos, orn, cornersgap[i], [0, 0, 0, 1])[0]
+
+            robot1_bbox.append(list(start1))
+
+            end1 = p.multiplyTransforms(pos, orn, cornersgap[i+1], [0, 0, 0, 1])[0]
+            #if self.args.debug:
+                #lineIdgap[i]=p.addUserDebugLine(robot1_bbox[0], robot1_bbox[1], lineColorRGB=[0.2, 0.5, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+                #lineIdgap[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[0.2, 0.5, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+        
+        # lineIdgap_A=p.addUserDebugLine(robot1_bbox[1], robot1_bbox[2], lineColorRGB=[0.2, 0.5, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+        # lineIdgap_B=p.addUserDebugLine(robot1_bbox[3], robot1_bbox[0], lineColorRGB=[0, 1, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+        #print(robot1_bbox[1])
+
+        #Gap_point Related Calculations
+        PP1=self.calculate_midpoint(robot1_bbox[1], robot1_bbox[2])
+        PP2=self.calculate_midpoint(robot1_bbox[3], robot1_bbox[0])
+        #lineIdgap_C=p.addUserDebugLine(P1, P2, lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+        P1=self.calculate_opposite_point(PP1,PP2,distance=2)
+        P2=self.calculate_opposite_point(PP2,PP1,distance=2)
+        #lineIdgap_D=p.addUserDebugLine(P1, P2, lineColorRGB=[0, 1, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+
+        dist_p1_goal=self.distance(P1,goal_pos)
+        dist_p2_goal=self.distance(P2,goal_pos)
+        #print(dist_Wp1_goal,dist_Wp2_goal)
+        if dist_p1_goal>dist_p2_goal:
+            WP1=P1
+            WP2=P2
+        elif dist_p2_goal>dist_p1_goal:
+            WP1=P2
+            WP2=P1
+        # #print(tuple(pos),WP1)
+        # lineIdgap_D=p.addUserDebugLine(WP1, goal_pos, lineColorRGB=[0, 1, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+        # lineIdgap_E=p.addUserDebugLine(WP2, goal_pos, lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+        lineIdgap_F=p.addUserDebugLine(WP1, WP2, lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
+
+
+        cornersA = [robot1_bbox[1],
+                  robot1_bbox[0],
+                  robot_bbox[0],
+                  robot_bbox[1],
+                  robot1_bbox[1]]
+        
+        robot2_bbox=[] #bbox of one side obstacle
+
+        for i in range(len(cornersA)-1):
+                
+            start1 = cornersA[i]
+
+            robot2_bbox.append(list(start1))
+
+            end1 = cornersA[i+1]
+            if self.args.debug:
+               lineIdA[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdA[i])
+     
+        cornersB = [robot1_bbox[2],
+                  robot1_bbox[3],
+                  robot_bbox[3],
+                  robot_bbox[2],
+                  robot1_bbox[2]]
+        
+        robot3_bbox=[]  #bbox of other side obstacle
+
+        for i in range(len(cornersB)-1):
+                
+            start1 = cornersB[i]
+
+            robot3_bbox.append(list(start1))
+
+            end1 = cornersB[i+1]
+            if self.args.debug:
+               lineIdB[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[1, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdB[i])
+        
+        Wall1_rectangle=robot2_bbox
+        Wall2_rectangle=robot3_bbox
+        
+
+        Wall1_centre=[(Wall1_rectangle[0][i] + Wall1_rectangle[2][i]) / 2 for i in range(3)]
+        Wall2_centre=[(Wall2_rectangle[0][i] + Wall2_rectangle[2][i]) / 2 for i in range(3)]
+        # print("r1",robot1_bbox)
+        # print("r2",robot2_bbox)
+        #corners=robot2_bbox
+        
+        # p.createMultiBody(
+        #     baseMass=1,
+        #     baseCollisionShapeIndex=p.createCollisionShape(p.GEOM_BOX, halfExtents=[length/2, width/2, height/2]),
+        #     basePosition=[position_x, position_y, height / 2],
+        #     baseOrientation=p.getQuaternionFromEuler([0, 0, yaw]),
+        # )
+
+        return Wall1_rectangle,Wall2_rectangle,WP1,WP2,orn,Wall1_centre,Wall2_centre
+    
     def create_rectangle(self,corners,wall_length,wall_width,wall_height,orientation):
 
         # Calculate the center and half extents of the rectangle
@@ -602,6 +762,8 @@ class Env(EnvBasePB):
         
         center = [(corners[0][i] + corners[2][i]) / 2 for i in range(3)]
         half_extents=[((wall_length/2)), wall_width, wall_height/2]
+
+        
         # Create a collision shape for the rectangle
         box_collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_extents)
 
@@ -624,6 +786,20 @@ class Env(EnvBasePB):
         z_b=0
 
         return x_b, y_b,z_b
+    
+    def calculate_midpoint(self,point1, point2):
+        x1, y1, z1 = point1
+        x2, y2, z1 = point2
+
+        # Calculate the midpoint
+        midpoint_x = (x1 + x2) / 2
+        midpoint_y = (y1 + y2) / 2
+
+        midpoint = (midpoint_x, midpoint_y,z1)
+        return midpoint
+    
+    def distance(self,point1, point2):
+        return math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
 
 
 

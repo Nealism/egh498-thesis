@@ -87,7 +87,7 @@ class Env(EnvBasePB):
             
         if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
             #parameters for gap curr
-            self.max_gap_width=1#2.5
+            self.max_gap_width=1.3#2.5
             #self.max_gap_width=2.5
             self.decrease_gap_width=self.args.gap_decrease
             self.final_gap_width=1
@@ -549,6 +549,7 @@ class Env(EnvBasePB):
         # print("robot_positions", pos2)
         # print("robot_state")
         # print(self.state_robot2)
+        self.lineId_wp1_wp2=-1
         self.lineId_heading = -1
         self.lineId_side1 = -1
         self.lineId_side2 = -1
@@ -565,10 +566,7 @@ class Env(EnvBasePB):
         self.lineId_box1big = [-1]*4
         self.ray_line = [-1]*2
         #gap line ids
-        self.lineIdgap=[-1]*4
-        self.lineIdA=[-1]*4
-        self.lineIdB=[-1]*4
-        self.lineIdWall=[-1]*4
+        
         self.hit = False
         self.h=0
         self.poshit_x=None
@@ -584,19 +582,28 @@ class Env(EnvBasePB):
         self.wp3_reach=0
         self.wp4_reach=0
 
-        self.gapwp1_reach=0
-        self.gapwp2_reach=0
+        self.gapwp1_reach=False
+        self.gapwp2_reach=False
+
+        self.counter=0
+
+        self.lineIdgap=[-1]*4
+        self.lineIdA=[-1]*4
+        self.lineIdB=[-1]*4
+        self.lineIdWall=[-1]*4
+
+        
 
         
 
         
         if self.args.gap_avoidance:
             #THIS PART IS NEEDED FOR SETTING ORIENTATION OF GAP WITH THE MID LINE
-            self.line1_start=(pos[0], pos[1])
-            self.line1_end=(self.state_goal[0], self.state_goal[1])
-            self.line1_angle=self.perpendicular_angle(self.line1_start,self.line1_end)
-            #print("angle",self.line1_angle)
-            self.line_orn=(0.0,0.0, self.line1_angle,0.1)
+            # self.line1_start=(pos[0], pos[1])
+            # self.line1_end=(self.state_goal[0], self.state_goal[1])
+            # self.line1_angle=self.perpendicular_angle(self.line1_start,self.line1_end)
+            # #print("angle",self.line1_angle)
+            # self.line_orn=(0.0,0.0, self.line1_angle,0.1)
             
             #Set the Gap width taken from the gap curriculum in reset
             self.gap_width=self.max_gap_width-self.decrease_gap_width
@@ -606,7 +613,7 @@ class Env(EnvBasePB):
             #Set the Tunnel/Gap Depth from the Tunnel Curriculum in reset
             self.tunnel_depth= self.increase_tunnel_depth
 
-            self.each_wall_length=10-(self.gap_width/2)
+            #self.each_wall_length=10-(self.gap_width/2)
             
             self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.mid_point_of_goals,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
 
@@ -614,25 +621,23 @@ class Env(EnvBasePB):
 
             self.gap_orn=self.gap[4]
 
+            wall_1_length = max(np.linalg.norm(np.array(self.gap[0][0]) - np.array(self.gap[0][2])), np.linalg.norm(np.array(self.gap[0][1]) - np.array(self.gap[0][3])))
+            print("wall_1_length",wall_1_length)
+
+            self.dist_gapwp1 = self.distance(pos, self.gap[2])
+            self.dist_gapwp2 = self.distance(pos, self.gap[3])
+
             self.rectangle1_centre = [(self.gap[0][0][i] + self.gap[0][2][i]) / 2 for i in range(3)]
-            #print("r",self.rectangle1_centre)
             self.rectangle2_centre = [(self.gap[1][0][i] + self.gap[1][2][i]) / 2 for i in range(3)]
-
-            if self.args.insert_wall:
-                # self.rectangle_id1=self.square
-                # self.rectangle_id2=self.square
-
-
-                self.rectangle_id1=self.create_rectangle(corners=self.gap[0],wall_length=20,wall_width=self.tunnel_depth,wall_height=0.5,orientation=self.gap_orn)
-                self.rectangle_id2=self.create_rectangle(corners=self.gap[1],wall_length=20,wall_width=self.tunnel_depth,wall_height=0.5,orientation=self.gap_orn)
+            #print("r1",self.rectangle1_centre,"r2",self.rectangle2_centre)
+            
             
             self.Boolian=False
             self.Boolian2=False
 
-            self.dist_gapwp1 = self.distance(pos, self.gap[2])
-            self.dist_gapwp2 = self.distance(pos, self.gap[3])
-            self.gap_point_moving = self.gap[2]
-            self.dist_gapwp_mv = self.distance(pos, self.gap[2])
+            
+            # self.gap_point_moving = self.gap[2]
+            # self.dist_gapwp_mv = self.distance(pos, self.gap[2])
 
             
 
@@ -683,7 +688,7 @@ class Env(EnvBasePB):
 
         # Get a new goal position, make sure it is far enough away from the robot. 
         #state_object=[np.random.uniform(-7, 7), np.random.uniform(-8, -6), 0.00]
-        print("self.external_goals_states",self.external_goals_states)
+        #print("self.external_goals_states",self.external_goals_states)
         robot1_pos=(initial_x, initial_y)
         
         
@@ -786,7 +791,7 @@ class Env(EnvBasePB):
         self.initial_orn2 = p.getQuaternionFromEuler([0,0,self.initial_yaw2])
         self.z_offset = 0
         self.pos2, self.orn2 = [initial_x2, initial_y2, self.z_offset+0.31],self.initial_orn2
-        print("self.pos2",self.pos2)
+        #print("self.pos2",self.pos2)
         
         self.state_robot2 = self.pos2
         self.orn_robot2 = self.orn2
@@ -872,13 +877,14 @@ class Env(EnvBasePB):
             #     exp_actions[0] = 0
             #     exp_actions[1] = 0
             # else:
-            exp_actions[0] = 0.07
+            #print(self.heading_error_gapwp1,self.heading_error_gapwp2,self.heading_error)
+            exp_actions[0] = 0.08
             exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp1, -1, 1)
-            if self.gapwp1_reach>0.5:
-                exp_actions[0] = 0.09
+            if self.gapwp1_reach:
+                exp_actions[0] = 0.06
                 exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp2, -1, 1)
-                if self.gapwp2_reach>1:
-                    exp_actions[0] = 0.08
+                if self.gapwp2_reach:
+                    exp_actions[0] = 0.1
                     exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
 
 
@@ -1054,10 +1060,21 @@ class Env(EnvBasePB):
         #self.Goal_pos,Goal_orn = p.getBasePositionAndOrientation(self.Goal)
         #print("self.Goal_pos",self.Goal_pos)
         #print("before",self.gap_point1,self.gap_point2,self.dist_gapwp1,self.dist_gapwp2)
+        
+        #print("counter",self.counter,"WP_Before",self.gap_point1,"wp2",self.gap_point2,"reach",self.gapwp1_reach,self.gapwp2_reach )
+        
         if self.dist_to_wp < 1.0:
+            
+
             #print("self.Goal_pos",self.Goal_pos)
             self.opposite_angle +=180
+            self.wp1_reach=0
+            self.wp2_reach=0
+            self.wp3_reach=0
+            self.wp4_reach=0
 
+            self.gapwp1_reach=False
+            self.gapwp2_reach=False
             
             #for robottogoal_angle in self.robottogoal_angles: 
                 #print(robottogoal_angle)   
@@ -1078,27 +1095,24 @@ class Env(EnvBasePB):
                 
                 
                 self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.opposite_angle-self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
-                if self.dist_gapwp1>self.dist_gapwp2:
-                    self.gap_point1=self.gap[3]
-                    self.gap_point2=self.gap[2]
-                    self.dist_gapwp1 = self.distance(self.pos, self.gap[3])
-                    self.dist_gapwp2 = self.distance(self.pos, self.gap[2])
-                elif self.dist_gapwp2>self.dist_gapwp1:
+
+                self.counter +=1
+                #print("counter",self.counter)
+                if self.counter % 2 == 0:
                     self.gap_point1=self.gap[2]
                     self.gap_point2=self.gap[3]
                     self.dist_gapwp1 = self.distance(self.pos, self.gap[2])
                     self.dist_gapwp2 = self.distance(self.pos, self.gap[3])
+                else:
+                    self.gap_point1=self.gap[3]
+                    self.gap_point2=self.gap[2]
+                    self.dist_gapwp1 = self.distance(self.pos, self.gap[3])
+                    self.dist_gapwp2 = self.distance(self.pos, self.gap[2])
+                    
+                #print("WP_After",self.gap_point1,"wp2",self.gap_point2 )
 
 
-                exp_actions[0] = 0.07
-                exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp1, -1, 1)
-                if self.gapwp1_reach>0.5:
-                    exp_actions[0] = 0.09
-                    exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp2, -1, 1)
-                    if self.gapwp2_reach>1:
-                        exp_actions[0] = 0.08
-                        exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
-                print("after",self.gap_point1,self.gap_point2,self.dist_gapwp1,self.dist_gapwp2)
+                
             else:
                 self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
                 # if self.args.gap_avoidance:
@@ -2566,7 +2580,8 @@ class Env(EnvBasePB):
             #self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
             #print(self.pos2,"LL",self.mid_point_of_goals,"MM",self.Goals_pos);exit()
             # self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.mid_point_of_goals,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
-            self.gap_point1,self.gap_point2=self.gap[2],self.gap[3]
+            #self.gap_point1,self.gap_point2=self.gap[2],self.gap[3]
+            lineIdgap_F=p.addUserDebugLine(self.gap_point1, self.gap_point2, lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.lineId_wp1_wp2)
             
             
 
@@ -2577,6 +2592,8 @@ class Env(EnvBasePB):
             #Distance to waypoints:
             self.dist_gapwp1=self.distance(self.pos,self.gap_point1)
             self.dist_gapwp2=self.distance(self.pos,self.gap_point2)
+
+            
             #self.gap_point_moving = self.gap[2]
             self.dist_gapwp_mv=self.distance(self.pos,self.gap_point1)
             # TT1= self.steps * self.timeStep + 1
@@ -2595,13 +2612,13 @@ class Env(EnvBasePB):
 
 
 
-            if self.dist_gapwp1<1:
+            if self.dist_gapwp1<0.5:
                     # self.time_to_wp1=self.steps
-                    self.gapwp1_reach=self.gapwp1_reach + 1
+                    self.gapwp1_reach=True#self.gapwp1_reach + 1
             # self.time_to_wp2=0
-            if self.dist_gapwp2<1:
+            if self.dist_gapwp2<0.5:
                     # self.time_to_wp2=self.steps
-                    self.gapwp2_reach=self.gapwp2_reach + 1
+                    self.gapwp2_reach=True#self.gapwp2_reach + 1
 
             # print("self.time_to_wp1",self.time_to_wp1,"self.time_to_wp2",self.time_to_wp2)
             # To set robot collision with gap walls
@@ -3069,23 +3086,38 @@ class Env(EnvBasePB):
         rot_mat = np.array([[np.cos(robot_yaw), np.sin(robot_yaw)],          #rotational distance
                              [-np.sin(robot_yaw), np.cos(robot_yaw)]])
         return list(np.dot(rot_mat, np.array([x, y])))
+    
+
+    def wrap_to_pi(self,angle):
+        """
+        Wrap an angle in radians to the range [-pi, pi].
+        """
+        return (angle + np.pi) % (2 * np.pi) - np.pi
 
     def calc_angle_error(self, world, robot, angle):
         target_angle = np.arctan2(world[1] - robot[1], world[0] - robot[0])
-        #print("target",target_angle)
-        if ( target_angle < 0 and angle > 0 ):
-            angle_error = ( 2*np.pi + target_angle ) - angle
-        elif ( target_angle > 0 and angle < 0 ):
-            angle_error = target_angle - ( 2*np.pi + angle )
-        else:
-            angle_error = target_angle - angle
 
-        if angle_error > np.pi:
-            angle_error = np.pi - angle_error
-        elif angle_error < -np.pi:
-            angle_error = angle_error - np.pi
+        angle_error = self.wrap_to_pi(target_angle - angle)
 
         return angle_error, target_angle
+
+    # def calc_angle_error(self, world, robot, angle):
+    #     target_angle = np.arctan2(world[1] - robot[1], world[0] - robot[0])
+    #     #print("target",target_angle)
+    #     if ( target_angle < 0 and angle > 0 ):
+    #         angle_error = ( 2*np.pi + target_angle ) - angle
+    #     elif ( target_angle > 0 and angle < 0 ):
+    #         angle_error = target_angle - ( 2*np.pi + angle )
+    #     else:
+    #         angle_error = target_angle - angle
+    #     #print("before_angle_error",angle_error)
+
+    #     if angle_error >= np.pi:
+    #         angle_error = np.pi - angle_error
+    #     elif angle_error <= -np.pi:
+    #         angle_error = angle_error - np.pi
+    #     #print("after_angle_error",angle_error)
+    #     return angle_error, target_angle
 
     # def min_distance_corners(self, corners_robot1, corners_robot2):
     
@@ -3337,8 +3369,8 @@ class Env(EnvBasePB):
         PP1=self.calculate_midpoint(robot1_bbox[1], robot1_bbox[2])
         PP2=self.calculate_midpoint(robot1_bbox[3], robot1_bbox[0])
         #lineIdgap_C=p.addUserDebugLine(P1, P2, lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
-        P1=self.calculate_opposite_point(PP1,PP2,distance=2.5)
-        P2=self.calculate_opposite_point(PP2,PP1,distance=2.5)
+        P1=self.calculate_opposite_point(PP1,PP2,distance=2)
+        P2=self.calculate_opposite_point(PP2,PP1,distance=2)
         #lineIdgap_D=p.addUserDebugLine(P1, P2, lineColorRGB=[0, 1, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineIdgap[i])
 
         dist_p1_goal=self.distance(P1,goal_pos)
@@ -3418,7 +3450,7 @@ class Env(EnvBasePB):
         
         center = [(corners[0][i] + corners[2][i]) / 2 for i in range(3)]
         half_extents=[((wall_length/2)), wall_width, wall_height/2]
-
+        print("center",center)
         
         # Create a collision shape for the rectangle
         box_collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_extents)
