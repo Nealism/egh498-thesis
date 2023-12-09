@@ -22,7 +22,8 @@ class Env(EnvBasePB):
         self.writer = writer
         self.master = True
         #self.robottogoal_angles=[(200),(250)]
-
+        self.rectangle_id1=0
+        self.rectangle_id2=0
         
         super().__init__(PATH)
 
@@ -36,11 +37,11 @@ class Env(EnvBasePB):
             if self.args.static_robots > 1:
                 self.ob_size = 18
             elif self.args.obstacle_avoidance:
-                self.ob_size = 16+3*(self.args.num_robots-1)
+                self.ob_size = 16+2*(self.args.num_robots-1)
             elif self.args.gap_avoidance:
-                self.ob_size = 26+3*(self.args.num_robots-1)
+                self.ob_size = 26+2*(self.args.num_robots-1)
             else:
-                self.ob_size = 6+3*(self.args.num_robots-1)
+                self.ob_size = 6+2*(self.args.num_robots-1)
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
 
@@ -100,6 +101,13 @@ class Env(EnvBasePB):
         self.gap_walls2_centre=[]
         self.external_goals_states=[]
         self.external_goals_states_with_IDx=[]
+        self.wall1_corners=[]
+        self.wall2_corners=[]
+
+        
+        
+
+        bodies_to_remove = [self.rectangle_id1, self.rectangle_id2]
         
         random_0_10=random.uniform(0,10),random.uniform(0,10),0.31
 
@@ -110,9 +118,24 @@ class Env(EnvBasePB):
             # 
             # self.gap_walls_length.append(Robot.each_wall_length)
 
+        if self.args.gap_avoidance and self.args.insert_wall:
+            
+            p.removeBody(self.rectangle_id1)
+            p.removeBody(self.rectangle_id2)
+            
+             
+            
 
+        if self.args.num_robots ==4:
+            self.robottogoal_angles=[(self.robots[0],0),(self.robots[1],0),(self.robots[2],0),(self.robots[3],0)]
+            self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31]),(self.robots[2],[list(random_0_10)[0]+0,list(random_0_10)[1]-2,0.31]),(self.robots[3],[list(random_0_10)[0]+0,list(random_0_10)[1]-4,0.31])]
+            # self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[2.5,2.5,0.31]),(self.robots[2],[4,4,0.31])]
+            for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
+                self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+                self.external_goals_states.append(self.external_goal_state)
+                self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
 
-        if self.args.num_robots ==3:
+        elif self.args.num_robots ==3:
             self.robottogoal_angles=[(self.robots[0],0),(self.robots[1],0),(self.robots[2],0)]
             self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31]),(self.robots[2],[list(random_0_10)[0]+0,list(random_0_10)[1]-2,0.31])]
             # self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[2.5,2.5,0.31]),(self.robots[2],[4,4,0.31])]
@@ -156,6 +179,8 @@ class Env(EnvBasePB):
             Robot.set_all_goal_poses(self.Goals_pos)
             Robot.set_external_robots_pos(self.external_robots_pos)
             Robot.set_robottogoal_angle(self.robottogoal_angles)
+            Robot.set_wall1_corners(self.wall1_corners)
+            Robot.set_wall1_corners(self.wall2_corners)
 
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
@@ -175,9 +200,15 @@ class Env(EnvBasePB):
             # self.rectangle_id1=self.square
             # self.rectangle_id2=self.square
 
+            wall1_corners=Robot.gap[0]
+            wall2_corners=Robot.gap[1]
+            #print(wall1_corners,wall2_corners)
 
-            self.rectangle_id1=self.create_rectangle(corners=Robot.gap[0],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=0.5,orientation=Robot.gap_orn)
-            self.rectangle_id2=Robot.create_rectangle(corners=Robot.gap[1],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=0.5,orientation=Robot.gap_orn)
+            
+            self.rectangle_id1=self.create_rectangle(ID=1,corners=Robot.gap[0],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=0.5,orientation=Robot.gap_orn)
+            self.rectangle_id2=self.create_rectangle(ID=2,corners=Robot.gap[1],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=0.5,orientation=Robot.gap_orn)
+
+            
 
             
                 # self.gap_walls_length.append(Robot.each_wall_length)
@@ -297,6 +328,8 @@ class Env(EnvBasePB):
         self.Goals_pos=[]
         self.Obstacles_pos=[]
         self.robots_pos_with_IDx=[]
+        self.wall1_corners=[]
+        self.wall2_corners=[]
         
 
         # self.rectangle_id3=self.create_rectangle(corners=self.gap[0],wall_length=20,wall_width=self.tunnel_depth,wall_height=0.5,orientation=self.gap_orn)
@@ -333,6 +366,8 @@ class Env(EnvBasePB):
             self.robots_orn.append(Robot.yaw)
             self.Goals_pos.append(Robot.state_goal)
             self.Obstacles_pos.append(Robot.pos2)
+            self.wall1_corners.append(Robot.gap[0])
+            self.wall2_corners.append(Robot.gap[1])
         #print(self.robots_pos_with_IDx)
         #print("self.Goals_pos",self.Goals_pos)
         if self.args.obstacle_avoidance:
@@ -755,7 +790,7 @@ class Env(EnvBasePB):
 
         return Wall1_rectangle,Wall2_rectangle,WP1,WP2,orn,Wall1_centre,Wall2_centre
     
-    def create_rectangle(self,corners,wall_length,wall_width,wall_height,orientation):
+    def create_rectangle(self,ID,corners,wall_length,wall_width,wall_height,orientation):
 
         # Calculate the center and half extents of the rectangle
         #half_extents = [(corners[2][i] - corners[0][i])/2 for i in range(3)]
@@ -768,18 +803,18 @@ class Env(EnvBasePB):
         box_collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_extents)
 
         # Create the rectangle using createMultiBody and attach the collision shape
-        box_id = p.createMultiBody(baseMass=0,
+        ID = p.createMultiBody(baseMass=0,
                                 baseCollisionShapeIndex=box_collision_shape_id,
                                 basePosition=center,baseOrientation=orientation)
 
-        return box_id
+        return ID
     
     def find_position_B(self,position_a, distance_d, angle_degrees):
         # Convert the angle from degrees to radians
         #print(angle_degrees);exit()
         angle_radians = math.radians(angle_degrees)
         
-        print("position_a",position_a)
+        #print("position_a",position_a)
         # Calculate the coordinates (x, y) of position B
         x_b = position_a[0] + distance_d * math.cos(angle_radians)
         y_b = position_a[1] + distance_d * math.sin(angle_radians)

@@ -625,7 +625,6 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # Prepare for interaction with environment
     start_time = time.time()
     o, ep_rets, ep_lens = env.reset(), [0] * robot_number, [0]*robot_number
-    #print("o",o)
     if use_perception:
         im = env.get_image()
         
@@ -648,6 +647,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
             #print("a",a,"O-shape",np.array(o).shape,"im-shape",np.array(im).shape)
             next_o, r, d, _ = env.step(a)
+            #print("O_len",len(next_o),len(next_o[0]),"o",next_o)
+
             #print(r)
             # print(d)
             #print("Value_before",v)

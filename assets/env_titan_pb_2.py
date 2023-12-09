@@ -57,21 +57,20 @@ class Env(EnvBasePB):
                 self.ob_size = 18
             elif self.args.obstacle_avoidance:
             
-                self.ob_size = 16+3*(self.args.num_robots-1)
+                self.ob_size = 16+2*(self.args.num_robots-1)
                 
             elif self.args.gap_avoidance:
                 
-                self.ob_size = 26+3*(self.args.num_robots-1)
+                self.ob_size = 26+2*(self.args.num_robots-1)
             
             else:
-                self.ob_size = 6+3*(self.args.num_robots-1)
+                self.ob_size = 6+2*(self.args.num_robots-1)
         self.Kp = 400
         self.initial_Kp = self.Kp
         self.time_to_goal=0
         self.time_to_gapwp1=0
         self.time_to_gapwp2=0
-        self.rectangle_id1=0
-        self.rectangle_id2=0
+        
         self.opposite_angle=0
         
 
@@ -87,7 +86,7 @@ class Env(EnvBasePB):
             
         if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
             #parameters for gap curr
-            self.max_gap_width=1.3#2.5
+            self.max_gap_width=2#2.5
             #self.max_gap_width=2.5
             self.decrease_gap_width=self.args.gap_decrease
             self.final_gap_width=1
@@ -357,9 +356,7 @@ class Env(EnvBasePB):
 
 
         p.removeBody(self.Goal)
-        if self.args.gap_avoidance and self.args.insert_wall:
-            p.removeBody(self.rectangle_id1)
-            p.removeBody(self.rectangle_id2)
+        
         # p.removeBody(self.Goal2)
         # p.removeBody(self.Goal3)
         
@@ -506,7 +503,7 @@ class Env(EnvBasePB):
                 else:
                     # If the robot_name is not found, handle it accordingly
                     print(f"Robot {self} not found in pos.")
-            print("Externally_set",self.robot_own_pos)
+            #print("Externally_set",self.robot_own_pos)
             
             pos=self.robot_own_pos
             # pos2, orn2, self.joints, self.base_vel, self.joint_vel = [initial_x2, initial_y2, self.z_offset+0.31],self.initial_orn2, [0]*self.ac_size, [[0,0,0],[0,0,0]], [0.]*self.ac_size
@@ -607,7 +604,7 @@ class Env(EnvBasePB):
             
             #Set the Gap width taken from the gap curriculum in reset
             self.gap_width=self.max_gap_width-self.decrease_gap_width
-            print("self.gap_width",self.gap_width)
+            #print("self.gap_width",self.gap_width)
             #print("Gap_Width",self.gap_width,"Decrease_gap",self.decrease_gap_width)
             
             #Set the Tunnel/Gap Depth from the Tunnel Curriculum in reset
@@ -622,7 +619,7 @@ class Env(EnvBasePB):
             self.gap_orn=self.gap[4]
 
             wall_1_length = max(np.linalg.norm(np.array(self.gap[0][0]) - np.array(self.gap[0][2])), np.linalg.norm(np.array(self.gap[0][1]) - np.array(self.gap[0][3])))
-            print("wall_1_length",wall_1_length)
+            #print("wall_1_length",wall_1_length)
 
             self.dist_gapwp1 = self.distance(pos, self.gap[2])
             self.dist_gapwp2 = self.distance(pos, self.gap[3])
@@ -727,7 +724,7 @@ class Env(EnvBasePB):
                 #Equation of the line trajectory from moving robot to goal
             if (mid_point_robots[0]-mid_point_goals[0])==0:
                 mid_point_robots[0]=mid_point_goals[0]+0.01
-                print("DENOM_ZERO")
+                #print("DENOM_ZERO")
 
             #Slope
             M = (mid_point_robots[1]-mid_point_goals[1])/(mid_point_robots[0]-mid_point_goals[0])
@@ -747,7 +744,7 @@ class Env(EnvBasePB):
             #Equation of the line trajectory from moving robot to goal
             if (initial_x-state_object[0])==0:
                 initial_x=state_object[0]+0.01
-                print("DENOM_ZERO")
+                #print("DENOM_ZERO")
 
             #Slope
             M = (initial_y-state_object[1])/(initial_x-state_object[0])
@@ -1194,30 +1191,46 @@ class Env(EnvBasePB):
         # print("eject",self.Robots_pos_list,"whole",self.pos)
         # print("ENTIRE",self.robots_pos_with_IDx)
         #print(len(self.Other_Robots_pos_list),"robot_num",self.args.num_robots)
-        #print(self,self.Other_Robots_pos_list)
+        #print(self,self.Other_Robots_pos_list,len(self.Other_Robots_pos_list),len([0]*1*(self.args.num_robots-1)))
+
+        if self.args.num_robots==1:
+            self.other_robots_positions=[]
+        elif self.args.num_robots>1 and self.Other_Robots_pos_list==[]:
+            self.other_robots_positions=[0]*2*(self.args.num_robots-1)
+        elif self.args.num_robots>1:
+            self.other_robots_positions=self.Other_Robots_pos_list[0]
 
         if self.args.static_robots > 1:
             return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3])
         
         #Obstacle Avoidance Observations for Multi Robot
-        elif self.args.obstacle_avoidance and len(self.Other_Robots_pos_list)==len([0]*3*(self.args.num_robots-1)):    
+        elif self.args.obstacle_avoidance and len(self.Other_Robots_pos_list)== len([0]*1*(self.args.num_robots-1)) and not len(self.Other_Robots_pos_list)==0:    
             return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + self.Other_Robots_pos_list + self.obs_pos_robot+[self.obs_corner1[0],self.obs_corner1[1]]+ [self.obs_corner2[0],self.obs_corner2[1]]+ [self.obs_corner3[0],self.obs_corner3[1]]+ [self.obs_corner4[0],self.obs_corner4[1]])
         #Obstacle Avoidance Observations for Single Robot
-        elif self.args.obstacle_avoidance:
-            return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + [0]*3*(self.args.num_robots-1) + self.obs_pos_robot+[self.obs_corner1[0],self.obs_corner1[1]]+ [self.obs_corner2[0],self.obs_corner2[1]]+ [self.obs_corner3[0],self.obs_corner3[1]]+ [self.obs_corner4[0],self.obs_corner4[1]])    
+        elif (self.args.obstacle_avoidance and len(self.Other_Robots_pos_list)!= len([0]*1*(self.args.num_robots-1))) or (self.args.obstacle_avoidance and self.args.num_robots==1):
+            return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + [0]*2*(self.args.num_robots-1) + self.obs_pos_robot+[self.obs_corner1[0],self.obs_corner1[1]]+ [self.obs_corner2[0],self.obs_corner2[1]]+ [self.obs_corner3[0],self.obs_corner3[1]]+ [self.obs_corner4[0],self.obs_corner4[1]])    
         
 
-        elif self.args.gap_avoidance and len(self.Other_Robots_pos_list)==len([0]*3*(self.args.num_robots-1)):
-            
-            return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel]+ self.Other_Robots_pos_list + self.wall1_pos_robot + self.wall2_pos_robot+[self.wall1_corner1[0],self.wall1_corner1[1]]+ [self.wall1_corner2[0],self.wall1_corner2[1]]+ [self.wall1_corner3[0],self.wall1_corner3[1]]+ [self.wall1_corner4[0],self.wall1_corner4[1]]+[self.wall2_corner1[0],self.wall2_corner1[1]]+ [self.wall2_corner2[0],self.wall2_corner2[1]]+ [self.wall2_corner3[0],self.wall2_corner3[1]]+ [self.wall2_corner4[0],self.wall2_corner4[1]])
         elif self.args.gap_avoidance:
             
-            return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel]+[0]*3*(self.args.num_robots-1) + self.wall1_pos_robot + self.wall2_pos_robot+[self.wall1_corner1[0],self.wall1_corner1[1]]+ [self.wall1_corner2[0],self.wall1_corner2[1]]+ [self.wall1_corner3[0],self.wall1_corner3[1]]+ [self.wall1_corner4[0],self.wall1_corner4[1]]+[self.wall2_corner1[0],self.wall2_corner1[1]]+ [self.wall2_corner2[0],self.wall2_corner2[1]]+ [self.wall2_corner3[0],self.wall2_corner3[1]]+ [self.wall2_corner4[0],self.wall2_corner4[1]])
-        elif len(self.Other_Robots_pos_list)==len([0]*3*(self.args.num_robots-1)):
+            return np.array(self.wp_pos_robot + self.other_robots_positions +[self.roll, self.pitch, self.vx, self.yaw_vel]+  self.wall1_pos_robot + self.wall2_pos_robot+[self.wall1_corner1[0],self.wall1_corner1[1]]+ [self.wall1_corner2[0],self.wall1_corner2[1]]+ [self.wall1_corner3[0],self.wall1_corner3[1]]+ [self.wall1_corner4[0],self.wall1_corner4[1]]+[self.wall2_corner1[0],self.wall2_corner1[1]]+ [self.wall2_corner2[0],self.wall2_corner2[1]]+ [self.wall2_corner3[0],self.wall2_corner3[1]]+ [self.wall2_corner4[0],self.wall2_corner4[1]])
+        # elif self.args.gap_avoidance and len(self.Other_Robots_pos_list)== len([0]*1*(self.args.num_robots-1)) and not len(self.Other_Robots_pos_list)==0:
+            
+        #     return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel]+ self.Other_Robots_pos_list[0] + self.wall1_pos_robot + self.wall2_pos_robot+[self.wall1_corner1[0],self.wall1_corner1[1]]+ [self.wall1_corner2[0],self.wall1_corner2[1]]+ [self.wall1_corner3[0],self.wall1_corner3[1]]+ [self.wall1_corner4[0],self.wall1_corner4[1]]+[self.wall2_corner1[0],self.wall2_corner1[1]]+ [self.wall2_corner2[0],self.wall2_corner2[1]]+ [self.wall2_corner3[0],self.wall2_corner3[1]]+ [self.wall2_corner4[0],self.wall2_corner4[1]])
+
+        # elif (self.args.gap_avoidance and len(self.Other_Robots_pos_list)!= len([0]*1*(self.args.num_robots-1))) or (self.args.gap_avoidance and self.args.num_robots==1):
+            
+        #     return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel]+[0]*2*(self.args.num_robots-1) + self.wall1_pos_robot + self.wall2_pos_robot+[self.wall1_corner1[0],self.wall1_corner1[1]]+ [self.wall1_corner2[0],self.wall1_corner2[1]]+ [self.wall1_corner3[0],self.wall1_corner3[1]]+ [self.wall1_corner4[0],self.wall1_corner4[1]]+[self.wall2_corner1[0],self.wall2_corner1[1]]+ [self.wall2_corner2[0],self.wall2_corner2[1]]+ [self.wall2_corner3[0],self.wall2_corner3[1]]+ [self.wall2_corner4[0],self.wall2_corner4[1]])
+        # elif self.args.gap_avoidance and len(self.Other_Robots_pos_list)!= len([0]*2*(self.args.num_robots-1)):
+            
+        #     return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel]+[0]*2*(self.args.num_robots-1) + self.wall1_pos_robot + self.wall2_pos_robot+[self.wall1_corner1[0],self.wall1_corner1[1]]+ [self.wall1_corner2[0],self.wall1_corner2[1]]+ [self.wall1_corner3[0],self.wall1_corner3[1]]+ [self.wall1_corner4[0],self.wall1_corner4[1]]+[self.wall2_corner1[0],self.wall2_corner1[1]]+ [self.wall2_corner2[0],self.wall2_corner2[1]]+ [self.wall2_corner3[0],self.wall2_corner3[1]]+ [self.wall2_corner4[0],self.wall2_corner4[1]])
+        elif len(self.Other_Robots_pos_list)== len([0]*1*(self.args.num_robots-1)) and not len(self.Other_Robots_pos_list)==0:
             return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel]+self.Other_Robots_pos_list) #+ zeros_array
-        else:
+        # elif self.args.gap_avoidance and self.args.insert_wall:
+
+        elif len(self.Other_Robots_pos_list)!= len([0]*1*(self.args.num_robots-1)) or self.args.num_robots==1:
             #print(self.wp_pos_robot)
-            return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel]+[0]*3*(self.args.num_robots-1)) #+ zeros_array
+            return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel]+[0]*2*(self.args.num_robots-1)) #+ zeros_array
 
     def get_reward_1(self):
         """
@@ -1803,10 +1816,10 @@ class Env(EnvBasePB):
             goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
         elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
         elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
         else:
             if abs(self.heading_error) < 0.5:
@@ -3022,6 +3035,10 @@ class Env(EnvBasePB):
         # print(self.obs_pos_robot)
         #print(self.Other_Robots_pos_list)
         #Converting Obstacle Obstacle BBOX Corners position to egocentric position based on Robot 1
+        # if self.args.insert_wall:
+        #     #print()
+        #     self.gap[0]=self.wall1_corners
+        #     self.gap[1]=self.wall2_corners
         if self.args.gap_avoidance:
             #wall1 corners in egocentric view
             self.wall1_corner1 = self.world_to_robot(self.yaw, self.pos, self.gap[0][0])
@@ -3074,6 +3091,14 @@ class Env(EnvBasePB):
 
     def set_external_goals_state(self, list_of_external_goals_state):
         self.external_goals_states_with_IDx=list_of_external_goals_state
+
+    def set_wall1_corners(self, list_of_wall1_corners):
+        self.wall1_corners=list_of_wall1_corners
+
+    def set_wall2_corners(self, list_of_wall2_corners):
+        self.wall2_corners=list_of_wall2_corners
+
+        
 
     
         
@@ -3265,7 +3290,7 @@ class Env(EnvBasePB):
             start1 = p.multiplyTransforms(pos, orn, corners[i], [0, 0, 0, 1])[0]
 
             object_bbox.append(list(start1))
-            print(object_bbox)
+            #print(object_bbox)
 
             end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
             if self.args.debug:
@@ -3288,7 +3313,7 @@ class Env(EnvBasePB):
                     if (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1) == 0:
                         
                         intersection = True
-                        print("Denominator_Zero")
+                        #print("Denominator_Zero")
                     else:
                         uA = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
                         uB = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
@@ -3450,7 +3475,7 @@ class Env(EnvBasePB):
         
         center = [(corners[0][i] + corners[2][i]) / 2 for i in range(3)]
         half_extents=[((wall_length/2)), wall_width, wall_height/2]
-        print("center",center)
+        #print("center",center)
         
         # Create a collision shape for the rectangle
         box_collision_shape_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=half_extents)
