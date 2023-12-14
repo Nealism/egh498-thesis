@@ -86,14 +86,14 @@ class Env(EnvBasePB):
             
         if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
             #parameters for gap curr
-            self.max_gap_width=1.5
+            self.max_gap_width=1
             #self.max_gap_width=2.5
-            self.decrease_gap_width=self.args.gap_decrease
+            self.decrease_gap_width=0#self.args.gap_decrease
             self.final_gap_width=1
             #parameters for tunnel curr
             self.max_tunnel_depth = 5
             self.increase_tunnel_depth = 0.2
-            self.time_to_moving_wp=0
+            
             
             
         elif self.args.gap_avoidance:
@@ -286,8 +286,9 @@ class Env(EnvBasePB):
         elif self.args.cur_succ==8:
             return self.total_reward > 1350
         elif self.args.cur_succ==9:
+            return self.total_reward > 1500
+        elif self.args.cur_succ==10:
             return self.total_reward > 2000
-    
 
     def check_for_success(self):
         return len(self.cur_success) == 5 and (np.array(self.cur_success) == True).all()
@@ -436,7 +437,8 @@ class Env(EnvBasePB):
             #if self.max_gap_width-self.decrease_gap_width - self.final_gap_width == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                 #self.decrease_gap_width = self.max_gap_width
             if self.max_gap_width-self.decrease_gap_width == self.final_gap_width:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
-                self.decrease_gap_width = self.max_gap_width-self.final_gap_width
+                #self.decrease_gap_width = self.max_gap_width-self.final_gap_width
+                self.decrease_gap_width = 0
                 self.cur_success = deque([0.0], maxlen=5)
                 #print("cur_success", self.cur_success)			
             else:
@@ -616,7 +618,7 @@ class Env(EnvBasePB):
             # print("All",self.All_Robot_ID,"self",self)
             self.gap=self.gap_generator(width=self.All_Robot_ID[0].gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = 20,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
 
-            print("gap",self,self.gap[0],self.gap[1])
+            #print("gap",self,self.gap[0],self.gap[1])
 
             self.gap_point1,self.gap_point2=self.gap[2],self.gap[3]
 
@@ -871,7 +873,7 @@ class Env(EnvBasePB):
         #         self.exp_actions[0] = 0.0
         #         self.exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
 
-        if self.args.gap_avoidance:
+        if self.args.gap_avoidance and self.args.num_robots > 1:
         # ####################_______WAY_POINT_SYSTEM______#####
             #make sure to uncomment it when remove wall
             # if self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2 or self.intersection_r1_r:
@@ -897,6 +899,7 @@ class Env(EnvBasePB):
                     self.intersection_s1line_rbbox,_= self.intersection_check(self.side_line1g,robot_bbox[1])
                     self.intersection_s2line_rbbox,_= self.intersection_check(self.side_line2g,robot_bbox[1])
                     self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox,self.intersection_s1line_rbbox,self.intersection_s2line_rbbox]
+                    #print(self.int_check_lines_vs_rbbox,self)
                     #print(num,robot_bbox[0]);exit()
                     if any(self.int_check_lines_vs_rbbox):
                         self.robot1_near_robot2=True
@@ -921,7 +924,16 @@ class Env(EnvBasePB):
                     self.exp_actions[0] = 0.07
                     self.exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
             
+        if self.args.gap_avoidance and self.args.num_robots == 1:
 
+            self.exp_actions[0] = 0.1
+            self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp1, -1, 1)
+            if self.gapwp1_reach:
+                self.exp_actions[0] = 0.06
+                self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp2, -1, 1)
+                if self.gapwp2_reach:
+                    self.exp_actions[0] = 0.1
+                    self.exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
     
         elif self.args.obstacle_avoidance :
         # ####################_______WayPoint System Inspired by Bug 2 algorithm______######################
@@ -1068,7 +1080,7 @@ class Env(EnvBasePB):
                 # if not self.args.just_expert:
                 #     self.applied_actions += self.action_multiplier*actions
 
-        print("action",self.applied_actions)
+        #print("action",self.applied_actions,self)
         
         # Network now outputs a twist message
         track_actions = self.twist_to_tracks(self.applied_actions)
@@ -2466,6 +2478,93 @@ class Env(EnvBasePB):
         #     done = True
             
         return reward, done
+    
+    def get_reward_36(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =1000
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+        
+        # collision=0
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+                
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            collision= -100
+            print("HIT_WALL")
+            done=True
+
+        reward = goal + neg + heading +reach
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     done=True
+        #     print("MA Collision----------------")
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
 
 
     def get_observation(self):
@@ -2615,7 +2714,7 @@ class Env(EnvBasePB):
             # print(self.robot100_bbox)
             
             # Creating green safe bounding box around robot 1
-            self.robot1_safe_box=self.bbox_generator_titan(0.5,self.pos,self.orn,self.lineId12, [.29,.45,.27])
+            self.robot1_safe_box=self.bbox_generator_titan(0.7,self.pos,self.orn,self.lineId12, [.29,.45,.27])
             self.robot1_safe_box.append(self.robot1_safe_box[0])
    
             #drawing imaginary line from the heading corners of safe bbox to the goal
@@ -2632,7 +2731,7 @@ class Env(EnvBasePB):
             
             #self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
             #print(self.pos2,"LL",self.mid_point_of_goals,"MM",self.Goals_pos);exit()
-            # self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.mid_point_of_goals,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
+            self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.mid_point_of_goals,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
             #self.gap_point1,self.gap_point2=self.gap[2],self.gap[3]
             lineIdgap_F=p.addUserDebugLine(self.gap_point1, self.gap_point2, lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.lineId_wp1_wp2)
             
@@ -2665,11 +2764,11 @@ class Env(EnvBasePB):
 
 
 
-            if self.dist_gapwp1<2:
+            if self.dist_gapwp1<0.8:
                     # self.time_to_wp1=self.steps
                     self.gapwp1_reach=True#self.gapwp1_reach + 1
             # self.time_to_wp2=0
-            if self.dist_gapwp2<2:
+            if self.dist_gapwp2<0.8:
                     # self.time_to_wp2=self.steps
                     self.gapwp2_reach=True#self.gapwp2_reach + 1
 
@@ -2702,9 +2801,9 @@ class Env(EnvBasePB):
             self.side_line1_endg=self.find_position_B(self.robot1_safe_box[0],distance_d=self.args.detect_distance/2,angle_degrees=math.degrees(self.yaw))
             self.side_line2_endg=self.find_position_B(self.robot1_safe_box[1],distance_d=self.args.detect_distance/2,angle_degrees=math.degrees(self.yaw))
 
-            self.side_line1g=self.robot1_safe_box[0], (self.side_line2_endg[0], self.side_line2_endg[1], 0.34)
+            self.side_line1g=self.robot1_safe_box[3], (self.side_line2_endg[0], self.side_line2_endg[1], 0.34)
 
-            self.side_line2g=self.robot1_safe_box[1], (self.side_line1_endg[0], self.side_line1_endg[1], 0.34)
+            self.side_line2g=self.robot1_safe_box[2], (self.side_line1_endg[0], self.side_line1_endg[1], 0.34)
 
             # self.side_line1_endg=self.find_position_B(self.robot1_bbox[0],distance_d=self.args.detect_distance/2,angle_degrees=math.degrees(self.yaw))
             # self.side_line2_endg=self.find_position_B(self.robot1_bbox[1],distance_d=self.args.detect_distance/2,angle_degrees=math.degrees(self.yaw))
@@ -2715,8 +2814,13 @@ class Env(EnvBasePB):
             
             if self.args.debug:
                 self.lineId=p.addUserDebugLine((self.pos[0], self.pos[1], 0.34), (self.heading_line_end[0], self.heading_line_end[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_heading)
-                self.lineId=p.addUserDebugLine((self.robot1_bbox[0][0], self.robot1_bbox[0][1], 0.34), (self.side_line2_endg[0], self.side_line2_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side1)
-                self.lineId=p.addUserDebugLine((self.robot1_bbox[1][0], self.robot1_bbox[1][1], 0.34), (self.side_line1_endg[0], self.side_line1_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side2)
+
+                self.lineId=p.addUserDebugLine((self.robot1_bbox[3][0], self.robot1_bbox[3][1], 0.34), (self.side_line1_endg[0], self.side_line1_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side2)
+
+                self.lineId=p.addUserDebugLine((self.robot1_bbox[2][0], self.robot1_bbox[2][1], 0.34), (self.side_line2_endg[0], self.side_line2_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side1)
+
+            
+                
             
             #Check head line ray with WALLs
             self.wall1_head,_=self.intersection_check(self.head_line, self.gap[0])
@@ -3380,12 +3484,12 @@ class Env(EnvBasePB):
     def gap_generator(self,width, depth,height,pos,wall_length,goal_pos,lineId,lineIdgap,lineIdA,lineIdB):
         # print("gap_pos",pos)
         # print("gap_goal_pos",goal_pos)
-
+        print("gap_width",width)
         line_direction = [goal_pos[0] - pos[0], goal_pos[1] - pos[1], 0]
         perpendicular_direction = [line_direction[1], -line_direction[0], 0]
         orn = p.getQuaternionFromEuler([0, 0, math.atan2(perpendicular_direction[1], perpendicular_direction[0])])
         #------------------------------------
-        x=width+wall_length
+        x=width/2+wall_length
         y=depth
         z=height
         # get the self.corners of the bounding box
@@ -3407,7 +3511,7 @@ class Env(EnvBasePB):
             # if self.args.debug:
             # 	lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB=[0, 0, 0], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
         
-        x=width
+        x=width/2
         cornersgap = [(x, y, z),
                   (x,-y,z),
                   (-x,-y,z),
