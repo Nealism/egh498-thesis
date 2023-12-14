@@ -6,14 +6,14 @@
 declare -a Experiments=(
                       
                       
-                      "mg8/r2GEC9"
+                      "mg11/r2GEC9"
                       
-                      "mg8/r2GD.1EC9"
+                      "mg11/r2GD.1EC9"
                       
-                      "mg8/r2GD.25EC9"
+                      "mg11/r2GD.25EC9"
                       
                       
-                      "mg8/r2EC9"
+                      "mg11/r2EC9"
                       
                       
                       
@@ -37,14 +37,6 @@ declare -a Arguments=(
     "--cpu 64 --env multi_robot_pb --num_robots 2 --reward_fn 2 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 4200 --local_epoch_len 4200 --detect_distance 2 --insert_wall "
 
     
-    
-    
-    
-   
-
-    
-
-
     
     
 )

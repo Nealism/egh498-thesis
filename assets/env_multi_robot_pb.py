@@ -103,7 +103,7 @@ class Env(EnvBasePB):
         self.external_goals_states_with_IDx=[]
         self.wall1_corners=[]
         self.wall2_corners=[]
-
+        self.All_Robot_ID=[]
         
         
 
@@ -113,6 +113,7 @@ class Env(EnvBasePB):
 
         for Robot in self.robots:
             self.initial_goal_distances.append(Robot.initial_goal_dist)
+            self.All_Robot_ID.append(Robot)
             
             
             # 
@@ -144,7 +145,7 @@ class Env(EnvBasePB):
                 self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         elif self.args.num_robots ==2:
-            self.robottogoal_angles=[(self.robots[0],0),(self.robots[1],0)]
+            self.robottogoal_angles=[(self.robots[0],-5),(self.robots[1],5)]
             self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31])]
             #self.external_robots_pos=[(self.robots[0],[0,0,0.31]),(self.robots[1],[0,2.5,0.31])]
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
@@ -172,7 +173,7 @@ class Env(EnvBasePB):
         self.occupancy_maps=[]
         for Robot in self.robots:
             # self.Goals_pos.append(Robot.state_goal)
-            
+            Robot.set_Robots_ID(self.All_Robot_ID)
             Robot.set_robot_bbox(self.robots_bbox)
             Robot.set_allrobot_positions(self.robots_pos_with_IDx)
             Robot.set_external_goals_state(self.external_goals_states_with_IDx)
@@ -366,8 +367,8 @@ class Env(EnvBasePB):
             self.robots_orn.append(Robot.yaw)
             self.Goals_pos.append(Robot.state_goal)
             self.Obstacles_pos.append(Robot.pos2)
-            self.wall1_corners.append(Robot.gap[0])
-            self.wall2_corners.append(Robot.gap[1])
+            # self.wall1_corners.append(Robot.gap[0])
+            # self.wall2_corners.append(Robot.gap[1])
         #print(self.robots_pos_with_IDx)
         #print("self.Goals_pos",self.Goals_pos)
         if self.args.obstacle_avoidance:
