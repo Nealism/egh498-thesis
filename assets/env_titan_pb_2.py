@@ -86,7 +86,7 @@ class Env(EnvBasePB):
             
         if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
             #parameters for gap curr
-            self.max_gap_width=1
+            self.max_gap_width=1.5
             #self.max_gap_width=2.5
             self.decrease_gap_width=0#self.args.gap_decrease
             self.final_gap_width=1
@@ -269,25 +269,48 @@ class Env(EnvBasePB):
         #print("success_dist",dist_to_goal)
         # print(self.dist_to_wp)
         # print("d",dist_to_goal)
-        if self.args.cur_succ==1:
-            return self.total_reward > 700
+        if self.args.cur_succ==0:
+            #print("self.distance_to_goal",dist_to_goal,self.distance_to_goal)
+            return self.distance_to_goal == True
+        elif self.args.cur_succ==1:
+            return self.total_reward > 100
         elif self.args.cur_succ==2:
-            return dist_to_goal < 1.0
-        elif self.args.cur_succ==3:
-            return self.total_reward > 500
-        elif self.args.cur_succ==4:
             return self.total_reward > 200
+        elif self.args.cur_succ==3:
+            return self.total_reward > 300
+        elif self.args.cur_succ==4:
+            return self.total_reward > 400
         elif self.args.cur_succ==5:
-            return self.total_reward > 700
+            return self.total_reward > 500
         elif self.args.cur_succ==6:
-            return self.total_reward > 1000
+            return self.total_reward > 600
         elif self.args.cur_succ==7:
-            return self.total_reward > 1200
+            return self.total_reward > 700
         elif self.args.cur_succ==8:
-            return self.total_reward > 1350
+            return self.total_reward > 850
         elif self.args.cur_succ==9:
-            return self.total_reward > 1500
+            return self.total_reward > 900
         elif self.args.cur_succ==10:
+            return self.total_reward > 1000
+        elif self.args.cur_succ==11:
+            return self.total_reward > 1100
+        elif self.args.cur_succ==12:
+            return self.total_reward > 1200
+        elif self.args.cur_succ==13:
+            return self.total_reward > 1300
+        elif self.args.cur_succ==14:
+            return self.total_reward > 1400
+        elif self.args.cur_succ==15:
+            return self.total_reward > 1500
+        elif self.args.cur_succ==16:
+            return self.total_reward > 1600
+        elif self.args.cur_succ==17:
+            return self.total_reward > 1700
+        elif self.args.cur_succ==18:
+            return self.total_reward > 1800
+        elif self.args.cur_succ==19:
+            return self.total_reward > 1900
+        elif self.args.cur_succ==20:
             return self.total_reward > 2000
 
     def check_for_success(self):
@@ -592,6 +615,8 @@ class Env(EnvBasePB):
         self.lineIdB=[-1]*4
         self.lineIdWall=[-1]*4
 
+        self.goal_reaching=False
+
         
 
         
@@ -672,6 +697,7 @@ class Env(EnvBasePB):
 
         self.cur_time = 0
         self.total_reward = 0
+        self.distance_to_goal=0
 
         # Time to take single step
         #print(list(self.pos))
@@ -886,27 +912,40 @@ class Env(EnvBasePB):
 
             # else:
             
-            self.exp_actions[0] = 0.08
-            self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp1, -1, 1)
+            self.exp_actions[0] = 0.06
+            self.exp_actions[1] = 0.7*np.clip(self.heading_error_gapwp1, -1, 1)
             
             for robot_bbox in self.robots_bbox:
             #print("k",robot_bbox,"whole",self.robots_bbox)
-                if str(robot_bbox[0])==str(self):
-                    #print(str(robot_bbox[0]),str(self))
+                # if str(robot_bbox[0])==str(self):
+                #     #print(str(robot_bbox[0]),str(self))
+                #     self.robot1_near_robot2=False
+                if str(robot_bbox[0]) != str(self):
                     self.robot1_near_robot2=False
-                elif str(robot_bbox[0]) != str(self):
                     self.intersection_hline_rbbox,_= self.intersection_check(self.head_line,robot_bbox[1])
                     self.intersection_s1line_rbbox,_= self.intersection_check(self.side_line1g,robot_bbox[1])
                     self.intersection_s2line_rbbox,_= self.intersection_check(self.side_line2g,robot_bbox[1])
                     self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox,self.intersection_s1line_rbbox,self.intersection_s2line_rbbox]
                     #print(self.int_check_lines_vs_rbbox,self)
                     #print(num,robot_bbox[0]);exit()
+                    # print("checking",self.turn_both)
+
                     if any(self.int_check_lines_vs_rbbox):
                         self.robot1_near_robot2=True
+                        # print("self.robot1_near_robot2",self.robot1_near_robot2,self)
                         self.exp_actions[0] = 0
                         self.exp_actions[1] = 0
-                    
-                    
+                        if self.turn_both and self==self.All_Robot_ID[0]:
+                            self.exp_actions[0] = -15
+                            self.exp_actions[1] = 0.5
+                        elif self.turn_both and self==self.All_Robot_ID[1]:
+                            self.exp_actions[0] = -0.5
+                            self.exp_actions[1] = -0.5
+
+
+                
+                # if self==self.All_Robot_ID[1]:    
+                #     print(self.robot1_near_robot2,self)
                         #break
 
             # if self.intersection_r1_r:
@@ -917,23 +956,30 @@ class Env(EnvBasePB):
         
             if self.gapwp1_reach:
                 self.exp_actions[0] = 0.06
-                self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp2, -1, 1)
+                self.exp_actions[1] = 0.7*np.clip(self.heading_error_gapwp2, -1, 1)
 
             
                 if self.gapwp2_reach:
-                    self.exp_actions[0] = 0.07
-                    self.exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+                    self.exp_actions[0] = 0.06
+                    self.exp_actions[1] = 0.7*np.clip(self.heading_error, -1, 1)
+            #print(self.exp_actions,self)
             
-        if self.args.gap_avoidance and self.args.num_robots == 1:
 
-            self.exp_actions[0] = 0.1
+            
+        elif self.args.gap_avoidance and self.args.num_robots == 1:
+
+            self.exp_actions[0] = 0.06
             self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp1, -1, 1)
+            #print("wp1")
             if self.gapwp1_reach:
                 self.exp_actions[0] = 0.06
                 self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp2, -1, 1)
+                #print("wp2")
                 if self.gapwp2_reach:
                     self.exp_actions[0] = 0.1
                     self.exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+                    #print("Goal")
+
     
         elif self.args.obstacle_avoidance :
         # ####################_______WayPoint System Inspired by Bug 2 algorithm______######################
@@ -1059,23 +1105,18 @@ class Env(EnvBasePB):
             #Make sure to uncomment it when remove wall or work with multi robot
             # if self.intersection_r1_box or self.intersection_r1_r or self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2:
             #if self.intersection_r1_r:
-            if self.robot1_near_robot2:
-                self.applied_actions=[0]*2
-            else:
-                self.applied_actions = (self.Kp/self.initial_Kp) * np.array(self.exp_actions)
-                if not self.args.just_expert:
-                    self.applied_actions += self.action_multiplier*actions
+            # if self.args.num_robots >1 and self.robot1_near_robot2 and not self.turn_both:
+            #     self.applied_actions=[0]*2
+            # else:
+            self.applied_actions = (self.Kp/self.initial_Kp) * np.array(self.exp_actions)
+            if not self.args.just_expert:
+                self.applied_actions += self.action_multiplier*actions
             
         else:
-            #Make sure to uncomment it when remove wall or work with multi robot
-
-            # if self.intersection_r1_box or self.intersection_r1_r or self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2:
-            #     self.applied_actions=[0]*2
-            #     #print("sss")
-            # else:
+            
                 
             self.applied_actions = self.action_multiplier*actions
-        #print("self.applied_actions",self.applied_actions,self)    
+        # print("self.applied_actions",self.applied_actions,self)    
                 # self.applied_actions = (self.Kp/self.initial_Kp) * np.array(self.exp_actions)
                 # if not self.args.just_expert:
                 #     self.applied_actions += self.action_multiplier*actions
@@ -1093,13 +1134,13 @@ class Env(EnvBasePB):
 
         # p.stepSimulation()
 
-    def return_step(self,actions):
+    def return_step(self,action):
         if self.args.render:
             time.sleep(self.args.sleep)
         self.get_observation()
         self.save_sim_state()
         #reward, done = self.get_reward()
-        reward, done = getattr(self, self.reward_fn_name)()
+        reward, done, distance_to_goal = getattr(self, self.reward_fn_name)()
 
         # Move the waypoint and static robot if close the waypoint
         # print(self.ep_goal_success, self.time_to_target, self.steps, self.dist_to_wp)
@@ -1110,12 +1151,13 @@ class Env(EnvBasePB):
         #print("before",self.gap_point1,self.gap_point2,self.dist_gapwp1,self.dist_gapwp2)
         
         #print("counter",self.counter,"WP_Before",self.gap_point1,"wp2",self.gap_point2,"reach",self.gapwp1_reach,self.gapwp2_reach )
+        #print("reach",self.gapwp1_reach,self.gapwp2_reach)
         
         if self.dist_to_wp < 1.0:
             
-
+            self.goal_reaching=True
             #print("self.Goal_pos",self.Goal_pos)
-            self.opposite_angle +=180
+            self.opposite_angle +=175
             self.wp1_reach=0
             self.wp2_reach=0
             self.wp3_reach=0
@@ -1141,7 +1183,7 @@ class Env(EnvBasePB):
                 
             if self.args.gap_avoidance:
                 
-                
+                print("opposite_angle",self.opposite_angle,self.robottogoal_angle)
                 self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.opposite_angle-self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
 
                 self.counter +=1
@@ -1182,7 +1224,7 @@ class Env(EnvBasePB):
 
             self.goal_success.append(True)
             self.time_to_goal=self.steps
-            print("G",self.goal_success,self)
+            print("self.goal_success",self.goal_success,self)
 
 
 
@@ -1193,6 +1235,7 @@ class Env(EnvBasePB):
             else:
                 self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
             self.goal_success.append(False)
+            print("Wrong_GOAL_SUCCESS",self.goal_success,self)
         # print("another",self.time_to_gapwp1)
         # print("time_wp2",self.time_to_gapwp2)
         # print("Time_to_gapWp1",self.time_to_gapwp1)
@@ -1202,11 +1245,11 @@ class Env(EnvBasePB):
         # print("gapWp2_to_goal",self.time_to_goal-self.time_to_gapwp2)
 
         if  self.args.gap_avoidance:
-            if not self.Boolian and self.dist_gapwp1 < 2:
+            if not self.Boolian and self.dist_gapwp1 < 1:
                 self.time_to_gapwp1=self.steps       
                 self.Boolian =True
 
-            if not self.Boolian2 and self.dist_gapwp2 < 2:
+            if not self.Boolian2 and self.dist_gapwp2 < 1:
                 self.time_to_gapwp2=self.steps       
                 self.Boolian2 =True
                 
@@ -1222,6 +1265,7 @@ class Env(EnvBasePB):
         
         self.total_steps += 1
         self.total_reward += reward
+        self.distance_to_goal =self.goal_reaching
         return self.return_state(),reward,done,self.ob_dict
         #print("total_reward",self.total_reward)
         #return np.array(self.robot1_bbox[0] +self.robot1_bbox[1] +self.robot1_bbox[2] +self.robot1_bbox[3] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3] + self.contacts + self.contacts2 + list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped]), reward, done, self.ob_dict
@@ -1793,6 +1837,7 @@ class Env(EnvBasePB):
         else:
             if abs(self.heading_error) < 0.5:
                 goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                
         
         collision=0
         if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
@@ -1860,7 +1905,7 @@ class Env(EnvBasePB):
 
         reach =0
         if self.dist_to_wp<1:
-            reach =1000
+            reach =0
 
         
             
@@ -1908,8 +1953,8 @@ class Env(EnvBasePB):
         
 
         if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
-            done=True
             print("MA Collision----------------")
+            done=True
         # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
         #     done=True
         #     print("Robot_hit_static_Robot",done)
@@ -1921,6 +1966,7 @@ class Env(EnvBasePB):
         #     done=True
             
         if self.tipped == True:
+            print("TIPPED----------------")
             done = True
             
         return reward, done
@@ -2023,31 +2069,36 @@ class Env(EnvBasePB):
 
         reach =0
         if self.dist_to_wp<1:
-            reach =1000
+            reach =0
 
         
             
         if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
             goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -5*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
         elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -5*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            #heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
         elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -5*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            #heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
         else:
             if abs(self.heading_error) < 0.5:
-                goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
         
         collision=0
-        if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
-            collision= -10000
-            done=True
-            #print("Hit_Obstacle-------Hit_Hit",done)
-        if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
-            collision= -10000
-            done=True
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+        #     #print("Hit_Obstacle-------Hit_Hit",done)
+
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= 0
+        #     print("HIT_WALL")
+        #     done=True
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -100
+        #     done=True
 
         reward = goal + neg + heading + collision +reach
         
@@ -2078,10 +2129,10 @@ class Env(EnvBasePB):
         # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
         #     done=True
             
-        # if self.tipped == True:
-        #     done = True
-            
-        return reward, done
+        if self.tipped == True:
+            done = True
+        #print("dist_to_goal",dist_to_goal)
+        return reward, done,dist_to_goal
     
 
     #Real_reward--with reach 1000 and 1st collision
@@ -2103,7 +2154,7 @@ class Env(EnvBasePB):
 
         reach =0
         if self.dist_to_wp<1:
-            reach =2000
+            reach =0
 
         
             
@@ -2111,23 +2162,28 @@ class Env(EnvBasePB):
             goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
             heading = -0.25*np.exp(-0.5*self.heading_error_to_obs**2)
         elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
         elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
         else:
             if abs(self.heading_error) < 0.5:
-                goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
         
         collision=0
         if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
-            collision= -10000
+            collision= 0
             done=True
             #print("Hit_Obstacle-------Hit_Hit",done)
-        if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
-            collision= -10000
-            done=True
+
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= 0
+        #     print("HIT_WALL")
+        #     done=True
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -200
+        #     done=True
 
         reward = goal + neg + heading + collision +reach
         
@@ -2158,8 +2214,8 @@ class Env(EnvBasePB):
         # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
         #     done=True
             
-        # if self.tipped == True:
-        #     done = True
+        if self.tipped == True:
+            done = True
             
         return reward, done
     
@@ -2183,30 +2239,35 @@ class Env(EnvBasePB):
 
         reach =0
         if self.dist_to_wp<1:
-            reach =2000
+            reach =0
 
         
             
         if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
             goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -2*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
         elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -2*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
         elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -2*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
         else:
             if abs(self.heading_error) < 0.5:
-                goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
         
         collision=0
         if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
             collision= -10000
             done=True
             #print("Hit_Obstacle-------Hit_Hit",done)
-        if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
-            collision= -10000
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            collision= 0
+            print("HIT_WALL")
             done=True
 
         reward = goal + neg + heading + collision +reach
@@ -2238,8 +2299,8 @@ class Env(EnvBasePB):
         # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
         #     done=True
             
-        # if self.tipped == True:
-        #     done = True
+        if self.tipped == True:
+            done = True
             
         return reward, done
     
@@ -2261,7 +2322,7 @@ class Env(EnvBasePB):
 
         reach =0
         if self.dist_to_wp<1:
-            reach =3000
+            reach =100
 
         
             
@@ -2269,23 +2330,28 @@ class Env(EnvBasePB):
             goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
         elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
         elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
         else:
             if abs(self.heading_error) < 0.5:
-                goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
         
         collision=0
         if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
             collision= -10000
             done=True
             #print("Hit_Obstacle-------Hit_Hit",done)
-        if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
-            collision= -10000
-            done=True
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -450
+        #     print("HIT_WALL")
+        #     done=True
 
         reward = goal + neg + heading + collision +reach
         
@@ -2316,8 +2382,8 @@ class Env(EnvBasePB):
         # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
         #     done=True
             
-        # if self.tipped == True:
-        #     done = True
+        if self.tipped == True:
+            done = True
             
         return reward, done
     
@@ -2340,31 +2406,36 @@ class Env(EnvBasePB):
 
         reach =0
         if self.dist_to_wp<1:
-            reach =2000
+            reach =300
 
         
             
         if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
             goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -4*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+            heading = -2*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
         elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -4*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -2*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
         elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -4*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -2*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
         else:
             if abs(self.heading_error) < 0.5:
-                goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
         
         collision=0
         if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
             collision= -10000
             done=True
             #print("Hit_Obstacle-------Hit_Hit",done)
-        if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
-            collision= -10000
-            done=True
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -200
+        #     print("HIT_WALL")
+        #     done=True
 
         reward = goal + neg + heading + collision +reach
         
@@ -2395,8 +2466,8 @@ class Env(EnvBasePB):
         # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
         #     done=True
             
-        # if self.tipped == True:
-        #     done = True
+        if self.tipped == True:
+            done = True
             
         return reward, done
     
@@ -2419,31 +2490,35 @@ class Env(EnvBasePB):
 
         reach =0
         if self.dist_to_wp<1:
-            reach =2000
+            reach =500
 
         
             
         if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
             goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -5*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
         elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -5*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
         elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -5*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
         else:
             if abs(self.heading_error) < 0.5:
-                goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
         
         collision=0
         if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
             collision= -10000
             done=True
             #print("Hit_Obstacle-------Hit_Hit",done)
-        if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
-            collision= -10000
-            done=True
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -400
+        #     print("HIT_WALL")
+        #     done=True
 
         reward = goal + neg + heading + collision +reach
         
@@ -2474,12 +2549,105 @@ class Env(EnvBasePB):
         # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
         #     done=True
             
-        # if self.tipped == True:
-        #     done = True
+        if self.tipped == True:
+            done = True
             
         return reward, done
     
     def get_reward_36(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =800
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+        
+        
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+
+        collision=0
+        MA_colision=0     
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -600
+        #     #print("HIT_WALL")
+        #     done=True
+
+        if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+            MA_colision= -50
+            done=True
+            #print("MA Collision----------------")
+
+        reward = goal + neg + heading +reach+collision+MA_colision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+
+    def get_reward_37(self):
         """
         Reward Function 2
         """
@@ -2505,14 +2673,14 @@ class Env(EnvBasePB):
             goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
         elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
-            goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
         elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
-            goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
         else:
             if abs(self.heading_error) < 0.5:
-                goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
         
         # collision=0
         # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
@@ -2528,12 +2696,19 @@ class Env(EnvBasePB):
             #print("Hit_GAP_WALL-------Hit_Hit",done)
             #done=True
                 
-        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-            collision= -100
-            print("HIT_WALL")
-            done=True
+        collision=0
+        MA_colision=0     
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -800
+        #     #print("HIT_WALL")
+        #     done=True
 
-        reward = goal + neg + heading +reach
+        if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+            MA_colision= -800
+            done=True
+            #print("MA Collision----------------")
+
+        reward = goal + neg + heading +reach+collision+MA_colision
         
         
 
@@ -2552,6 +2727,1005 @@ class Env(EnvBasePB):
         # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
         #     done=True
         #     print("MA Collision----------------")
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+    def get_reward_38(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =1500
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+        
+        # collision=0
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+                
+        collision=0
+        MA_colision=0     
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -1000
+        #     #print("HIT_WALL")
+        #     done=True
+
+        if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+            MA_colision= -1000
+            done=True
+            #print("MA Collision----------------")
+
+        reward = goal + neg + heading +reach+collision+MA_colision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     done=True
+        #     print("MA Collision----------------")
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+    def get_reward_39(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =500
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+        
+        # collision=0
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+                
+        collision=0
+        MA_colision=0     
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            collision= -100
+            #print("HIT_WALL")
+            done=True
+
+        if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+            MA_colision= -1200
+            done=True
+            #print("MA Collision----------------")
+
+        reward = goal + neg + heading +reach+collision+MA_colision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     done=True
+        #     print("MA Collision----------------")
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+    def get_reward_40(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =1000
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+        
+        # collision=0
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+                
+        collision=0
+        MA_colision=0     
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            collision= -100
+            #print("HIT_WALL")
+            done=True
+
+        if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+            MA_colision= -1450
+            done=True
+            #print("MA Collision----------------")
+
+        reward = goal + neg + heading +reach+collision+MA_colision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     done=True
+        #     print("MA Collision----------------")
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+    def get_reward_41(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =300
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+        
+        collision=0
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+                
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            collision= -50
+            print("HIT_WALL")
+            done=True
+
+        reward = goal + neg + heading +reach+collision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     done=True
+        #     print("MA Collision----------------")
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+
+    def get_reward_42(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =500
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+        
+        collision=0
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+                
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            collision= -200
+            print("HIT_WALL")
+            done=True
+
+        reward = goal + neg + heading +reach+collision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     done=True
+        #     print("MA Collision----------------")
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+    def get_reward_43(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =1000
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+        
+        collision=0
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+                
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            collision= -200
+            print("HIT_WALL")
+            done=True
+
+        reward = goal + neg + heading +reach+collision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     done=True
+        #     print("MA Collision----------------")
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+    def get_reward_44(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =500
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+        
+        collision=0
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+                
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            collision= -50
+            print("HIT_WALL")
+            done=True
+
+        reward = goal + neg + heading +reach+collision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     done=True
+        #     print("MA Collision----------------")
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+    def get_reward_45(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =500
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+        
+        collision=0
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+                
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            collision= -20
+            print("HIT_WALL")
+            done=True
+
+        reward = goal + neg + heading +reach+collision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     done=True
+        #     print("MA Collision----------------")
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+
+    def get_reward_46(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =1000
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(2.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+        
+        
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+
+        collision=0
+        MA_colision=0     
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            collision= -20
+            #print("HIT_WALL")
+            done=True
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     MA_colision= -10000
+        #     done=True
+            #print("MA Collision----------------")
+
+        reward = goal + neg + heading +reach+collision+MA_colision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+
+    def get_reward_47(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =1000
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(1.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            #print("goal",goal)
+        
+        
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+
+        collision=0
+        MA_colision=0     
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -5000
+        #     #print("HIT_WALL")
+        #     done=True
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     MA_colision= -5000
+        #     done=True
+        #     #print("MA Collision----------------")
+
+        reward = goal + neg + heading +reach+collision+MA_colision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        
+        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
+        #     done=True
+        #     print("Robot_hit_static_Robot",done)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+            
+        return reward, done
+    
+
+    def get_reward_48(self):
+        """
+        Reward Function 2
+        """
+       
+        done=False
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0:
+            neg = 0.25*self.vx 
+
+        reach =0
+        if self.dist_to_wp<1:
+            reach =1000
+
+        
+            
+        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
+            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            #heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            #heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        else:
+            if abs(self.heading_error) < 0.5:
+                goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            # print("goal",goal)
+        
+        
+        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
+        #     collision= -10000
+        #     done=True
+            #print("Hit_Obstacle-------Hit_Hit",done)
+        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
+        #     collision= -10000
+            #done=True
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10000
+            #print("Hit_GAP_WALL-------Hit_Hit",done)
+            #done=True
+
+        collision=0
+        MA_colision=0     
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -2000
+        #     #print("HIT_WALL")
+        #     done=True
+
+        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+        #     MA_colision= -2000
+        #     done=True
+            #print("MA Collision----------------")
+
+        reward = goal + neg + heading +reach+collision+MA_colision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        
         # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
         #     done=True
         #     print("Robot_hit_static_Robot",done)
@@ -2714,7 +3888,7 @@ class Env(EnvBasePB):
             # print(self.robot100_bbox)
             
             # Creating green safe bounding box around robot 1
-            self.robot1_safe_box=self.bbox_generator_titan(0.7,self.pos,self.orn,self.lineId12, [.29,.45,.27])
+            self.robot1_safe_box=self.bbox_generator_titan(0.8,self.pos,self.orn,self.lineId12, [.29,.45,.27])
             self.robot1_safe_box.append(self.robot1_safe_box[0])
    
             #drawing imaginary line from the heading corners of safe bbox to the goal
@@ -2731,7 +3905,7 @@ class Env(EnvBasePB):
             
             #self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.state_goal,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
             #print(self.pos2,"LL",self.mid_point_of_goals,"MM",self.Goals_pos);exit()
-            self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.mid_point_of_goals,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
+            # self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.mid_point_of_goals,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
             #self.gap_point1,self.gap_point2=self.gap[2],self.gap[3]
             lineIdgap_F=p.addUserDebugLine(self.gap_point1, self.gap_point2, lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.lineId_wp1_wp2)
             
@@ -2764,11 +3938,11 @@ class Env(EnvBasePB):
 
 
 
-            if self.dist_gapwp1<0.8:
+            if self.dist_gapwp1<0.5:
                     # self.time_to_wp1=self.steps
                     self.gapwp1_reach=True#self.gapwp1_reach + 1
             # self.time_to_wp2=0
-            if self.dist_gapwp2<0.8:
+            if self.dist_gapwp2<0.5:
                     # self.time_to_wp2=self.steps
                     self.gapwp2_reach=True#self.gapwp2_reach + 1
 
@@ -2798,12 +3972,12 @@ class Env(EnvBasePB):
             self.heading_line_end=self.find_position_B(self.pos,distance_d=self.args.detect_distance,angle_degrees=math.degrees(self.yaw))
             self.head_line=(self.pos[0], self.pos[1], 0.34), (self.heading_line_end[0], self.heading_line_end[1], 0.34)
 
-            self.side_line1_endg=self.find_position_B(self.robot1_safe_box[0],distance_d=self.args.detect_distance/2,angle_degrees=math.degrees(self.yaw))
-            self.side_line2_endg=self.find_position_B(self.robot1_safe_box[1],distance_d=self.args.detect_distance/2,angle_degrees=math.degrees(self.yaw))
+            self.side_line1_endg=self.find_position_B(self.robot1_safe_box[0],distance_d=0,angle_degrees=math.degrees(self.yaw))
+            self.side_line2_endg=self.find_position_B(self.robot1_safe_box[1],distance_d=0,angle_degrees=math.degrees(self.yaw))
 
-            self.side_line1g=self.robot1_safe_box[3], (self.side_line2_endg[0], self.side_line2_endg[1], 0.34)
+            self.side_line1g=self.robot1_bbox[3], (self.side_line2_endg[0], self.side_line2_endg[1], 0.34)
 
-            self.side_line2g=self.robot1_safe_box[2], (self.side_line1_endg[0], self.side_line1_endg[1], 0.34)
+            self.side_line2g=self.robot1_bbox[2], (self.side_line1_endg[0], self.side_line1_endg[1], 0.34)
 
             # self.side_line1_endg=self.find_position_B(self.robot1_bbox[0],distance_d=self.args.detect_distance/2,angle_degrees=math.degrees(self.yaw))
             # self.side_line2_endg=self.find_position_B(self.robot1_bbox[1],distance_d=self.args.detect_distance/2,angle_degrees=math.degrees(self.yaw))
@@ -2815,9 +3989,9 @@ class Env(EnvBasePB):
             if self.args.debug:
                 self.lineId=p.addUserDebugLine((self.pos[0], self.pos[1], 0.34), (self.heading_line_end[0], self.heading_line_end[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_heading)
 
-                self.lineId=p.addUserDebugLine((self.robot1_bbox[3][0], self.robot1_bbox[3][1], 0.34), (self.side_line1_endg[0], self.side_line1_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side2)
+                self.lineId_s1=p.addUserDebugLine((self.robot1_bbox[3][0], self.robot1_bbox[3][1], 0.34), (self.side_line1_endg[0], self.side_line1_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side2)
 
-                self.lineId=p.addUserDebugLine((self.robot1_bbox[2][0], self.robot1_bbox[2][1], 0.34), (self.side_line2_endg[0], self.side_line2_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side1)
+                self.lineId_s2=p.addUserDebugLine((self.robot1_bbox[2][0], self.robot1_bbox[2][1], 0.34), (self.side_line2_endg[0], self.side_line2_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side1)
 
             
                 
@@ -3244,6 +4418,9 @@ class Env(EnvBasePB):
 
     def set_Robots_ID(self, list_of_Robots_ID):
         self.All_Robot_ID=list_of_Robots_ID
+
+    def set_turn_both(self, list_of_turn_both):
+        self.turn_both=list_of_turn_both
         
 
         

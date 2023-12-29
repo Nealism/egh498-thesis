@@ -147,7 +147,7 @@ class Env(EnvBasePB):
         elif self.args.num_robots ==2:
             self.robottogoal_angles=[(self.robots[0],-5),(self.robots[1],5)]
             self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31])]
-            #self.external_robots_pos=[(self.robots[0],[0,0,0.31]),(self.robots[1],[0,2.5,0.31])]
+            # self.external_robots_pos=[(self.robots[0],[0,0,0.31]),(self.robots[1],[-2,-1.5,0.31])]
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
                 self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
                 self.external_goals_states.append(self.external_goal_state)
@@ -223,6 +223,8 @@ class Env(EnvBasePB):
         obs = []
         rews=[]
         dones=[]
+        self.Both_Robots_stuck=[]
+        self.turn_both=False
         # self.ob_dicts=[]
 
         # self.obstacles=[]
@@ -253,6 +255,17 @@ class Env(EnvBasePB):
             
             Robot.motor_action(action)
 
+            if self.args.gap_avoidance:
+                self.Both_Robots_stuck.append(Robot.robot1_near_robot2)
+
+
+            # print("self.Both_Robots_stuck",self.Both_Robots_stuck,len(self.Both_Robots_stuck))
+            if all(self.Both_Robots_stuck) and len(self.Both_Robots_stuck)==2:
+                
+                self.turn_both=True
+                # print("turn_both",self.turn_both)
+
+
         p.stepSimulation()
         #print("action_length",actions,"robot",self.robots)
         for action,Robot in zip(actions,self.robots):
@@ -264,6 +277,9 @@ class Env(EnvBasePB):
             Robot.set_external_robots_pos(self.external_robots_pos)
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
+
+            if self.args.gap_avoidance:
+                Robot.set_turn_both(self.turn_both)
             
                 
             ob,rew,done, self.ob_dict=Robot.return_step(action)
