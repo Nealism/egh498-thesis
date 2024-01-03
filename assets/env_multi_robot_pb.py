@@ -38,6 +38,10 @@ class Env(EnvBasePB):
                 self.ob_size = 18
             elif self.args.obstacle_avoidance:
                 self.ob_size = 16+2*(self.args.num_robots-1)
+
+            elif self.args.gap_avoidance and self.args.occupancy_map and self.args.use_perception:
+                    
+                self.ob_size = 6+2*(self.args.num_robots-1)
             elif self.args.gap_avoidance:
                 self.ob_size = 26+2*(self.args.num_robots-1)
             else:

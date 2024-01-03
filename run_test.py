@@ -35,6 +35,7 @@ def run(args):
     
     Env, args = default_arguments.get_env(args)   
     args.render = True
+    # args.render = False
     args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
