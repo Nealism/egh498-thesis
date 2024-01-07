@@ -63,13 +63,15 @@ class Env(EnvBasePB):
 
             elif self.args.gap_avoidance and self.args.occupancy_map and self.args.use_perception:
                 
-                self.ob_size = 6+2*(self.args.num_robots-1)
+                #print("owch")
+                self.ob_size = 6#+2 *(self.args.num_robots-1)
                 
             elif self.args.gap_avoidance:
                 
                 self.ob_size = 26+2*(self.args.num_robots-1)
             
             else:
+                #print("nowch")
                 self.ob_size = 6+2*(self.args.num_robots-1)
         self.Kp = 400
         self.initial_Kp = self.Kp
@@ -89,24 +91,47 @@ class Env(EnvBasePB):
 
             self.a=0.0
             self.b=0.0
+
             
-        if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
-            #parameters for gap curr
-            self.max_gap_width=1.5
-            #self.max_gap_width=2.5
-            self.decrease_gap_width=0#self.args.gap_decrease
-            self.final_gap_width=0.8
-            #parameters for tunnel curr
-            self.max_tunnel_depth = 5
-            self.increase_tunnel_depth = 0.2
+        if self.args.num_robots==1: 
+                   
+            if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
+                #parameters for gap curr
+                self.max_gap_width=1.5
+                #self.max_gap_width=2.5
+                self.decrease_gap_width=0#self.args.gap_decrease
+                self.final_gap_width=1
+                #parameters for tunnel curr
+                self.max_tunnel_depth = 0.1
+                self.increase_tunnel_depth = 0.1
+                
+                
+                
+            elif self.args.gap_avoidance:
+                self.max_gap_width=1
+                self.decrease_gap_width=0
+                self.max_tunnel_depth = 0.1
+                self.increase_tunnel_depth = 0.1
+        
+        elif self.args.num_robots>1:
             
-            
-            
-        elif self.args.gap_avoidance:
-            self.max_gap_width=30
-            self.decrease_gap_width=0
-            self.max_tunnel_depth = 0.1
-            self.increase_tunnel_depth = 0.1
+            if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
+                #parameters for gap curr
+                self.max_gap_width=6
+                #self.max_gap_width=2.5
+                self.decrease_gap_width=0#self.args.gap_decrease
+                self.final_gap_width=1
+                #parameters for tunnel curr
+                self.max_tunnel_depth = 0.1
+                self.increase_tunnel_depth = 0.1
+                
+                
+                
+            elif self.args.gap_avoidance:
+                self.max_gap_width=30
+                self.decrease_gap_width=0
+                self.max_tunnel_depth = 0.1
+                self.increase_tunnel_depth = 0.1
             
 
         # if self.args.gap_avoidance and self.args.cur and self.args.tunnel_curr:
@@ -321,6 +346,9 @@ class Env(EnvBasePB):
 
     def check_for_success(self):
         return len(self.cur_success) == 5 and (np.array(self.cur_success) == True).all()
+    
+    def check_both_for_success(self):
+        return len(self.All_Robot_ID[0].cur_success) == 5 and len(self.All_Robot_ID[1].cur_success) == 5 and (np.array(self.All_Robot_ID[0].cur_success) == True).all() and (np.array(self.All_Robot_ID[1].cur_success) == True).all()
 
     def reset(self, terrain=None, test=False, restore_state=None):
         
@@ -444,6 +472,8 @@ class Env(EnvBasePB):
         
         #########____EXPERT/GUIDED_CURRICULUM__########    
 
+        
+
         if (self.args.cur or self.args.expert_curr) and self.Kp > 0 and self.check_for_success():
             self.Kp = 0.75*self.Kp
             if self.Kp < 5:
@@ -460,26 +490,45 @@ class Env(EnvBasePB):
                 #print("cur_success", self.cur_success)			
             
         
-
         #GAP_CUrriculum: Reducing Gap Width Gradually
-        if self.args.gap_avoidance and (self.args.cur or self.args.gap_curr) and self.check_for_success():
+        if self.args.gap_avoidance and (self.args.cur or self.args.gap_curr):
             #if self.max_gap_width-self.decrease_gap_width - self.final_gap_width == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                 #self.decrease_gap_width = self.max_gap_width
-            if self.max_gap_width-self.decrease_gap_width == self.final_gap_width:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
-                #self.decrease_gap_width = self.max_gap_width-self.final_gap_width
-                self.decrease_gap_width = 0
-                self.cur_success = deque([0.0], maxlen=5)
-                #print("cur_success", self.cur_success)			
-            else:
-                self.decrease_gap_width += self.args.gap_decrease			
-                
-                self.cur_success = deque([0.0], maxlen=5)
+            
+            if self.args.num_robots>1 and self.check_both_for_success():
+                if self.max_gap_width-self.decrease_gap_width == self.final_gap_width:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
+                    #self.decrease_gap_width = self.max_gap_width-self.final_gap_width
+                    self.decrease_gap_width = 0
+                    #self.cur_success = deque([0.0], maxlen=5)
+                    #print("cur_success", self.cur_success)			
+                else:
+                    self.All_Robot_ID[0].decrease_gap_width += self.args.gap_decrease			
+                    self.All_Robot_ID[1].decrease_gap_width += self.args.gap_decrease
+                    #self.decrease_gap_width += self.args.gap_decrease			
+                    print("TOTTOOTOTOTO")
+
+                    self.cur_success = deque([0.0], maxlen=5)
+                    # self.All_Robot_ID[0].cur_success = deque([0.0], maxlen=5)
+                    # self.All_Robot_ID[1].cur_success = deque([0.0], maxlen=5)
+                    
+
+            elif self.args.num_robots==1 and self.check_for_success():
+                if self.max_gap_width-self.decrease_gap_width == self.final_gap_width:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
+                    #self.decrease_gap_width = self.max_gap_width-self.final_gap_width
+                    self.decrease_gap_width = 0
+                    #self.cur_success = deque([0.0], maxlen=5)
+                    #print("cur_success", self.cur_success)			
+                else:
+                    self.decrease_gap_width += self.args.gap_decrease			
+                    
+                    self.cur_success = deque([0.0], maxlen=5)
+        
                 
         #Tunnel_CUrriculum: Increasing the Tunnel/Gap length Gradually
         if self.args.gap_avoidance and (self.args.cur or self.args.tunnel_curr) and self.check_for_success():
             if self.max_tunnel_depth-self.increase_tunnel_depth == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                 self.increase_tunnel_depth = self.max_tunnel_depth
-                self.cur_success = deque([0.0], maxlen=5)
+                #self.cur_success = deque([0.0], maxlen=5)
                 #print("cur_success", self.cur_success)			
             else:
                 self.increase_tunnel_depth += 0.2			
@@ -782,6 +831,7 @@ class Env(EnvBasePB):
             rand_x = (mid_point_robots[0] + mid_point_goals[0]) / 2
             rand_y = (mid_point_robots[1] + mid_point_goals[1]) / 2
             
+        
         else:
             #Equation of the line trajectory from moving robot to goal
             if (initial_x-state_object[0])==0:
@@ -812,6 +862,7 @@ class Env(EnvBasePB):
         #print("state_obj",state_object)
         if self.args.gap_avoidance:
             angle = np.arctan2((mid_point_robots[1]-mid_point_goals[1]), (mid_point_robots[0]-mid_point_goals[0]))
+        
         else:
             angle = np.arctan2((initial_y-state_object[1]), (initial_x-state_object[0]))
         # target_angle = angle - 90 
@@ -909,7 +960,7 @@ class Env(EnvBasePB):
         #         self.exp_actions[0] = 0.0
         #         self.exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
 
-        if self.args.gap_avoidance and self.args.num_robots > 1:
+        if self.args.gap_avoidance and self.args.MA_bootstrap:
         # ####################_______WAY_POINT_SYSTEM______#####
             #make sure to uncomment it when remove wall
             # if self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2 or self.intersection_r1_r:
@@ -975,8 +1026,21 @@ class Env(EnvBasePB):
             #print(self.exp_actions,self)
             
 
-            
-        elif self.args.gap_avoidance and self.args.num_robots == 1:
+        elif self.args.gap_avoidance and (self.args.regular_bootstrap):
+
+            self.exp_actions[0] = 0.1
+            self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp1, -1, 1)
+            #print("wp1")
+            if self.gapwp1_reach:
+                self.exp_actions[0] = 0.08
+                self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp2, -1, 1)
+                #print("wp2")
+                if self.gapwp2_reach:
+                    self.exp_actions[0] = 0.08
+                    self.exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
+                    #print("Goal")
+
+        elif self.args.gap_avoidance and (self.args.num_robots == 1):
 
             self.exp_actions[0] = 0.06
             self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp1, -1, 1)
@@ -1322,7 +1386,7 @@ class Env(EnvBasePB):
         
         elif self.args.gap_avoidance and self.args.occupancy_map and self.args.use_perception:
             
-            return np.array(self.wp_pos_robot + self.other_robots_positions +[self.roll, self.pitch, self.vx, self.yaw_vel])
+            return np.array(self.wp_pos_robot +[self.roll, self.pitch, self.vx, self.yaw_vel])
 
         elif self.args.gap_avoidance:
             
@@ -1634,13 +1698,13 @@ class Env(EnvBasePB):
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
         elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
             goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+            #heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
         elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
             goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+            #heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
         else:
             if abs(self.heading_error) < 0.5:
-                goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         
         
@@ -2103,14 +2167,17 @@ class Env(EnvBasePB):
             goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
         elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
-            goal = np.exp(-0.5*(0.2 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -3*0.25*np.exp(-0.2*self.heading_error_to_wall1**2)
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
         elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
-            goal = np.exp(-0.5*(0.2 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -3*0.25*np.exp(-0.2*self.heading_error_to_wall2**2)
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2) and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            heading = (-3*0.25*np.exp(-0.5*self.heading_error_to_wall1**2))-(3*0.25*np.exp(-0.5*self.heading_error_to_wall2**2))
         else:
             if abs(self.heading_error) < 0.5:
-                goal = np.exp(-0.5*(0.2 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         
         
@@ -5579,14 +5646,24 @@ class Env(EnvBasePB):
 
 
 
-
-            if self.dist_gapwp1<0.5:
+            if self.args.num_robots>1:
+                if self.dist_gapwp1<3:
                     # self.time_to_wp1=self.steps
                     self.gapwp1_reach=True#self.gapwp1_reach + 1
-            # self.time_to_wp2=0
-            if self.dist_gapwp2<0.5:
-                    # self.time_to_wp2=self.steps
-                    self.gapwp2_reach=True#self.gapwp2_reach + 1
+                # self.time_to_wp2=0
+                if self.dist_gapwp2<3:
+                        # self.time_to_wp2=self.steps
+                        self.gapwp2_reach=True#self.gapwp2_reach + 1
+
+            
+            else:
+                if self.dist_gapwp1<0.5:
+                        # self.time_to_wp1=self.steps
+                        self.gapwp1_reach=True#self.gapwp1_reach + 1
+                # self.time_to_wp2=0
+                if self.dist_gapwp2<0.5:
+                        # self.time_to_wp2=self.steps
+                        self.gapwp2_reach=True#self.gapwp2_reach + 1
 
             # print("self.time_to_wp1",self.time_to_wp1,"self.time_to_wp2",self.time_to_wp2)
             # To set robot collision with gap walls
@@ -6542,4 +6619,8 @@ class Env(EnvBasePB):
         point =(center_x, center_y,z1)
         return point
                 
+
+
+
+
     

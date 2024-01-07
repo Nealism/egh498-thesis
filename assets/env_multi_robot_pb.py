@@ -40,11 +40,12 @@ class Env(EnvBasePB):
                 self.ob_size = 16+2*(self.args.num_robots-1)
 
             elif self.args.gap_avoidance and self.args.occupancy_map and self.args.use_perception:
-                    
-                self.ob_size = 6+2*(self.args.num_robots-1)
+                #print("owch")    
+                self.ob_size = 6#+2 *(self.args.num_robots-1)
             elif self.args.gap_avoidance:
                 self.ob_size = 26+2*(self.args.num_robots-1)
             else:
+                #print("nowch")
                 self.ob_size = 6+2*(self.args.num_robots-1)
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
@@ -201,7 +202,7 @@ class Env(EnvBasePB):
                 
 
 
-        if self.args.insert_wall:
+        if self.args.gap_avoidance and self.args.insert_wall:
             # self.rectangle_id1=self.square
             # self.rectangle_id2=self.square
 

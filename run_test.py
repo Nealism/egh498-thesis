@@ -34,21 +34,35 @@ def run(args):
     PATH = path_home + latest_folder
     
     Env, args = default_arguments.get_env(args)   
-    args.render = True
-    # args.render = False
+    #args.render = True
+    args.render = False
     args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
     pol = torch.load(PATH + "/model.pt")
     obs = env.reset()
     n=0
+
+    if args.use_perception:
+        im = env.get_image()
+
     while True:
-        action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
+        if args.use_perception:
+            action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+
+        else:
+            action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
+
         obs, _, done, _ = env.step(action)
+
+        # if use_perception:
+        #         next_im = env.get_image()
         
 
         if done==[True] or env.steps > args.max_ep_len:
             obs = env.reset()
+            if args.use_perception:
+                im = env.get_image()
             n=n+1
             if n==100:
                 print("100 Iteration Done")
