@@ -8,13 +8,15 @@ declare -a Experiments=(
                       # "sg13/r43GD.1EC9"
                       # "sg13/r43GD.25EC9"
 
-                      "sg25/r6TC0"
-                      "sg25/r7TC0"
-                      "sg25/r8TC0"
-                      "sg25/r9TC0"
-                      "sg25/r10TC0"
-                      "sg25/r11TC0"
-                      "sg25/r12TC0"
+                      # "sg25/r6TC0"
+                      # "sg25/r7TC0"
+                      # "sg25/r8TC0"
+                      # "sg25/r9TC0"
+                      # "sg25/r10TC0"
+                      # "sg25/r11TC0"
+                      # "sg25/r12TC0"
+
+
                       # "sg25/r13TC0"
                       # "sg25/r14TC0"
                       # "sg25/r15TC0"
@@ -77,22 +79,27 @@ declare -a Arguments=(
     
     # "--cpu 64 --env multi_robot_pb --reward_fn 30 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
 
-    "--cpu 64 --env multi_robot_pb --reward_fn 6 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
+    
+    
+    # "--cpu 64 --env multi_robot_pb --reward_fn 6 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
 
-    "--cpu 64 --env multi_robot_pb --reward_fn 7 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
+    # "--cpu 64 --env multi_robot_pb --reward_fn 7 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
 
-    "--cpu 64 --env multi_robot_pb --reward_fn 8 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
+    # "--cpu 64 --env multi_robot_pb --reward_fn 8 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
 
-    "--cpu 64 --env multi_robot_pb --reward_fn 9 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
+    # "--cpu 64 --env multi_robot_pb --reward_fn 9 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
 
-    "--cpu 64 --env multi_robot_pb --reward_fn 10 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
+    # "--cpu 64 --env multi_robot_pb --reward_fn 10 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
 
 
 
-    "--cpu 64 --env multi_robot_pb --reward_fn 11 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
+    # "--cpu 64 --env multi_robot_pb --reward_fn 11 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
 
-    "--cpu 64 --env multi_robot_pb --reward_fn 12 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
+    # "--cpu 64 --env multi_robot_pb --reward_fn 12 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
 
+    
+    
+    
     # "--cpu 64 --env multi_robot_pb --reward_fn 13 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --detect_distance 2 --insert_wall --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
 
     # "--cpu 64 --env multi_robot_pb --reward_fn 14 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --detect_distance 2 --insert_wall --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"

@@ -199,8 +199,11 @@ class Env(EnvBasePB):
                 self.gap_walls2_centre.append(Robot.rectangle2_centre)
                 self.gap_walls_thickness.append(Robot.tunnel_depth)
 
-                
-
+        if self.args.num_robots>1:
+            self.max_gap_among_all_robots_individual_gap_width=max(self.All_Robot_ID[0].gap_width,self.All_Robot_ID[1].gap_width)  
+        elif self.args.num_robots==1:
+            self.max_gap_among_all_robots_individual_gap_width=self.All_Robot_ID[0].gap_width
+        #print("GP_MA",self.max_gap_among_all_robots_individual_gap_width,self.All_Robot_ID[0].gap_width,self.All_Robot_ID[1].gap_width)
 
         if self.args.gap_avoidance and self.args.insert_wall:
             # self.rectangle_id1=self.square
@@ -285,6 +288,7 @@ class Env(EnvBasePB):
 
             if self.args.gap_avoidance:
                 Robot.set_turn_both(self.turn_both)
+                Robot.set_max_robotcode_gap_width(self.max_gap_among_all_robots_individual_gap_width)
             
                 
             ob,rew,done, self.ob_dict=Robot.return_step(action)
