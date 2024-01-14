@@ -93,6 +93,10 @@ class Env(EnvBasePB):
             self.a=0.0
             self.b=0.0
 
+
+        if self.args.gap_avoidance and (self.args.cur or self.args.collision_likelihood_curr) and self.args.num_robots>1:
+            self.increase_collision_rate=-2
+            
             
         if self.args.num_robots==1: 
                    
@@ -288,7 +292,7 @@ class Env(EnvBasePB):
         if self.args.obstacle_avoidance and self.args.gap_avoidance:
             return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "GC: Gap Width":self.max_gap_among_all_robots_individual_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth,"CLC: distance between obstacle and path": self.a-self.b, "EC: Kp": self.Kp }
         elif self.args.gap_avoidance:
-            return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "EC: Kp": self.Kp, "GC: Gap Width":self.max_gap_among_all_robots_individual_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth,"Time_to_Goal":self.time_to_goal,"Time_to_gapwp1":self.time_to_gapwp1,"Time_gapwp1_gapwp2":self.time_to_gapwp2-self.time_to_gapwp1,"Time_gapwp2_goal":self.time_to_goal-self.time_to_gapwp2}
+            return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "EC: Kp": self.Kp, "GC: Gap Width":self.max_gap_among_all_robots_individual_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth,"Time_to_Goal":self.time_to_goal,"Time_to_gapwp1":self.time_to_gapwp1,"Time_gapwp1_gapwp2":self.time_to_gapwp2-self.time_to_gapwp1,"Time_gapwp2_goal":self.time_to_goal-self.time_to_gapwp2, "Collision_likelihood": self.increase_collision_rate}
         else:
             return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "EC: Kp": self.Kp }
 
@@ -472,8 +476,7 @@ class Env(EnvBasePB):
     
         ######___________ALL CURRICULUM STAGES ARE HERE__________________##################################################
         
-        #########____EXPERT/GUIDED_CURRICULUM__########    
-
+        #########____EXPERT/GUIDED_CURRICULUM__########   
         
 
         if (self.args.cur or self.args.expert_curr) and self.Kp > 0 and self.check_for_success():
@@ -482,6 +485,32 @@ class Env(EnvBasePB):
                 self.Kp = 0
             self.cur_success = deque([0.0], maxlen=5)
             print(self.Kp)
+
+
+        for robot, angles in self.robottogoal_angles:
+            if robot == self:
+                # Assuming there's only one value in the angles list for simplicity
+                self.robottogoal_angle = angles#[0]
+                
+                break
+            else:
+                # If the robot_name is not found, handle it accordingly
+                print(f"Robot {self} not found in robottogoal_angles.")
+
+        # self.robottogoal_angle += 5
+
+               
+
+        if self.args.gap_avoidance and (self.args.cur or self.args.collision_likelihood_curr) and self.args.num_robots>1 and self.check_for_success():
+            
+            print("self.increase_rate",self.increase_collision_rate)
+            self.increase_collision_rate += 1
+            self.robottogoal_angle *= - self.increase_collision_rate
+
+
+            if self.increase_collision_rate >= 2:
+                self.increase_collision_rate=2
+            self.cur_success = deque([0.0], maxlen=5)
 
 
         
@@ -605,7 +634,7 @@ class Env(EnvBasePB):
             self.set_position(pos, orn, robot_id=self.Id)
             #self.h=0
 
-        self.robottogoal_angle=None
+        # self.robottogoal_angle=None
         self.external_goals_states=[]
         self.external_robots_states=[]
         
@@ -620,18 +649,18 @@ class Env(EnvBasePB):
         self.mid_point_of_robots=self.calculate_midpoint(self.external_robots_states[0],self.external_robots_states[-1])
 
         # Function to move the goal and the static robot
-        for robot, angles in self.robottogoal_angles:
-            if robot == self:
-                # Assuming there's only one value in the angles list for simplicity
-                self.robottogoal_angle = angles#[0]
-                break
-            else:
-                # If the robot_name is not found, handle it accordingly
-                print(f"Robot {self} not found in robottogoal_angles.")
-            #print(self.robottogoal_angle)
+        
+        
+    
+
+        
+
+
+
         if self.args.gap_avoidance:
             
 
+            print("reset self.robottogoal_angle",self.robottogoal_angle)
             
             self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
         else:
@@ -1053,11 +1082,11 @@ class Env(EnvBasePB):
             self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp1, -1, 1)
             #print("wp1")
             if self.gapwp1_reach:
-                self.exp_actions[0] = 0.08
+                self.exp_actions[0] = 0.1
                 self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp2, -1, 1)
                 #print("wp2")
                 if self.gapwp2_reach:
-                    self.exp_actions[0] = 0.08
+                    self.exp_actions[0] = 0.1
                     self.exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
                     #print("Goal")
 
@@ -1268,20 +1297,22 @@ class Env(EnvBasePB):
                 #print(robottogoal_angle)   
                 # self.move_goal_and_static_robot(self.pos[0], self.pos[1], self.yaw,robottogoal_angle=robottogoal_angle)
             self.exp_actions = [0.0]*2
-            self.robottogoal_angle=None
+            # self.robottogoal_angle=None
 
-            for robot, angles in self.robottogoal_angles:
-                if robot == self:
-                    # Assuming there's only one value in the angles list for simplicity
-                    self.robottogoal_angle = angles
-                    break
-                else:
-                    # If the robot_name is not found, handle it accordingly
-                    print(f"Robot {self} not found in robottogoal_angles.")
+            # for robot, angles in self.robottogoal_angles:
+            #     if robot == self:
+            #         # Assuming there's only one value in the angles list for simplicity
+            #         self.robottogoal_angle = angles
+            #         break
+            #     else:
+            #         # If the robot_name is not found, handle it accordingly
+            #         print(f"Robot {self} not found in robottogoal_angles.")
                 
             if self.args.gap_avoidance:
                 
                 print("opposite_angle",self.opposite_angle,self.robottogoal_angle)
+                print("observation self.robottogoal_angle",self.robottogoal_angle)
+
                 self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.opposite_angle-self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
 
                 self.counter +=1
@@ -2096,13 +2127,13 @@ class Env(EnvBasePB):
             heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
         elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2):
             goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -6*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
+            heading = -1*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
         elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
             goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -6*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
+            heading = -1*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
         else:
             if abs(self.heading_error) < 0.5:
-                goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         
         
