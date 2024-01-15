@@ -39,9 +39,20 @@ class Env(EnvBasePB):
             elif self.args.obstacle_avoidance:
                 self.ob_size = 16+2*(self.args.num_robots-1)
 
-            elif self.args.gap_avoidance and self.args.occupancy_map and self.args.use_perception:
+            elif self.args.gap_avoidance and self.args.experiment_1 and self.args.occupancy_map and self.args.use_perception:
                 #print("owch")    
                 self.ob_size = 6#+2 *(self.args.num_robots-1)
+
+            elif self.args.gap_avoidance and self.args.experiment_2 and self.args.occupancy_map and self.args.use_perception:
+                
+                #print("owch")
+                self.ob_size = 6+2 *(self.args.num_robots-1)
+
+            elif self.args.gap_avoidance and self.args.experiment_3 and self.args.occupancy_map and self.args.use_perception:
+                
+                #print("owch")
+                self.ob_size = 6+5 *(self.args.num_robots-1)
+                
             elif self.args.gap_avoidance:
                 self.ob_size = 26+2*(self.args.num_robots-1)
             else:
@@ -109,6 +120,10 @@ class Env(EnvBasePB):
         self.wall1_corners=[]
         self.wall2_corners=[]
         self.All_Robot_ID=[]
+
+        self.robots_orn_with_IDx=[]
+        self.robots_vx_with_IDx=[]
+        self.robots_angular_vx_with_IDx=[]
         
         
 
@@ -150,7 +165,11 @@ class Env(EnvBasePB):
                 self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         elif self.args.num_robots ==2:
-            self.robottogoal_angles=[(self.robots[0],-5),(self.robots[1],5)]
+            if self.args.collision_likelihood_curr:
+                self.robottogoal_angles=[(self.robots[0],-5),(self.robots[1],5)]
+            elif not self.args.collision_likelihood_curr:
+                self.robottogoal_angles=[(self.robots[0],15),(self.robots[1],-15)]
+
             self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31])]
             # self.external_robots_pos=[(self.robots[0],[0,0,0.31]),(self.robots[1],[-2,-1.5,0.31])]
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
@@ -181,6 +200,10 @@ class Env(EnvBasePB):
             Robot.set_Robots_ID(self.All_Robot_ID)
             Robot.set_robot_bbox(self.robots_bbox)
             Robot.set_allrobot_positions(self.robots_pos_with_IDx)
+            Robot.set_allrobot_orientation(self.robots_orn_with_IDx)
+            Robot.set_allrobot_vx(self.robots_vx_with_IDx)
+            Robot.set_allrobot_angular_velocity(self.robots_angular_vx_with_IDx)
+
             Robot.set_external_goals_state(self.external_goals_states_with_IDx)
             Robot.set_all_goal_poses(self.Goals_pos)
             Robot.set_external_robots_pos(self.external_robots_pos)
@@ -199,9 +222,9 @@ class Env(EnvBasePB):
                 self.gap_walls2_centre.append(Robot.rectangle2_centre)
                 self.gap_walls_thickness.append(Robot.tunnel_depth)
 
-        if self.args.num_robots>1 and self.args.gap_avoidance and self.args.gap_curr:
+        if self.args.num_robots>1 and self.args.gap_avoidance:
             self.max_gap_among_all_robots_individual_gap_width=max(self.All_Robot_ID[0].gap_width,self.All_Robot_ID[1].gap_width)  
-        elif self.args.num_robots==1 and self.args.gap_avoidance and self.args.gap_curr:
+        elif self.args.num_robots==1 and self.args.gap_avoidance:
             self.max_gap_among_all_robots_individual_gap_width=self.All_Robot_ID[0].gap_width
 
 
@@ -283,6 +306,10 @@ class Env(EnvBasePB):
             
             Robot.set_robot_bbox(self.robots_bbox)
             Robot.set_allrobot_positions(self.robots_pos_with_IDx)
+            Robot.set_allrobot_orientation(self.robots_orn_with_IDx)
+            Robot.set_allrobot_vx(self.robots_vx_with_IDx)
+            Robot.set_allrobot_angular_velocity(self.robots_angular_vx_with_IDx)
+
             Robot.set_all_goal_poses(self.Goals_pos)
             Robot.set_robottogoal_angle(self.robottogoal_angles)
             Robot.set_external_robots_pos(self.external_robots_pos)
@@ -359,6 +386,9 @@ class Env(EnvBasePB):
         self.robots_pos_with_IDx=[]
         self.wall1_corners=[]
         self.wall2_corners=[]
+        self.robots_orn_with_IDx=[]
+        self.robots_vx_with_IDx=[]
+        self.robots_angular_vx_with_IDx=[]
         
 
         # self.rectangle_id3=self.create_rectangle(corners=self.gap[0],wall_length=20,wall_width=self.tunnel_depth,wall_height=0.5,orientation=self.gap_orn)
@@ -389,6 +419,11 @@ class Env(EnvBasePB):
             #print(Robot,"s",self.robots)
             #self.ns.append(n)
             #self.ns.append(n)
+
+            self.robots_orn_with_IDx.append((Robot,[Robot.yaw]))
+            self.robots_vx_with_IDx.append((Robot,[Robot.vx]))
+            self.robots_angular_vx_with_IDx.append((Robot,[Robot.yaw_vel]))
+            
             self.robots_bbox.append((Robot,Robot.robot1_bbox))
             self.robots_pos_with_IDx.append((Robot,list(Robot.pos)))
             self.robots_pos.append(Robot.pos)
