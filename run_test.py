@@ -13,10 +13,17 @@ def run(args):
 
     if args.hpc:
         path_home = "/hpc-scratch/" + home.split("/")[-1]
+    elif args.home:
+        path_home = home 
     else:
         path_home = "/scratch3/" + home.split("/")[-1]
 
-    path_home += "/results/" + args.env + "/" + args.exp + "/"
+
+    if args.home:
+        path_home += "/behaviour_rl/" +  args.exp + "/"
+
+    else:
+        path_home += "/results/" + args.env + "/" + args.exp + "/"
 
     if args.folder == "":
         # Get latest experiment (eg: latest model inside test folder)

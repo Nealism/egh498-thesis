@@ -15,6 +15,7 @@ def get_defaults():
     parser.add_argument('--urdf', default=False, action="store_true")
     parser.add_argument('--cur', default=False, action="store_true")
     parser.add_argument('--hpc', default=False, action="store_true")
+    parser.add_argument('--home', default=False, action="store_true")
     parser.add_argument('--test', default=False, action="store_true")
     parser.add_argument('--just_expert', default=False, action="store_true")
     parser.add_argument('--use_perception', default=False, action="store_true")
@@ -118,8 +119,9 @@ def get_defaults():
     parser.add_argument('--step_fn', type=int, default=1)
     parser.add_argument('--cmd_scaling', type=float, default=1.0)
     parser.add_argument('--load_path', default="")
-    parser.add_argument('--detect_distance', type=int, default=4)
+    parser.add_argument('--detect_distance', type=float, default=4)
     parser.add_argument('--gap_decrease', default=0.5, type=float)
+    parser.add_argument('--starting_gap_width', default=10, type=float)
 
 
     # ========================================================================

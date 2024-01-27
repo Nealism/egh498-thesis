@@ -52,6 +52,10 @@ class Env(EnvBasePB):
                 
                 #print("owch")
                 self.ob_size = 7+5 *(self.args.num_robots-1)
+
+            elif self.args.gap_avoidance and self.args.experiment_3:
+
+                self.ob_size = 27+5*(self.args.num_robots-1)
                 
             elif self.args.gap_avoidance:
                 self.ob_size = 26+2*(self.args.num_robots-1)
