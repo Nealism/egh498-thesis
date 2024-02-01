@@ -4,49 +4,49 @@
 # Experiment type
 # ==================================================================================
 declare -a Experiments=(
-                      "ME14/r13MGE10"
-                      "ME14/r14MGE10"
-                      "ME14/r15MGE10"
-                      "ME14/r16MGE10"
-                      "ME14/r17MGE10"
-                      "ME14/r18MGE10"
+                      "ME16/r13MGE10"
+                      "ME16/r14MGE10"
+                      "ME16/r15MGE10"
+                      "ME16/r16MGE10"
+                      "ME16/r17MGE10"
+                      "ME16/r18MGE10"
 
-                      "ME14/r13MGE1.5"
-                      "ME14/r14MGE1.5"
-                      "ME14/r15MGE1.5"
-                      "ME14/r16MGE1.5"
-                      "ME14/r17MGE1.5"
-                      "ME14/r18MGE1.5"
-
-
-                      "ME14/r13MTGE10"
-                      "ME14/r14MTGE10"
-                      "ME14/r15MTGE10"
-                      "ME14/r16MTGE10"
-                      "ME14/r17MTGE10"
-                      "ME14/r18MTGE10"
-
-                      "ME14/r13MTGE1.5"
-                      "ME14/r14MTGE1.5"
-                      "ME14/r15MTGE1.5"
-                      "ME14/r16MTGE1.5"
-                      "ME14/r17MTGE1.5"
-                      "ME14/r18MTGE1.5"
+                      "ME16/r13MGE1.5"
+                      "ME16/r14MGE1.5"
+                      "ME16/r15MGE1.5"
+                      "ME16/r16MGE1.5"
+                      "ME16/r17MGE1.5"
+                      "ME16/r18MGE1.5"
 
 
-                      "ME14/r13TGE10"
-                      "ME14/r14TGE10"
-                      "ME14/r15TGE10"
-                      "ME14/r16TGE10"
-                      "ME14/r17TGE10"
-                      "ME14/r18TGE10"
+                      "ME16/r13MTGE10"
+                      "ME16/r14MTGE10"
+                      "ME16/r15MTGE10"
+                      "ME16/r16MTGE10"
+                      "ME16/r17MTGE10"
+                      "ME16/r18MTGE10"
 
-                      "ME14/r13TGE1.5"
-                      "ME14/r14TGE1.5"
-                      "ME14/r15TGE1.5"
-                      "ME14/r16TGE1.5"
-                      "ME14/r17TGE1.5"
-                      "ME14/r18TGE1.5"
+                      "ME16/r13MTGE1.5"
+                      "ME16/r14MTGE1.5"
+                      "ME16/r15MTGE1.5"
+                      "ME16/r16MTGE1.5"
+                      "ME16/r17MTGE1.5"
+                      "ME16/r18MTGE1.5"
+
+
+                      "ME16/r13TGE10"
+                      "ME16/r14TGE10"
+                      "ME16/r15TGE10"
+                      "ME16/r16TGE10"
+                      "ME16/r17TGE10"
+                      "ME16/r18TGE10"
+
+                      "ME16/r13TGE1.5"
+                      "ME16/r14TGE1.5"
+                      "ME16/r15TGE1.5"
+                      "ME16/r16TGE1.5"
+                      "ME16/r17TGE1.5"
+                      "ME16/r18TGE1.5"
 
                       
 
@@ -180,7 +180,7 @@ declare -a Arguments=(
     
     "--cpu 64 --env multi_robot_pb --num_robots 2 --reward_fn 17 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1 --insert_wall --use_perception --occupancy_map --gap_curr --gap_decrease 0.25 --starting_gap_width 10 --MA_bootstrap --load_path ~/behaviour_rl/Saved_models/r18MGD.5E/2024_01_20_13_36_49/model.pt --experiment_3"
 
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --reward_fn 18 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1 --insert_wall --use_perception --occupancy_map --gap_curr --gap_decrease 0.25 --starting_gap_width 10 --MA_bootstrap --load_path ~/behaviour_rl/Saved_models/r18MGD.5E/2024_01_20_13_36_49/model.pt --experiment_3"
+     "--cpu 64 --env multi_robot_pb --num_robots 2 --reward_fn 18 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1 --insert_wall --use_perception --occupancy_map --gap_curr --gap_decrease 0.25 --starting_gap_width 10 --MA_bootstrap --load_path ~/behaviour_rl/Saved_models/r18MGD.5E/2024_01_20_13_36_49/model.pt --experiment_3"
 
 
 
@@ -196,7 +196,7 @@ declare -a Arguments=(
     
     "--cpu 64 --env multi_robot_pb --num_robots 2 --reward_fn 17 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1 --insert_wall --use_perception --occupancy_map --gap_curr --gap_decrease 0.25 --starting_gap_width 1.5 --MA_bootstrap --load_path ~/behaviour_rl/Saved_models/r18MGD.5E/2024_01_20_13_36_49/model.pt --experiment_3"
 
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --reward_fn 18 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1 --insert_wall --use_perception --occupancy_map --gap_curr --gap_decrease 0.25 --starting_gap_width 1.5 --MA_bootstrap --load_path ~/behaviour_rl/Saved_models/r18MGD.5E/2024_01_20_13_36_49/model.pt --experiment_3" 
+     "--cpu 64 --env multi_robot_pb --num_robots 2 --reward_fn 18 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1 --insert_wall --use_perception --occupancy_map --gap_curr --gap_decrease 0.25 --starting_gap_width 1.5 --MA_bootstrap --load_path ~/behaviour_rl/Saved_models/r18MGD.5E/2024_01_20_13_36_49/model.pt --experiment_3" 
 
 
 

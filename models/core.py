@@ -129,22 +129,26 @@ class MLPActorCriticPerception(nn.Module):
     def __init__(self, observation_space,  im_dim, action_space,
                  hidden_sizes=(64,64), activation=nn.Tanh):
         super().__init__()
-
         obs_dim = observation_space.shape[0]
         # # policy builder depends on action space
         if isinstance(action_space, Box):
             self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape[0], hidden_sizes, activation)
-
+        # print(self.pi)
         # build value function
         self.v  = MLPCriticPerception(obs_dim, hidden_sizes, activation, self.pi.z_net)
 
 
     def step(self, obs, im, stochastic=True):
         pi = self.pi._distribution(obs, im)
+        
+        # print(pi)
+
         if stochastic:
             a = pi.sample()
+            # print(a)
         else:
             a = self.pi.mu
+        
         logp_a = self.pi._log_prob_from_distribution(pi, a)
         v = self.v(obs, im)
 

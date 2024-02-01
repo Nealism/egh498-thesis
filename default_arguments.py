@@ -122,6 +122,8 @@ def get_defaults():
     parser.add_argument('--detect_distance', type=float, default=4)
     parser.add_argument('--gap_decrease', default=0.5, type=float)
     parser.add_argument('--starting_gap_width', default=10, type=float)
+    parser.add_argument('--final_gap_width', default=3, type=float)
+    
 
 
     # ========================================================================

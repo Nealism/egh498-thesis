@@ -360,8 +360,8 @@ class Env(EnvBasePB):
             
             M=self.visualize_maps(self.global_map_list, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos,self.gap_walls1_centre,self.gap_walls2_centre)
             #N=self.visualize_maps(self.global_map2, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos)
-            #self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
-            #self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
+            # self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
+            # self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
             self.occupancy_maps=deepcopy(self.local_heightmaps)
             #print(self.occupancy_maps)
             self.global_map_list=[np.zeros((self.global_num_rows, self.global_num_cols), dtype=np.float32) for _ in range(self.args.num_robots)]
@@ -542,7 +542,8 @@ class Env(EnvBasePB):
 
         for robot_position, goal_position,local_heightmap,local_heightmap_position, obstalce_position,global_map in zip(robot_positions,goal_positions, local_heightmaps,local_heightmap_positions,obstalce_positions,global_map_list):
             #Scale the maps for visualization
-            scaled_global_map = (global_map - np.min(global_map)) / (np.max(global_map) - np.min(global_map)) * 200
+            # print( (np.max(global_map) - np.min(global_map)))
+            scaled_global_map = (global_map - np.min(global_map))  * 200
             # Convert to uint8 and create color images
             scaled_global_map = scaled_global_map.astype(np.uint8)
             global_map_image = cv2.cvtColor(scaled_global_map, cv2.COLOR_GRAY2BGR)
@@ -550,11 +551,13 @@ class Env(EnvBasePB):
             global_map_image[:, :, :] = 128  # Blue channel to 255 for global map (blue color)
             
             #print("WEW",local_heightmaps,len(local_heightmaps), local_heightmap_positions,len(local_heightmap_positions))
-            scaled_heightmap = (local_heightmap - np.min(local_heightmap)) / (np.max(local_heightmap) - np.min(local_heightmap)) * 200
+            # print(local_heightmap)
+            # print((np.max(local_heightmap) - np.min(local_heightmap)))
+            scaled_heightmap = (local_heightmap - np.min(local_heightmap))  * 200
             scaled_heightmap = scaled_heightmap.astype(np.uint8)
             heightmap_image = cv2.cvtColor(scaled_heightmap, cv2.COLOR_GRAY2BGR)
             heightmap_image[:, :, 1] = 155  # Green channel to 255 for local heightmap (green color)
-            #print("HP",heightmap_image)
+            # print("HP",heightmap_image)
             # Calculate the position of the local heightmap within the global map
             local_map_x_min = local_heightmap_position[0]
             local_map_x_max = local_heightmap_position[1]
@@ -657,7 +660,7 @@ class Env(EnvBasePB):
             for i in range(len(self.robots_pos)):
                 global_map_image = cv2.circle(global_map_image, (turtlebots_y_index[i], turtlebots_x_index[i]), 5, (255, 0, 0), -1)
                 global_map_image = cv2.circle(global_map_image, (Goals_y_index[i], Goals_x_index[i]), 5, (0, 255, 0), -1)
-            
+                # print(self.global_resolution)
                 # print("index",index,"i",i)
                 if index!=i:
                 #     print("True")

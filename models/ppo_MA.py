@@ -12,6 +12,7 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 import os
 import psutil
+import pandas as pd
 
 class PPOBufferPerception:
     """
@@ -449,7 +450,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
     ob_size = env.observation_space.shape
     ac_size = env.action_space.shape
-    print(ob_size,ac_size)
+    # print(ob_size,ac_size)
     #print("obs",env.observation_space,"action",env.action_space)
     
 
@@ -638,6 +639,11 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     #print("os",np.array(o))
     #ep_ret_list=[]
     # Main loop: collect experience in env and update/log each epoch
+    # action_saving1=[]
+    # action_saving2=[]
+    # action_saving3=[]
+    # action_saving4=[]
+
     for epoch in range(epochs):
         for t in range(local_steps_per_epoch):
             if use_perception:
@@ -645,7 +651,20 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             else:
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
 
-            #print("a",a,"O-shape",np.array(o).shape,"im-shape",np.array(im).shape)
+            # # print("a",a,"O-shape",np.array(o).shape)
+            # action_saving1.append([a[0][0]])
+            # action_saving2.append([a[0][1]])
+            # action_saving3.append([a[1][0]])
+            # action_saving4.append([a[1][1]])
+            # # print("act",action_saving)
+            # column1=pd.DataFrame(action_saving1)
+            # column2=pd.DataFrame(action_saving2)
+            # column3=pd.DataFrame(action_saving3)
+            # column4=pd.DataFrame(action_saving4)
+            # datafrm=pd.concat([column1,column2,column3,column4],axis=1)
+            # # print("datafrm",datafrm)
+            # datafrm.to_csv("action.csv")
+
             next_o, r, d, _ = env.step(a)
             #print("O_len",len(next_o),len(next_o[0]),"o",next_o)
 
@@ -681,7 +700,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
                 ep_lens[i] += 1
 
-            #print(ep_rets,ep_lens)
+            # print(ep_rets,ep_lens)
             #print(ep_ret_list, len(ep_ret_list))
             #print(len(ep_ret_list),(ep_ret_list))
 
@@ -724,7 +743,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 #if (timeout or epoch_ended) and not all(d):
                 if (timeout or epoch_ended) and not all(d):
                     if use_perception:
-                        _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                        _, v, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                     else:
                         _, v, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
                         #print("what is that tensor with 2 element",v.detach().numpy(), type(v.detach().numpy()))
@@ -794,6 +813,9 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
         loggers = [EpochLogger(**logger_kwargs) for _ in range(robot_number)]
         t1 = time.time()
+    
+        
+
 
 
 def run_test(env, model, use_perception=False):
