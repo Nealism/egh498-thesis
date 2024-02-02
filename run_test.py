@@ -62,8 +62,8 @@ def run(args):
 
         obs, _, done, _ = env.step(action)
 
-        # if use_perception:
-        #         next_im = env.get_image()
+        if args.use_perception:
+                im = env.get_image()
         
 
         if done==[True] or env.steps > args.max_ep_len:
