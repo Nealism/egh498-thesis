@@ -244,8 +244,8 @@ class Env(EnvBasePB):
             #print(wall1_corners,wall2_corners)
 
             
-            self.rectangle_id1=self.create_rectangle(ID=1,corners=Robot.gap[0],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=0.5,orientation=Robot.gap_orn)
-            self.rectangle_id2=self.create_rectangle(ID=2,corners=Robot.gap[1],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=0.5,orientation=Robot.gap_orn)
+            self.rectangle_id1=self.create_rectangle(ID=1,corners=Robot.gap[0],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
+            self.rectangle_id2=self.create_rectangle(ID=2,corners=Robot.gap[1],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
 
             
 
