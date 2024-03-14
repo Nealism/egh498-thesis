@@ -6,8 +6,12 @@ import time
 from pathlib import Path
 import default_arguments
 from utils.plotter import Plotter
+import pandas as pd
 
 home = str(Path.home())
+
+start_time=time.time()
+
 
 def run(args): 
 
@@ -41,25 +45,48 @@ def run(args):
     PATH = path_home + latest_folder
     
     Env, args = default_arguments.get_env(args)   
-    args.render = True
-    #args.render = False
+    #args.render = True
+    args.render = False
     args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
     pol = torch.load(PATH + "/model.pt")
+    # print(pol)
     obs = env.reset()
-    n=0
+    # print(obs)
 
+    # def convert_model(model, input=torch.tensor(torch.rand(size=(1,3,112,112)))):
+    # model = torch.jit.trace(pol,torch.rand(1, 1, 3, 3))
+    # torch.jit.save(model,'/home/kom018/behaviour_rl/Saved_models/model.tjm')
+
+    n=0
+    # print(pol)
     if args.use_perception:
         im = env.get_image()
 
+
+
+
+    
+    time_saving=[]
+    action_saving1=[]
+    action_saving2=[]
+
+
     while True:
+
         if args.use_perception:
+            # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
             action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
 
         else:
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
 
+
+        # current_time = time.time() - start_time
+
+        # time_saving.append(current_time)
+        
         obs, _, done, _ = env.step(action)
 
         if args.use_perception:

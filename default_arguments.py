@@ -61,6 +61,7 @@ def get_defaults():
     parser.add_argument('--experiment_1', default=False, action="store_true")
     parser.add_argument('--experiment_2', default=False, action="store_true")
     parser.add_argument('--experiment_3', default=False, action="store_true")
+    parser.add_argument('--randomness', type=int, default=0)
 
     
 
@@ -123,6 +124,8 @@ def get_defaults():
     parser.add_argument('--gap_decrease', default=0.5, type=float)
     parser.add_argument('--starting_gap_width', default=10, type=float)
     parser.add_argument('--final_gap_width', default=3, type=float)
+    parser.add_argument('--ray_wall_type', type=int, default=0)
+
     
 
 

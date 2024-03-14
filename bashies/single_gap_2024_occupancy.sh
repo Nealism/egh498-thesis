@@ -10,15 +10,15 @@ declare -a Experiments=(
 
                     
 
-                      "sgo27/r5GD.1EC0"
-                      "sgo27/r6GD.1EC0"
-                      "sgo27/r7GD.1EC0"
-                      "sgo27/r8GD.1EC0"
-                      "sgo27/r9GD.1EC0"
-                      "sgo27/r10GD.1EC0"
-                      "sgo27/r11GD.1EC0"
-                      "sgo27/r12GD.1EC0"
-                      "sgo27/r47GD.1EC0"
+                      "sgo29/r5GD.1EC0"
+                      "sgo29/r6GD.1EC0"
+                      "sgo29/r7GD.1EC0"
+                      "sgo29/r8GD.1EC0"
+                      "sgo29/r9GD.1EC0"
+                      "sgo29/r10GD.1EC0"
+                      "sgo29/r11GD.1EC0"
+                      "sgo29/r12GD.1EC0"
+                      "sgo29/r47GD.1EC0"
                       # "sgo23/r13GD.1EC0"
                       # "sgo23/r14GD.1EC0"
                       # "sgo23/r15GD.1EC0"
@@ -53,85 +53,85 @@ declare -a Arguments=(
     
 
     
-    # "--cpu 64 --env multi_robot_pb --reward_fn 43 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall --gap_curr"
+    # "--cpu 64 --env multi_robot_pb --reward_fn 43 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr"
 
     
-    # "--cpu 64 --env multi_robot_pb --reward_fn 43 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1"
+    # "--cpu 64 --env multi_robot_pb --reward_fn 43 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1"
     
     
-    # "--cpu 64 --env multi_robot_pb --reward_fn 43 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.25"
+    # "--cpu 64 --env multi_robot_pb --reward_fn 43 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.25"
 
     
-    # "--cpu 64 --env multi_robot_pb --reward_fn 30 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
-
-    
-
-
-
-
-
-
-
-
-    "--cpu 64 --env multi_robot_pb --reward_fn 5 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1 --regular_bootstrap"
-
-    "--cpu 64 --env multi_robot_pb --reward_fn 6 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    "--cpu 64 --env multi_robot_pb --reward_fn 7 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    "--cpu 64 --env multi_robot_pb --reward_fn 8 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    "--cpu 64 --env multi_robot_pb --reward_fn 9 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    "--cpu 64 --env multi_robot_pb --reward_fn 10 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-
-
-    "--cpu 64 --env multi_robot_pb --reward_fn 11 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    "--cpu 64 --env multi_robot_pb --reward_fn 12 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-    "--cpu 64 --env multi_robot_pb --reward_fn 47 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    # "--cpu 64 --env multi_robot_pb --reward_fn 13 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    # "--cpu 64 --env multi_robot_pb --reward_fn 14 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    # "--cpu 64 --env multi_robot_pb --reward_fn 15 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    # "--cpu 64 --env multi_robot_pb --reward_fn 16 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    # "--cpu 64 --env multi_robot_pb --reward_fn 17 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    # "--cpu 64 --env multi_robot_pb --reward_fn 18 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    # "--cpu 64 --env multi_robot_pb --reward_fn 19 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
-    # "--cpu 64 --env multi_robot_pb --reward_fn 20 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 2 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_1"
-
+    # "--cpu 64 --env multi_robot_pb --reward_fn 30 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --load_path /scratch3/kom018/results/multi_robot_pb/sg21/r47GD.1EC0/2023_12_30_05_05_57/model.pt"
 
     
 
 
-    # "--cpu 64 --env multi_robot_pb --reward_fn 36 --cur_succ 0 --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall"
 
 
-    # "--cpu 64 --env multi_robot_pb --reward_fn 37 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall"
 
-    # "--cpu 64 --env multi_robot_pb --reward_fn 38 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall"
 
-    # "--cpu 64 --env multi_robot_pb --reward_fn 39 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall"
 
-    # "--cpu 64 --env multi_robot_pb --reward_fn 40 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall"
 
-    # "--cpu 64 --env multi_robot_pb --reward_fn 41 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall"
+    "--cpu 64 --env multi_robot_pb --reward_fn 5 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
 
-    # "--cpu 64 --env multi_robot_pb --reward_fn 42 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall"
+    "--cpu 64 --env multi_robot_pb --reward_fn 6 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
 
-    # "--cpu 64 --env multi_robot_pb --reward_fn 43 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall"
+    "--cpu 64 --env multi_robot_pb --reward_fn 7 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
 
-    # "--cpu 64 --env multi_robot_pb --reward_fn 44 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall"
+    "--cpu 64 --env multi_robot_pb --reward_fn 8 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
 
-    # "--cpu 64 --env multi_robot_pb --reward_fn 45 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 2 --insert_wall"
+    "--cpu 64 --env multi_robot_pb --reward_fn 9 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+    "--cpu 64 --env multi_robot_pb --reward_fn 10 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+
+
+    "--cpu 64 --env multi_robot_pb --reward_fn 11 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+    "--cpu 64 --env multi_robot_pb --reward_fn 12 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+    "--cpu 64 --env multi_robot_pb --reward_fn 47 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 2200 --local_epoch_len 2200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 13 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 14 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 15 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 16 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 17 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 18 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 19 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 20 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 10000 --max_ep_len 3200 --local_epoch_len 3200 --expert_curr --detect_distance 1.8 --insert_wall --gap_curr --gap_decrease 0.1 --use_perception --occupancy_map --starting_gap_width 1.5 --final_gap_width 1 --experiment_3 --ray_wall_type 1"
+
+
+    
+
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 36 --cur_succ 0 --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall"
+
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 37 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 38 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 39 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 40 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 41 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 42 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 43 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 44 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall"
+
+    # "--cpu 64 --env multi_robot_pb --reward_fn 45 --cur_succ 9  --training_on_hpc --gap_avoidance --epochs 8400 --max_ep_len 3000 --local_epoch_len 3000 --expert_curr --detect_distance 1.8 --insert_wall"
 
    
     

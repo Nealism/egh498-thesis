@@ -128,6 +128,8 @@ class Env(EnvBasePB):
         self.robots_orn_with_IDx=[]
         self.robots_vx_with_IDx=[]
         self.robots_angular_vx_with_IDx=[]
+
+        self.random_robot_init=np.random.choice([6,8,9,10])
         
         
 
@@ -169,13 +171,22 @@ class Env(EnvBasePB):
                 self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         elif self.args.num_robots ==2:
-            if self.args.collision_likelihood_curr:
-                self.robottogoal_angles=[(self.robots[0],-5),(self.robots[1],5)]
-            elif not self.args.collision_likelihood_curr:
-                self.robottogoal_angles=[(self.robots[0],15),(self.robots[1],-15)]
 
-            self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31])]
+            self.robot_goal_synchroniser=np.random.choice([-2,2])  #This synchroniser ensire robots and goals are crossing to each other even when external robot position are swapping
+            if self.args.collision_likelihood_curr:
+                self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*-2.5),(self.robots[1],self.robot_goal_synchroniser*2.5)]
+            elif not self.args.collision_likelihood_curr:
+                self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*7.5),(self.robots[1],self.robot_goal_synchroniser*-7.5)]
+
+
+            if self.args.randomness==0:
+                self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31])]
+            elif self.args.randomness==1:
+                self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+self.robot_goal_synchroniser,0.31])]
+            elif self.args.randomness==2:
+                self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.choice([-1,0,-0,1]),list(random_0_10)[1]+self.robot_goal_synchroniser,0.31])]
             # self.external_robots_pos=[(self.robots[0],[0,0,0.31]),(self.robots[1],[-2,-1.5,0.31])]
+            # print("list(random_0_10)[1]-2",list(random_0_10)[1]-2)
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
                 self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
                 self.external_goals_states.append(self.external_goal_state)
@@ -214,6 +225,8 @@ class Env(EnvBasePB):
             Robot.set_robottogoal_angle(self.robottogoal_angles)
             Robot.set_wall1_corners(self.wall1_corners)
             Robot.set_wall1_corners(self.wall2_corners)
+            
+            Robot.set_random_robotinit(self.random_robot_init)
 
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)

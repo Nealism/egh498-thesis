@@ -14,6 +14,8 @@ import os
 import psutil
 import pandas as pd
 
+
+
 class PPOBufferPerception:
     """
     A buffer for storing trajectories experienced by a PPO agent interacting
@@ -639,11 +641,14 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     #print("os",np.array(o))
     #ep_ret_list=[]
     # Main loop: collect experience in env and update/log each epoch
+    
+    # time_saving=[]
     # action_saving1=[]
     # action_saving2=[]
     # action_saving3=[]
     # action_saving4=[]
 
+    
     for epoch in range(epochs):
         for t in range(local_steps_per_epoch):
             if use_perception:
@@ -651,19 +656,26 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             else:
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
 
-            # # print("a",a,"O-shape",np.array(o).shape)
+            # print("a",a,"O-shape",np.array(o).shape)
+                
+            # current_time = time.time() - t1
+
+            # time_saving.append(current_time)
             # action_saving1.append([a[0][0]])
             # action_saving2.append([a[0][1]])
             # action_saving3.append([a[1][0]])
             # action_saving4.append([a[1][1]])
-            # # print("act",action_saving)
+            # print("act",action_saving)
+            # print("actions",a)
+            # column0=pd.DataFrame(time_saving)
             # column1=pd.DataFrame(action_saving1)
             # column2=pd.DataFrame(action_saving2)
             # column3=pd.DataFrame(action_saving3)
             # column4=pd.DataFrame(action_saving4)
             # datafrm=pd.concat([column1,column2,column3,column4],axis=1)
+            # datafrm=pd.concat([column0,column1,column2],axis=1)
             # # print("datafrm",datafrm)
-            # datafrm.to_csv("action.csv")
+            # datafrm.to_csv("/home/kom018/behaviour_rl/action_time.csv")
 
             next_o, r, d, _ = env.step(a)
             #print("O_len",len(next_o),len(next_o[0]),"o",next_o)
