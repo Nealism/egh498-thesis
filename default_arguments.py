@@ -58,10 +58,11 @@ def get_defaults():
     parser.add_argument('--map_show', default=False, action="store_true")
     parser.add_argument('--regular_bootstrap', default=False, action="store_true")
     parser.add_argument('--MA_bootstrap', default=False, action="store_true")
+    parser.add_argument('--MA_bootstrap_extreme', default=False, action="store_true")
     parser.add_argument('--experiment_1', default=False, action="store_true")
     parser.add_argument('--experiment_2', default=False, action="store_true")
     parser.add_argument('--experiment_3', default=False, action="store_true")
-    parser.add_argument('--randomness', type=int, default=0)
+    parser.add_argument('--randomness', type=int, default=1)
 
     
 

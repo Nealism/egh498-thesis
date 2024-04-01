@@ -7,6 +7,7 @@ from pathlib import Path
 import default_arguments
 from utils.plotter import Plotter
 import pandas as pd
+import copy
 
 home = str(Path.home())
 
@@ -55,9 +56,7 @@ def run(args):
     obs = env.reset()
     # print(obs)
 
-    # def convert_model(model, input=torch.tensor(torch.rand(size=(1,3,112,112)))):
-    # model = torch.jit.trace(pol,torch.rand(1, 1, 3, 3))
-    # torch.jit.save(model,'/home/kom018/behaviour_rl/Saved_models/model.tjm')
+    
 
     n=0
     # print(pol)
@@ -67,11 +66,23 @@ def run(args):
 
 
 
-    
+    # print(pol)
     time_saving=[]
     action_saving1=[]
     action_saving2=[]
 
+    model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
+    traced_script_module1 = torch.jit.script(model1)
+    traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net.jit")
+
+    model2 = copy.deepcopy(pol.pi.z_net).to('cpu')
+    traced_script_module2 = torch.jit.script(model2)
+    traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net.jit")
+
+
+    # print("traced_script_module1",traced_script_module1)
+    # print("traced_script_module2",traced_script_module2)
+    st=time.time()
 
     while True:
 
@@ -82,9 +93,10 @@ def run(args):
         else:
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
 
-
-        # current_time = time.time() - start_time
-
+        # print ("action", action)
+        current_time = time.time() - st
+        # print(current_time)
+        st=time.time()
         # time_saving.append(current_time)
         
         obs, _, done, _ = env.step(action)

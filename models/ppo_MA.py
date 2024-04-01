@@ -627,12 +627,16 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
     # Prepare for interaction with environment
     start_time = time.time()
+
+
     o, ep_rets, ep_lens = env.reset(), [0] * robot_number, [0]*robot_number
-    if use_perception:
-        im = env.get_image()
+    
+
+    
         
         #print(im);exit()
-
+    if use_perception:
+        im = env.get_image()
         
 
     local_lens = [[] for _ in range(robot_number)]
@@ -650,16 +654,59 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
     
     for epoch in range(epochs):
+        st=time.time()
         for t in range(local_steps_per_epoch):
             if use_perception:
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
             else:
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
 
+            next_o, r, d, _ = env.step(a)
+
+            #print("O_len",len(next_o),len(next_o[0]),"o",next_o)
+
+            #print(r)
+            # print(d)
+            #print("Value_before",v)
+            # v = [0 if collision else value for collision, value in zip(d, v)]
+            # v=torch.tensor(v, dtype=torch.float32)
+            # print("after v",v)
+            #print("DONE",d)
+            st1=time.time()
+            # current_time=0
+            # and time.time() - st1 == 0.2
+            if use_perception:
+                # if time.time() - st1 == 0.2:
+                next_im = env.get_image()
+                # else:
+                #     pass 
+                #print(len(im))
+                #np.savetxt('im1.txt', im[0])
+            current_time = time.time()
+            new_time=current_time-st1
+
+            # print("time_before",st1) 
+            # print("time",new_time)
+            st1=time.time()
+            # if robot_number > 1:
+
+            #ep_ret += sum(r) / len(r)
+            
+            
+            
+            # else:
+            # for single_r in r:
+            #     ep_ret += [single_r] #sum(r) / len(r)
+            #     ep_ret_list.append(ep_ret)
+
+            # print("reward",r)
+            # print("robot_number",robot_number)
+                
             # print("a",a,"O-shape",np.array(o).shape)
                 
-            # current_time = time.time() - t1
-
+            # current_time = time.time() - st
+            # print(current_time)
+            # st=time.time()
             # time_saving.append(current_time)
             # action_saving1.append([a[0][0]])
             # action_saving2.append([a[0][1]])
@@ -677,34 +724,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             # # print("datafrm",datafrm)
             # datafrm.to_csv("/home/kom018/behaviour_rl/action_time.csv")
 
-            next_o, r, d, _ = env.step(a)
-            #print("O_len",len(next_o),len(next_o[0]),"o",next_o)
 
-            #print(r)
-            # print(d)
-            #print("Value_before",v)
-            # v = [0 if collision else value for collision, value in zip(d, v)]
-            # v=torch.tensor(v, dtype=torch.float32)
-            # print("after v",v)
-            #print("DONE",d)
-            if use_perception:
-                next_im = env.get_image()
-                #print(len(im))
-                #np.savetxt('im1.txt', im[0])
-            
-            # if robot_number > 1:
-
-            #ep_ret += sum(r) / len(r)
-
-            
-            
-            # else:
-            # for single_r in r:
-            #     ep_ret += [single_r] #sum(r) / len(r)
-            #     ep_ret_list.append(ep_ret)
-
-            # print("reward",r)
-            # print("robot_number",robot_number)
             for i in range(robot_number):
                 #print("ep_ret_before",ep_rets)
                 ep_rets[i] += r[i]
@@ -734,6 +754,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             
             # Update obs (critical!)
             o = next_o
+            
             if use_perception:
                 im = next_im
             #print(ep_lens)
