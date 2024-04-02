@@ -6,22 +6,22 @@
 declare -a Experiments=(
                       
                       
-                      "ME65_5/r21MGE103"
-                      "ME65_5/1r21MGE103"
-                      "ME65_5/2r21MGE103"
-                      "ME65_5/3r21MGE103"
-                      "ME65_5/4r21MGE103"
-                      "ME65_5/5r21MGE103"
-                      "ME65_5/6r21MGE103"
-                      "ME65_5/7r21MGE103"
-                      "ME65_5/8r21MGE103"
-                      "ME65_5/9r21MGE103"
-                      "ME65_5/10r21MGE103"
-                      "ME65_5/11r21MGE103"
-                      "ME65_5/12r21MGE103"
-                      "ME65_5/13r21MGE103"
-                      "ME65_5/14r21MGE103"
-                      "ME65_5/15r21MGE103"
+                      "ME65_6/r21MGE103"
+                      "ME65_6/1r21MGE103"
+                      "ME65_6/2r21MGE103"
+                      "ME65_6/3r21MGE103"
+                      "ME65_6/4r21MGE103"
+                      "ME65_6/5r21MGE103"
+                      "ME65_6/6r21MGE103"
+                      "ME65_6/7r21MGE103"
+                      "ME65_6/8r21MGE103"
+                      "ME65_6/9r21MGE103"
+                      "ME65_6/10r21MGE103"
+                      "ME65_6/11r21MGE103"
+                      "ME65_6/12r21MGE103"
+                      "ME65_6/13r21MGE103"
+                      "ME65_6/14r21MGE103"
+                      "ME65_6/15r21MGE103"
                       
                       
                       

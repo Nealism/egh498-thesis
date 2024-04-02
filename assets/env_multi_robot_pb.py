@@ -174,7 +174,7 @@ class Env(EnvBasePB):
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         elif self.args.num_robots ==2:
 
-            self.robot_goal_synchroniser=np.random.choice([-3,-2,2,3])  #This synchroniser ensire robots and goals are crossing to each other even when external robot position are swapping
+            self.robot_goal_synchroniser=np.random.choice([-2,2])  #This synchroniser ensire robots and goals are crossing to each other even when external robot position are swapping
             if self.args.collision_likelihood_curr:
                 self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*-2.5),(self.robots[1],self.robot_goal_synchroniser*2.5)]
             elif not self.args.collision_likelihood_curr:
@@ -213,8 +213,8 @@ class Env(EnvBasePB):
         self.steps = 0
         self.occupancy_maps=[]
 
-        shape = (2, 1, 80, 80)
-        self.prev_occupancy_maps=[[[[random.random() for _ in range(shape[3])] for _ in range(shape[2])] for _ in range(shape[1])] for _ in range(shape[0])]
+        # shape = (2, 1, 80, 80)
+        # self.prev_occupancy_maps=[[[[random.random() for _ in range(shape[3])] for _ in range(shape[2])] for _ in range(shape[1])] for _ in range(shape[0])]
         for Robot in self.robots:
             # self.Goals_pos.append(Robot.state_goal)
             Robot.set_Robots_ID(self.All_Robot_ID)
@@ -321,9 +321,9 @@ class Env(EnvBasePB):
                 self.turn_both=True
                 # print("turn_both",self.turn_both)
 
-        for _ in range(int(self.timeStep/self.simStep)):
-            p.stepSimulation()
-        # p.stepSimulation()
+        # for _ in range(int(self.timeStep/self.simStep)):
+        #     p.stepSimulation()
+        p.stepSimulation()
         #print("action_length",actions,"robot",self.robots)
         for action,Robot in zip(actions,self.robots):
             
@@ -356,7 +356,7 @@ class Env(EnvBasePB):
 
         
             #self.local_map = np.zeros((self.local_num_rows, self.local_num_cols), dtype=np.float32)
-        
+        # print()
         self.steps += 1
         self.get_observation()
         return obs, rews, dones, self.ob_dict
@@ -387,10 +387,10 @@ class Env(EnvBasePB):
             #N=self.visualize_maps(self.global_map2, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos)
             # self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
             # self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
-            current_time = time.time()
+            # current_time = time.time()
             # print("current",current_time-self.start_time)
             self.occupancy_maps=deepcopy(self.local_heightmaps)
-            self.occupancy_maps_reshaped=np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size)
+            # self.occupancy_maps_reshaped=np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size)
 
             # if current_time-self.start_time==0.2:
             #     self.occupancy_maps=deepcopy(self.local_heightmaps)
@@ -407,7 +407,7 @@ class Env(EnvBasePB):
             #     self.global_map = np.zeros((self.global_num_rows, self.global_num_cols), dtype=np.float32)
             #     self.global_map_list.append(self.global_map)
         #print(self.occupancy_maps);exit()
-        return self.occupancy_maps_reshaped
+        return np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size)
     
     def get_observation(self):
 

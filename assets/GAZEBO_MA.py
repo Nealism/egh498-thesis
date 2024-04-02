@@ -4,6 +4,7 @@ from nav_msgs.msg import Odometry, OccupancyGrid
 import numpy as np
 import scipy
 import time
+import cv2
 
 
 
@@ -21,13 +22,14 @@ import pybullet as p
 # im = env.get_image()
 
 class RLRobot():
-    def __init__(self, cmd_topic, topic1_robotpos, topic2_other_robotpos, topic3_robotvel, topic4_other_robotvel,topic5_goalpos, occupancy_topic, model):
+    def __init__(self, cmd_topic, topic1_robotpos, topic2_other_robotpos, topic3_robotvel, topic4_other_robotvel,topic5_goalpos, occupancy_topic, model_mu,model_z):
         self.action_pub = rospy.Publisher(cmd_topic, TwistStamped)
         # self.state_topic = state_topic1,state_topic2
         self.robot_topic=topic1_robotpos
         self.other_robot_topic=topic2_other_robotpos
         self.goal_pos=topic5_goalpos
-        self.model=model
+        self.model_mu=model_mu
+        self.model_z=model_z
         self.im_topic=occupancy_topic
 
         self.robot_pose=None
@@ -43,8 +45,10 @@ class RLRobot():
         rospy.Subscriber(topic4_other_robotvel, TwistStamped, self.odom_callback4)
         # rospy.Subscriber(topic5_goalpos, PoseStamped, self.odom_callback5)
         # rospy.Subscriber(topic6_goal2pos, PoseStamped, self.odom_callback6)
-        rospy.Subscriber(occupancy_topic, OccupancyGrid, self.occupancy_callback6)
-        self.map_publisher = rospy.Publisher("/modified_occupancy_map", OccupancyGrid, queue_size=10)
+        rospy.Subscriber(occupancy_topic, OccupancyGrid, self.occupancy_callbacklocal)
+        # self.map_publisher = rospy.Publisher("/modified_occupancy_map", OccupancyGrid, queue_size=10)
+
+        self.t1=time.time()
 
 
         
@@ -64,10 +68,58 @@ class RLRobot():
     # def goal_callback5(self, goal_msg):
     #     self.goal_pose = goal_msg.pose
         
-    def occupancy_callback6(self, msg6:OccupancyGrid):
+    def occupancy_callbacklocal(self, msg6:OccupancyGrid):
+        # Convert the occupancy map data to a numpy array
+        width = msg6.info.width
+        height = msg6.info.height
+        map_data = np.array(msg6.data).reshape((height, width))
+
+        #Flip the map horizontally
+        # map_data = np.fliplr(map_data)
+        map_data = np.flipud(map_data)
+
+
+        # Calculate the indices for the central 70x70 region
+        start_row = (height - 70) // 2
+        end_row = start_row + 70
+        start_col = (width - 70) // 2
+        end_col = start_col + 70
+
+        # Extract the central 70x70 region
+        central_region = map_data[start_row:end_row, start_col:end_col]
+
+        # Create an empty 80x80 array
+        resized_map = np.zeros((80, 80))
+
+        # Calculate the indices for inserting the central region into the resized map
+        resized_start_row = (80 - 70) // 2
+        resized_end_row = resized_start_row + 70
+        resized_start_col = (80 - 70) // 2
+        resized_end_col = resized_start_col + 70
+
+        # Insert the central region into the resized map
+        resized_map[resized_start_row:resized_end_row, resized_start_col:resized_end_col] = central_region
+
+        # Convert values greater than 0 to 1
+        self.scaled_map = np.where(resized_map > 0, 1, 0)
+
+        # Create a new OccupancyGrid message for the modified map
+        modified_msg = OccupancyGrid()
+        modified_msg.header = msg6.header
+        modified_msg.info = msg6.info
+        modified_msg.info.width = 80
+        modified_msg.info.height = 80
+        modified_msg.data = self.scaled_map.flatten().tolist()
+        self.im=modified_msg.data 
+        # # Publish the modified occupancy map
+        # self.map_publisher.publish(modified_msg)
+        
+    def occupancy_callbackglobal(self, msg6:OccupancyGrid):
         # Convert the occupancy map data to a numpy array
         # print(msg6)
         map_data = np.array(msg6.data).reshape((msg6.info.height, msg6.info.width))
+        # print("map_original",map_data)
+        map_data = np.flipud(map_data)
         # print(msg6.info.height)
         # Calculate the indices for the central 8x8 region
         start_row = (msg6.info.height - 80) // 2
@@ -79,24 +131,56 @@ class RLRobot():
         central_region = map_data[start_row:end_row, start_col:end_col]
 
         # Scale the values to 0 or 100
-        scaled_map = np.where(central_region > 0, 1, 0)
+        self.scaled_map = np.where(central_region > 0, 1, 0)
+        # print("map_scaled",self.scaled_map)
 
         # Update the message with the modified map data
         modified_msg = msg6
-        modified_msg.data = scaled_map.flatten().tolist()
+        modified_msg.data = self.scaled_map.flatten().tolist()
         modified_msg.info.width = 80
         modified_msg.info.height = 80
         # print(modified_msg)
         self.im=modified_msg.data 
+        # print("ow",np.array(self.im).shape)
+        # print("r1",time.time()-self.t1)
+        self.t1=time.time()
+
 
         # Publish the modified occupancy map
-        self.map_publisher.publish(modified_msg)
+        # self.map_publisher.publish(modified_msg)
 
     # def publish_action(self):
     #     if self.robot1_pose is not None and self.robot2_pose is not None and self.goal_pose is not None:
     #         observation = self.get_observation()
     #         action = self.model.step(torch.tensor(observation))
     #         self.execute_action(action)
+        
+
+    def occupancy_map_to_image(self,occupancy_map):
+        # Convert the list of lists to a NumPy array
+        occupancy_map_array = np.array(occupancy_map)
+        # print("occupancy_map_array.shape",occupancy_map_array.shape)
+        # Determine the dimensions of the occupancy map
+        rows, cols = occupancy_map_array.shape
+        
+        # Create an empty image with the same dimensions as the occupancy map
+        image = np.zeros((rows, cols, 3), dtype=np.uint8)
+        
+        # Assign grey color where occupancy_map is 0
+        image[occupancy_map_array == 0] = (128, 128, 128)  # Grey
+        
+        # Assign red color where occupancy_map is 1
+        image[occupancy_map_array == 1] = (0, 0, 255)  # Red
+        
+        return image
+    
+    def get_occupancy_image(self):
+        
+        
+        if self.im is not None:
+            self.occupancy_map_image=self.scaled_map
+
+        return self.occupancy_map_image
 
     def get_observation(self):
 
@@ -144,12 +228,7 @@ class RLRobot():
                                self.other_robot_linear_velocity, self.other_robot_angular_velocity,
                                self.roll, self.pitch,self.linear_velocity,self.angular_velocity)
 
-    def get_occupancy_image(self):
-        
-        if self.im is not None:
-            self.occupancy_map_image=self.im
-
-        return self.occupancy_map_image
+    
 
     # def goal_callback5(self, goal_msg):
     #     self.goal_pose = goal_msg.pose
@@ -183,12 +262,25 @@ class RLRobot():
         
         
         if self.robot_pose is not None and self.other_robot_pose is not None and self.robot_vel is not None and self.other_robot_vel is not None and self.goal_pos is not None and self.im is not None:
-            observation = self.get_observation()
-            im=self.get_occupancy_image()
-            action = pol.step(torch.as_tensor(np.array(observation), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            t2=time.time()
+            self.observations_r1 = self.get_observation()
+            self.im_ocupancy=self.get_occupancy_image()
+            
+            # self.actions = pol.step(torch.as_tensor(np.array(self.observations), dtype=torch.float32), torch.as_tensor(self.im_ocupancy, dtype=torch.float32), stochastic=False)[0]
+            a_r1=torch.as_tensor(np.array(self.observations_r1), dtype=torch.float32).unsqueeze(dim=0)
+            b_r1=self.model_z(torch.as_tensor(self.im_ocupancy, dtype=torch.float32))
+            
+            # print(a.shape)
+            # print(b.shape)
+            concatenate_part_r1=torch.concat((a_r1,b_r1),-1)
+
+            
+            self.actions = self.model_mu(concatenate_part_r1)
             # print("action",action[0][0])
-            msg.twist.linear.x = action[0][0]    
-            msg.twist.angular.z = action[0][1]#np.pi /2
+            msg.twist.linear.x = self.actions[0][0] *0.1    
+            msg.twist.angular.z = self.actions[0][1] *0.1#np.pi /2
+            # print("linear_actions_r1",self.actions[0][0] )
+
         # Action = self.model(state)
         # Assemble the msg using the acction
         # self.action_pub.publish(msg)
@@ -199,20 +291,60 @@ class RLRobot():
         
 
         # Execute the acction 
-        self.action_pub.publish(msg)
+            self.action_pub.publish(msg)
+
+            # self.image = self.occupancy_map_to_image(self.im_ocupancy)
+
+
+            # # Create a window with the specified name
+            # cv2.namedWindow("Occupancy Map", cv2.WINDOW_NORMAL)
+
+            # # Resize the window to a desired size
+            # cv2.resizeWindow("Occupancy Map", 800, 600)
+            # # Display the image
+            # cv2.imshow("Occupancy Map", self.image)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+            self.image = self.occupancy_map_to_image(self.im_ocupancy)
+
+
+            # # Create a window with the specified name
+            cv2.namedWindow("Occupancy Map", cv2.WINDOW_NORMAL)
+
+            # Resize the window to a desired size
+            cv2.resizeWindow("Occupancy Map", 800, 600)
+            # Display the image
+            cv2.imshow("Occupancy Map", self.image)
+            cv2.waitKey(1)
 
     def step_R3(self):
         msg = TwistStamped() # create a message
 
         if self.robot_pose is not None and self.other_robot_pose is not None and self.robot_vel is not None and self.other_robot_vel is not None and self.goal_pos is not None and self.im is not None:
 
+            
+            self.observations = self.get_observation()
+            self.im_ocupancy=self.get_occupancy_image()
+            
+            #self.actions = pol.step(torch.as_tensor(np.array(self.observations), dtype=torch.float32), torch.as_tensor(self.im_ocupancy, dtype=torch.float32), stochastic=False)[0]
+            # self.actions = self.model_mu(torch.concat(torch.as_tensor(np.array(self.observations), dtype=torch.float32), ))  , stochastic=False
+            a=torch.as_tensor(np.array(self.observations), dtype=torch.float32).unsqueeze(dim=0)
+            b=self.model_z(torch.as_tensor(self.im_ocupancy, dtype=torch.float32))
+            
+            # print(a.shape)
+            # print(b.shape)
+            concatenate_part=torch.concat((a,b),-1)
 
-            observation = self.get_observation()
-            im=self.get_occupancy_image()
-            action = pol.step(torch.as_tensor(np.array(observation), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
-        
-            msg.twist.linear.x = action[0][0]    
-            msg.twist.angular.z = action[0][1]#np.pi /2
+            
+            self.actions_r3 = self.model_mu(concatenate_part)
+
+
+            #self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
+            # self.actions = self.model_mu(torch.concat((torch.as_tensor(np.array(self.observations), dtype=torch.float32), self.model_z(torch.as_tensor(self.im_ocupancy, dtype=torch.float32))), -1))
+            # print("linear_actions_r3",self.actions_r3[0][0] )
+            # print("action",self.action[0][0])
+            msg.twist.linear.x = self.actions_r3[0][0] *0.1   
+            msg.twist.angular.z = self.actions_r3[0][1]*0.1#np.pi /2
         # Action = self.model(state)
         # Assemble the msg using the acction
         # self.action_pub.publish(msg)
@@ -223,31 +355,52 @@ class RLRobot():
         
 
         # Execute the acction 
-        self.action_pub.publish(msg)
+            self.action_pub.publish(msg)
+            self.image = self.occupancy_map_to_image(self.im_ocupancy)
+
+
+            # # Create a window with the specified name
+            cv2.namedWindow("Occupancy Map", cv2.WINDOW_NORMAL)
+
+            # Resize the window to a desired size
+            cv2.resizeWindow("Occupancy Map", 800, 600)
+            # Display the image
+            cv2.imshow("Occupancy Map", self.image)
+            cv2.waitKey(1)
+            # cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     rospy.init_node("robotclass_test")
 
     #model = RL(warever to load it)
-    pol = torch.load("/data/r21TG1.5N/2024_03_03_04_28_37/model.pt")
+    # pol = torch.load("/data/r21TG1.3N_FINAL_MA_MODEL_ME67_2/2024_03_10_05_35_53/model.pt")
+    mu_net = torch.load("/refarm/src/multi_robot_rl/scripts/JIT_models/mu_net.jit")
+    z_net = torch.load("/refarm/src/multi_robot_rl/scripts/JIT_models/z_net.jit")
+
+    
     # print(pol)
     goal_R1=(28,-1)
     goal_R2=(28,1)
 
-    R1 = RLRobot("/r1/cmd_vel_stamped","/r1/slam/odom/high/pose","/r3/slam/odom/high/pose","/r1/slam/odom/high/velocity","/r3/slam/odom/high/velocity",goal_R1, "/r1/costmap_global/occupancy_grid", pol)
-    R3 = RLRobot("/r3/cmd_vel_stamped","/r3/slam/odom/high/pose","/r1/slam/odom/high/pose","/r3/slam/odom/high/velocity","/r1/slam/odom/high/velocity",goal_R2, "/r3/costmap_global/occupancy_grid", pol)
+    # R1 = RLRobot("/r1/cmd_vel_stamped","/r1/slam/odom/high/pose","/r3/slam/odom/high/pose","/r1/slam/odom/high/velocity","/r3/slam/odom/high/velocity",goal_R1, "/r1/costmap_local/occupancy_grid", mu_net,z_net)
+    # R3 = RLRobot("/r3/cmd_vel_stamped","/r3/slam/odom/high/pose","/r1/slam/odom/high/pose","/r3/slam/odom/high/velocity","/r1/slam/odom/high/velocity",goal_R2, "/r3/costmap_local/occupancy_grid", mu_net,z_net)
     
+    R1 = RLRobot("/r1/cmd_vel_stamped","/r1/slam/odom/high/pose","/r3/slam/odom/high/pose","/r1/slam/odom/high/velocity","/r3/slam/odom/high/velocity",goal_R1, "/r1/costmap_local/occupancy_grid", mu_net,z_net)
+    R3 = RLRobot("/r3/cmd_vel_stamped","/r3/slam/odom/high/pose","/r1/slam/odom/high/pose","/r3/slam/odom/high/velocity","/r1/slam/odom/high/velocity",goal_R2, "/r3/costmap_local/occupancy_grid", mu_net,z_net)
+
     # print(R1)
 
-    control_rate = rospy.Rate(50) # 10 Hz
+    control_rate = rospy.Rate(240) # 10 Hz
     t1=time.time()
     while not rospy.is_shutdown():
 
         
         # action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
         R1.step_R1()
-        R3.step_R3()
+        # R3.step_R3()
         control_rate.sleep()
-        print(time.time()-t1)
+        print("overal",time.time()-t1)
         t1=time.time()
+
+        
 
