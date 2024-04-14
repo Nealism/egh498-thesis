@@ -43,7 +43,7 @@ class Env(EnvBasePB):
         
         
         
-        self.timeStep = 1/120
+        # self.timeStep = 1/120
         super().__init__(PATH)
 
         self.reward_fn_name = f'get_reward_{self.args.reward_fn}'
@@ -180,12 +180,13 @@ class Env(EnvBasePB):
             #np.random.choice([10,8,6])
             self.max_goal_dist=8
         
-        self.action_multiplier = 0.1 
+        self.action_multiplier = 0.005
         # print(10000*np.ones(self.ac_size))
         # Needed if importing as Gym environment--  spaces.Discrete(self.ac_size) 
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
         self.steps = -1
+        self.steps_occupancy = -1
         
         self.reward_names = ["Reward/goal", "Reward/heading", "Reward/heading_obs", "Reward/neg"]
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
@@ -579,6 +580,7 @@ class Env(EnvBasePB):
         # self.a is the fixed value of unit ( how far from the line) and self.b is the step size ( Here, step size is 0.5 unit)
         #print("static robot distance from trajectory",self.a-self.b,"and cur_success", self.cur_success)
         #print("cur_success", self.cur_success)	
+
         if (self.args.static_robots > 1 or self.args.obstacle_avoidance) and (self.args.cur or self.args.collision_likelihood_curr) and self.check_for_success():
             if self.a-self.b == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                 self.b = self.a
@@ -757,13 +759,18 @@ class Env(EnvBasePB):
             #self.each_wall_length=10-(self.gap_width/2)
             #print("self.robots_bbox",self.robots_bbox)
             # print("All",self.All_Robot_ID,"self",self)
-            self.gap=self.gap_generator(width=self.max_gap_among_all_robots_individual_gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = 20,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
+            # print(self.max_gap_among_all_robots_individual_gap_width)
+            side_wall_moving_rate=self.max_gap_among_all_robots_individual_gap_width-17
+            self.gap=self.gap_generator(width=self.max_gap_among_all_robots_individual_gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = 3.7,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
+            self.sidewall_right=self.gap_generator(width=side_wall_moving_rate, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = 25,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
+            # self.sidewall_left=self.gap_generator(width=0.1, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = 15,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
 
             #print("gap",self,self.gap[0],self.gap[1])
 
             self.gap_point1,self.gap_point2=self.gap[2],self.gap[3]
 
             self.gap_orn=self.gap[4]
+            # print(self.gap_orn)
 
             wall_1_length = max(np.linalg.norm(np.array(self.gap[0][0]) - np.array(self.gap[0][2])), np.linalg.norm(np.array(self.gap[0][1]) - np.array(self.gap[0][3])))
             #print("wall_1_length",wall_1_length)
@@ -965,11 +972,12 @@ class Env(EnvBasePB):
     def twist_to_tracks(self, actions):
         radius = 0.14
         width = 0.78/2
-        #print(actions)
+        # print(actions)
         lin_vel = actions[0]
         ang_vel = actions[1]
         w_r = (lin_vel + ang_vel*width)/radius
         w_l = (lin_vel - ang_vel*width)/radius
+        # print("action",actions,"wl",w_l,"w_r",w_r,self)
         return [w_l, w_r]
     
     #def step(self, actions):
@@ -982,7 +990,7 @@ class Env(EnvBasePB):
         # This is an expert functionexper
         # ===========================
     def motor_action(self,actions):
-        #print("motor action",actions)
+        # print("motor action",actions,self)
         self.exp_actions = [0.0]*2
         # ##########################__RAY_LINE___###################
         #if self.args.num_robots > 1:
@@ -1437,7 +1445,7 @@ class Env(EnvBasePB):
         # Network now outputs a twist message
         # print("actions",self,actions)
         track_actions = self.twist_to_tracks(self.applied_actions)
-
+        
         # action_saving=[]
         for (a, tracks) in zip(track_actions,[self.left_track, self.right_track]):
             for track in tracks:
@@ -1614,17 +1622,20 @@ class Env(EnvBasePB):
 
             self.goal_success.append(True)
             self.time_to_goal=self.steps
-            # print(self.time_to_goal)
+            # print(self.time_to_goal,self.steps,self.timeStep,self.timeStep*self.steps,self)
             # print("self.goal_success",self.goal_success,self)
 
 
 
  
         elif self.time_to_target < self.steps:
+
             if self.args.gap_avoidance:
+
                 self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.opposite_angle-self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
             else:
                 self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
+            
             self.goal_success.append(False)
             # print("Wrong_GOAL_SUCCESS",self.goal_success,self)
         # print("another",self.time_to_gapwp1)
@@ -1659,6 +1670,7 @@ class Env(EnvBasePB):
         # print("Timestep:", self.timest/self.steps, "seconds")
 
         self.steps += 1
+        
         
         self.total_steps += 1
         self.total_reward += reward
@@ -7552,7 +7564,7 @@ class Env(EnvBasePB):
         # print("g",len(self.robots_bbox))
         textureId = -1
         
-        self.robot1_bbox=self.bbox_generator_titan1(0.075,self.pos,self.orn,self.lineId1) #0.075
+        self.robot1_bbox=self.bbox_generator_titan1(0.0,self.pos,self.orn,self.lineId1) #0.075
         self.robot1_bbox.append(self.robot1_bbox[0])
         #self.intersection_r1_r1,_= self.intersection_check(self.robot1_bbox,self.robot1_bbox)
         # To set robot collision with obstacle
@@ -7599,7 +7611,7 @@ class Env(EnvBasePB):
             #drawing imaginary line from the heading corners of safe bbox to the goal
             self.corner1_points=(self.robot1_safe_box[0][0], self.robot1_safe_box[0][1], 0), (self.state_goal[0], self.state_goal[1], 0)
             self.corner2_points=(self.robot1_safe_box[1][0], self.robot1_safe_box[1][1], 0), (self.state_goal[0], self.state_goal[1], 0)
-   
+    
             
         
         if self.args.gap_avoidance:
@@ -7750,17 +7762,17 @@ class Env(EnvBasePB):
             
             
             if self.args.debug:
-                self.lineId=p.addUserDebugLine((self.pos[0], self.pos[1], 0.34), (self.heading_line_end[0], self.heading_line_end[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_heading)
+                self.lineId=p.addUserDebugLine((self.pos[0], self.pos[1], 0.34), (self.heading_line_end[0], self.heading_line_end[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_heading)
 
-                self.lineId_s1=p.addUserDebugLine((self.robot1_bbox[3][0], self.robot1_bbox[3][1], 0.34), (self.side_line1_endg[0], self.side_line1_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side2)
+                self.lineId_s1=p.addUserDebugLine((self.robot1_bbox[3][0], self.robot1_bbox[3][1], 0.34), (self.side_line1_endg[0], self.side_line1_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_side2)
 
-                self.lineId_s2=p.addUserDebugLine((self.robot1_bbox[2][0], self.robot1_bbox[2][1], 0.34), (self.side_line2_endg[0], self.side_line2_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side1)
+                self.lineId_s2=p.addUserDebugLine((self.robot1_bbox[2][0], self.robot1_bbox[2][1], 0.34), (self.side_line2_endg[0], self.side_line2_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_side1)
 
-                self.lineId_MA=p.addUserDebugLine((self.pos[0], self.pos[1], 0.34), (self.heading_line_end_MA[0], self.heading_line_end_MA[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_heading_MA)
+                self.lineId_MA=p.addUserDebugLine((self.pos[0], self.pos[1], 0.34), (self.heading_line_end_MA[0], self.heading_line_end_MA[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_heading_MA)
 
-                self.lineId_s1_MA=p.addUserDebugLine((self.robot1_bbox[3][0], self.robot1_bbox[3][1], 0.34), (self.side_line1_endg_MA[0], self.side_line1_endg_MA[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side2_MA)
+                self.lineId_s1_MA=p.addUserDebugLine((self.robot1_bbox[3][0], self.robot1_bbox[3][1], 0.34), (self.side_line1_endg_MA[0], self.side_line1_endg_MA[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_side2_MA)
 
-                self.lineId_s2_MA=p.addUserDebugLine((self.robot1_bbox[2][0], self.robot1_bbox[2][1], 0.34), (self.side_line2_endg_MA[0], self.side_line2_endg_MA[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.06, replaceItemUniqueId=self.lineId_side1_MA)
+                self.lineId_s2_MA=p.addUserDebugLine((self.robot1_bbox[2][0], self.robot1_bbox[2][1], 0.34), (self.side_line2_endg_MA[0], self.side_line2_endg_MA[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_side1_MA)
 
             
                 
@@ -8302,8 +8314,8 @@ class Env(EnvBasePB):
             robot_bbox.append(list(start1))
 
             end1 = p.multiplyTransforms(pos, orn, corners[i+1], [0, 0, 0, 1])[0]
-            if self.args.debug:
-                    lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB, lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
+            # if self.args.debug:
+            #         lineId[i]=p.addUserDebugLine(start1, end1, lineColorRGB, lineWidth=50, lifeTime=0.3, replaceItemUniqueId=lineId[i])
         return robot_bbox
     
     def bbox_generator_titan1(self,radius,pos,orn,lineId,lineColorRGB=[1, 0, 0]):

@@ -10,6 +10,29 @@ def get_defaults():
     # ========================================================================
     # Sim
     # ========================================================================
+
+    #Taken From Spot
+    parser.add_argument("-hf",
+                        "--HeightField",
+                        help="Use HeightField",
+                        action='store_true')
+    parser.add_argument("-r",
+                        "--DebugRack",
+                        help="Put Spot on an Elevated Rack",
+                        action='store_true')
+    parser.add_argument("-p",
+                        "--DebugPath",
+                        help="Draw Spot's Foot Path",
+                        action='store_true')
+    parser.add_argument("-gui",
+                        "--GUI",
+                        help="Control The Robot Yourself With a GUI",
+                        action='store_true')
+    parser.add_argument("-a",
+                        "--AgentNum",
+                        help="Agent Number To Load")
+
+
     parser.add_argument('--render', default=False, action="store_true")
     parser.add_argument('--env', default="franka_reach_mj")
     parser.add_argument('--urdf', default=False, action="store_true")
@@ -125,7 +148,7 @@ def get_defaults():
     parser.add_argument('--gap_decrease', default=0.5, type=float)
     parser.add_argument('--starting_gap_width', default=10, type=float)
     parser.add_argument('--final_gap_width', default=3, type=float)
-    parser.add_argument('--ray_wall_type', type=int, default=0)
+    parser.add_argument('--ray_wall_type', type=int, default=1)
 
     
 

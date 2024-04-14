@@ -305,16 +305,16 @@ class RLRobot():
             # cv2.imshow("Occupancy Map", self.image)
             # cv2.waitKey(0)
             # cv2.destroyAllWindows()
-            self.image = self.occupancy_map_to_image(self.im_ocupancy)
+            self.image_r1 = self.occupancy_map_to_image(self.im_ocupancy)
 
 
             # # Create a window with the specified name
-            cv2.namedWindow("Occupancy Map", cv2.WINDOW_NORMAL)
+            cv2.namedWindow("R1 Occupancy Map", cv2.WINDOW_NORMAL)
 
             # Resize the window to a desired size
-            cv2.resizeWindow("Occupancy Map", 800, 600)
+            cv2.resizeWindow("R1 Occupancy Map", 800, 600)
             # Display the image
-            cv2.imshow("Occupancy Map", self.image)
+            cv2.imshow("R1 Occupancy Map", self.image_r1)
             cv2.waitKey(1)
 
     def step_R3(self):
@@ -360,12 +360,12 @@ class RLRobot():
 
 
             # # Create a window with the specified name
-            cv2.namedWindow("Occupancy Map", cv2.WINDOW_NORMAL)
+            cv2.namedWindow("R2 Occupancy Map", cv2.WINDOW_NORMAL)
 
             # Resize the window to a desired size
-            cv2.resizeWindow("Occupancy Map", 800, 600)
+            cv2.resizeWindow("R2 Occupancy Map", 800, 600)
             # Display the image
-            cv2.imshow("Occupancy Map", self.image)
+            cv2.imshow("R2 Occupancy Map", self.image)
             cv2.waitKey(1)
             # cv2.destroyAllWindows()
 
@@ -397,7 +397,7 @@ if __name__ == "__main__":
         
         # action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
         R1.step_R1()
-        # R3.step_R3()
+        R3.step_R3()
         control_rate.sleep()
         print("overal",time.time()-t1)
         t1=time.time()

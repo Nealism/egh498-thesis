@@ -73,11 +73,11 @@ def run(args):
 
     model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
     traced_script_module1 = torch.jit.script(model1)
-    traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net.jit")
+    # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net.jit")
 
     model2 = copy.deepcopy(pol.pi.z_net).to('cpu')
     traced_script_module2 = torch.jit.script(model2)
-    traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net.jit")
+    # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net.jit")
 
 
     # print("traced_script_module1",traced_script_module1)

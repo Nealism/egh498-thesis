@@ -25,6 +25,8 @@ class Env(EnvBasePB):
         #self.robottogoal_angles=[(200),(250)]
         self.rectangle_id1=0
         self.rectangle_id2=0
+        self.rectangle_id3=0
+        self.rectangle_id4=0
         self.start_time=time.time()
         
         super().__init__(PATH)
@@ -151,6 +153,8 @@ class Env(EnvBasePB):
             
             p.removeBody(self.rectangle_id1)
             p.removeBody(self.rectangle_id2)
+            p.removeBody(self.rectangle_id3)
+            p.removeBody(self.rectangle_id4)
             
              
             
@@ -262,8 +266,22 @@ class Env(EnvBasePB):
             #print(wall1_corners,wall2_corners)
 
             
-            self.rectangle_id1=self.create_rectangle(ID=1,corners=Robot.gap[0],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
-            self.rectangle_id2=self.create_rectangle(ID=2,corners=Robot.gap[1],wall_length=20,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
+            self.rectangle_id1=self.create_rectangle(ID=1,corners=Robot.gap[0],wall_length=3.7,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
+            self.rectangle_id2=self.create_rectangle(ID=2,corners=Robot.gap[1],wall_length=3.7,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
+
+
+            perpendicular_direction = [Robot.gap_orn[1], -Robot.gap_orn[0], 0]
+
+            
+
+            # Given orientation (orn)
+            orn_wallright = Robot.gap_orn
+            perpendicular_orn = p.getQuaternionFromEuler((0, 0, p.getEulerFromQuaternion(Robot.gap_orn)[2] + (math.pi / 2)))
+            
+
+
+            self.rectangle_id3=self.create_rectangle(ID=3,corners=Robot.sidewall_right[0],wall_length=25,wall_width=Robot.tunnel_depth,wall_height=2,orientation=perpendicular_orn)
+            self.rectangle_id4=self.create_rectangle(ID=4,corners=Robot.sidewall_right[1],wall_length=25,wall_width=Robot.tunnel_depth,wall_height=2,orientation=perpendicular_orn)
 
             
 
@@ -321,9 +339,9 @@ class Env(EnvBasePB):
                 self.turn_both=True
                 # print("turn_both",self.turn_both)
 
-        # for _ in range(int(self.timeStep/self.simStep)):
-        #     p.stepSimulation()
-        p.stepSimulation()
+        for _ in range(int(self.timeStep/self.simStep)):
+            p.stepSimulation()
+        # p.stepSimulation()
         #print("action_length",actions,"robot",self.robots)
         for action,Robot in zip(actions,self.robots):
             
@@ -363,8 +381,11 @@ class Env(EnvBasePB):
     
     def get_image(self):
         
-        
-        if self.args.occupancy_map:
+        # print("step",self.steps)
+        if self.args.occupancy_map and self.steps % 2 == 0:
+        # if self.args.occupancy_map and (self.steps >20 or self.steps  == 0):
+            # print("step_after",self.steps)
+
             # # p.setTimeStep(1/50)
              
             # for _ in range(int(50/10)):

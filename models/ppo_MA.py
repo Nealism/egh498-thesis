@@ -661,8 +661,11 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             else:
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
 
-            next_o, r, d, _ = env.step(a)
 
+            tt=time.time()
+            next_o, r, d, _ = env.step(a)
+            # print("td", time.time()-tt)
+            tt=time.time()
             #print("O_len",len(next_o),len(next_o[0]),"o",next_o)
 
             #print(r)
@@ -678,6 +681,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             if use_perception:
                 # if time.time() - st1 == 0.2:
                 next_im = env.get_image()
+                # print(next_im)
                 # else:
                 #     pass 
                 #print(len(im))
@@ -686,8 +690,9 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             new_time=current_time-st1
 
             # print("time_before",st1) 
-            # print("time",new_time)
+            
             st1=time.time()
+            # print("time",new_time)
             # if robot_number > 1:
 
             #ep_ret += sum(r) / len(r)

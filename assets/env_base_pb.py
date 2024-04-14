@@ -13,6 +13,7 @@ except:
     pass
 
 class EnvBasePB(EnvBase):
+    
     sim_data = []
     terrainId = None
     # terrain_size = [256,256]
@@ -20,9 +21,9 @@ class EnvBasePB(EnvBase):
     loaded_sim = False
     terrain = np.zeros(terrain_size)
 
-    # timeStep = 1/10
+    timeStep = 1/10
 
-    # simStep = 1/100
+    simStep = 1/100
 
     def load_robot(self):
             
@@ -111,7 +112,7 @@ class EnvBasePB(EnvBase):
             self._p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
         # ======================================================================
 
-        # p.setTimeStep(self.simStep)
+        p.setTimeStep(self.simStep)
         p.setGravity(0,0,-9.8)
         
         
