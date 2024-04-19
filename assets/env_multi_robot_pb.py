@@ -123,6 +123,10 @@ class Env(EnvBasePB):
         #self.gap_walls_length=[]
         self.gap_walls1_centre=[]
         self.gap_walls2_centre=[]
+
+        self.side_walls1_centre=[]
+        self.side_walls2_centre=[]
+
         self.external_goals_states=[]
         self.external_goals_states_with_IDx=[]
         self.wall1_corners=[]
@@ -135,6 +139,7 @@ class Env(EnvBasePB):
 
         self.random_robot_init=np.random.choice([6,8,9,10])
         
+        self.wall_length=3.7
         
 
         bodies_to_remove = [self.rectangle_id1, self.rectangle_id2]
@@ -246,6 +251,8 @@ class Env(EnvBasePB):
             if self.args.gap_avoidance:
                 self.gap_walls1_centre.append(Robot.rectangle1_centre)
                 self.gap_walls2_centre.append(Robot.rectangle2_centre)
+                self.side_walls1_centre.append(Robot.rectangle3_centre)
+                self.side_walls2_centre.append(Robot.rectangle4_centre)
                 self.gap_walls_thickness.append(Robot.tunnel_depth)
 
         if self.args.num_robots>1 and self.args.gap_avoidance:
@@ -266,8 +273,8 @@ class Env(EnvBasePB):
             #print(wall1_corners,wall2_corners)
 
             
-            self.rectangle_id1=self.create_rectangle(ID=1,corners=Robot.gap[0],wall_length=3.7,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
-            self.rectangle_id2=self.create_rectangle(ID=2,corners=Robot.gap[1],wall_length=3.7,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
+            self.rectangle_id1=self.create_rectangle(ID=1,corners=Robot.gap[0],wall_length=self.wall_length,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
+            self.rectangle_id2=self.create_rectangle(ID=2,corners=Robot.gap[1],wall_length=self.wall_length,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
 
 
             perpendicular_direction = [Robot.gap_orn[1], -Robot.gap_orn[0], 0]
@@ -280,8 +287,8 @@ class Env(EnvBasePB):
             
 
 
-            self.rectangle_id3=self.create_rectangle(ID=3,corners=Robot.sidewall_right[0],wall_length=25,wall_width=Robot.tunnel_depth,wall_height=2,orientation=perpendicular_orn)
-            self.rectangle_id4=self.create_rectangle(ID=4,corners=Robot.sidewall_right[1],wall_length=25,wall_width=Robot.tunnel_depth,wall_height=2,orientation=perpendicular_orn)
+            self.rectangle_id3=self.create_rectangle(ID=3,corners=Robot.sidewalls[0],wall_length=25,wall_width=Robot.tunnel_depth,wall_height=2,orientation=perpendicular_orn)
+            self.rectangle_id4=self.create_rectangle(ID=4,corners=Robot.sidewalls[1],wall_length=25,wall_width=Robot.tunnel_depth,wall_height=2,orientation=perpendicular_orn)
 
             
 
@@ -404,7 +411,7 @@ class Env(EnvBasePB):
                 turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
 
             
-            M=self.visualize_maps(self.global_map_list, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos,self.gap_walls1_centre,self.gap_walls2_centre)
+            M=self.visualize_maps(self.global_map_list, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos,self.gap_walls1_centre,self.gap_walls2_centre,self.side_walls1_centre,self.side_walls2_centre)
             #N=self.visualize_maps(self.global_map2, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos)
             # self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
             # self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
@@ -562,7 +569,7 @@ class Env(EnvBasePB):
 
     # Function to visualize the maps using OpenCV
     
-    def visualize_maps(self,global_map_list, local_heightmaps, local_heightmap_positions, robot_positions,goal_positions,obstalce_positions,gap_walls1_centre,gap_walls2_centre):
+    def visualize_maps(self,global_map_list, local_heightmaps, local_heightmap_positions, robot_positions,goal_positions,obstalce_positions,gap_walls1_centre,gap_walls2_centre,side_walls1_centre,side_walls2_centre):
         
 
         #
@@ -575,6 +582,8 @@ class Env(EnvBasePB):
         obstacles_x_index,obstacles_y_index=[],[]
 
         gap_wall1s_x_index,gap_wall1s_y_index,gap_wall2s_x_index,gap_wall2s_y_index=[],[],[],[]
+        side_wall1s_x_index,side_wall1s_y_index,side_wall2s_x_index,side_wall2s_y_index=[],[],[],[]
+        
         Goals_x_index,Goals_y_index=[],[]
         #prev_positions=[(0,0),(0,0)]
         globalmap_images=[]
@@ -597,6 +606,23 @@ class Env(EnvBasePB):
 
                 gap_wall2s_x_index.append(gap_wall2_x_index)
                 gap_wall2s_y_index.append(gap_wall2_y_index)
+
+        if self.args.gap_avoidance:
+            for side_wall1_centre,side_wall2_centre in zip(side_walls1_centre,side_walls2_centre):
+                
+                side_wall1_x_index = int((side_wall1_centre[0] + self.global_map_size_x / 2) / self.global_resolution)
+                side_wall1_y_index = int((side_wall1_centre[1] + self.global_map_size_y / 2) / self.global_resolution)
+
+                side_wall2_x_index = int((side_wall2_centre[0] + self.global_map_size_x / 2) / self.global_resolution)
+                side_wall2_y_index = int((side_wall2_centre[1] + self.global_map_size_y / 2) / self.global_resolution)
+
+                # print(side_wall1_x_index,side_wall1_y_index,side_wall2_x_index,side_wall2_x_index)
+                
+                side_wall1s_x_index.append(side_wall1_x_index)
+                side_wall1s_y_index.append(side_wall1_y_index)
+
+                side_wall2s_x_index.append(side_wall2_x_index)
+                side_wall2s_y_index.append(side_wall2_y_index)
 
         for robot_position, goal_position,local_heightmap,local_heightmap_position, obstalce_position,global_map in zip(robot_positions,goal_positions, local_heightmaps,local_heightmap_positions,obstalce_positions,global_map_list):
             #Scale the maps for visualization
@@ -692,8 +718,12 @@ class Env(EnvBasePB):
 
                     # Calculate half-length and half-width in grid cells
                     half_length_cells = int(self.gap_walls_thickness[0] / (2 * self.global_resolution))
-                    half_width_cells = int(20 / (2 * self.global_resolution))
+                    half_width_cells = int(self.wall_length / (2 * self.global_resolution))
                     #half_width_cells = int(self.gap_walls_length[0] / (2 * self.global_resolution))
+                    
+                    #side walls
+                    sides_half_length_cells = int(25 / (2 * self.global_resolution))#int(self.gap_walls_thickness[0] / (2 * self.global_resolution))
+                    sides_half_width_cells = int(self.gap_walls_thickness[0] / (2 * self.global_resolution))#int(25 / (2 * self.global_resolution))
                     
                     #print("rr",self.gap_walls1_centre);exit
                     wall1_x_center=gap_wall1s_x_index[i]
@@ -701,6 +731,13 @@ class Env(EnvBasePB):
 
                     wall2_x_center=gap_wall2s_x_index[i]
                     wall2_y_center=gap_wall2s_y_index[i]
+
+
+                    side_wall1_x_center=side_wall1s_x_index[i]
+                    side_wall1_y_center=side_wall1s_y_index[i]
+
+                    side_wall2_x_center=side_wall2s_x_index[i]
+                    side_wall2_y_center=side_wall2s_y_index[i]
 
 
                     # Set the obstacle region in the global map to a higher value for visualization
@@ -712,6 +749,18 @@ class Env(EnvBasePB):
                     # Set the obstacle region in the global map to a higher value for visualization
                     for p in range(wall2_x_center - half_length_cells, wall2_x_center + half_length_cells + 1):
                         for q in range(wall2_y_center - half_width_cells, wall2_y_center + half_width_cells + 1):
+                            if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
+                                global_map[p, q] = 1.0
+
+                    # Set the obstacle region in the global map to a higher value for visualization
+                    for p in range(side_wall1_x_center - sides_half_length_cells, side_wall1_x_center + sides_half_length_cells + 1):
+                        for q in range(side_wall1_y_center - sides_half_width_cells, side_wall1_y_center + sides_half_width_cells + 1):
+                            if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
+                                global_map[p, q] = 1.0
+
+                    # Set the obstacle region in the global map to a higher value for visualization
+                    for p in range(side_wall2_x_center - sides_half_length_cells, side_wall2_x_center + sides_half_length_cells + 1):
+                        for q in range(side_wall2_y_center - sides_half_width_cells, side_wall2_y_center + sides_half_width_cells + 1):
                             if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
                                 global_map[p, q] = 1.0
         for index,(global_map,global_map_image) in enumerate(zip(global_map_list,globalmap_images)):

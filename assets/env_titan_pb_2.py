@@ -726,6 +726,8 @@ class Env(EnvBasePB):
         self.scale_f_linear=[]
         self.scale_f_angular=[]
 
+        self.wall_length=3.7
+
         self.k=0
 
         
@@ -761,8 +763,8 @@ class Env(EnvBasePB):
             # print("All",self.All_Robot_ID,"self",self)
             # print(self.max_gap_among_all_robots_individual_gap_width)
             side_wall_moving_rate=self.max_gap_among_all_robots_individual_gap_width-17
-            self.gap=self.gap_generator(width=self.max_gap_among_all_robots_individual_gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = 3.7,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
-            self.sidewall_right=self.gap_generator(width=side_wall_moving_rate, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = 25,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
+            self.gap=self.gap_generator(width=self.max_gap_among_all_robots_individual_gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = self.wall_length,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
+            self.sidewalls=self.gap_generator(width=side_wall_moving_rate, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = 25,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
             # self.sidewall_left=self.gap_generator(width=0.1, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = 15,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
 
             #print("gap",self,self.gap[0],self.gap[1])
@@ -780,7 +782,10 @@ class Env(EnvBasePB):
 
             self.rectangle1_centre = [(self.gap[0][0][i] + self.gap[0][2][i]) / 2 for i in range(3)]
             self.rectangle2_centre = [(self.gap[1][0][i] + self.gap[1][2][i]) / 2 for i in range(3)]
-            #print("r1",self.rectangle1_centre,"r2",self.rectangle2_centre)
+            # print("r1",self.rectangle1_centre,"r2",self.rectangle2_centre)
+            self.rectangle3_centre = [(self.sidewalls[0][0][i] + self.sidewalls[0][2][i]) / 2 for i in range(3)]
+            self.rectangle4_centre = [(self.sidewalls[1][0][i] + self.sidewalls[1][2][i]) / 2 for i in range(3)]
+            # print("r3",self.rectangle3_centre,"r4",self.rectangle4_centre)
             
             
             self.Boolian=False

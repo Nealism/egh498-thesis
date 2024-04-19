@@ -43,11 +43,18 @@ class GUI:
     def __init__(self, quadruped):
 
         time.sleep(0.5)
+        actions = pd.read_csv("/home/kom018/behaviour_rl/action_test.csv")
+        # print("titan_actions",actions.linear)
+        self.linear_vel=0
+        self.angular_vel=1
+        self.angular_vel_above_half=0
+        action_multiplier=1
+
 
         self.cyaw = 0
         self.cpitch = -7
         self.cdist = 0.66
-
+        # print("check");exit()
         self.xId = pb.addUserDebugParameter("x", -0.10, 0.10, 0.)
         self.yId = pb.addUserDebugParameter("y", -0.10, 0.10, 0.)
         self.zId = pb.addUserDebugParameter("z", -0.10, 0.10, 0.)
@@ -57,13 +64,14 @@ class GUI:
                                                 0.)
         self.yawId = pb.addUserDebugParameter("yaw", -np.pi / 4, np.pi / 4, 0.)
         self.StepLengthID = pb.addUserDebugParameter("Step Length", -0.1, 0.1,
-                                                     0.0)
-        self.YawRateId = pb.addUserDebugParameter("Yaw Rate", -1.0, 1.0, 0.)
+                                                     0.032)
+        self.YawRateId = pb.addUserDebugParameter("Yaw Rate", -1.0, 1.0, self.angular_vel*action_multiplier)
         self.LateralFractionId = pb.addUserDebugParameter(
-            "Lateral Fraction", -np.pi / 2.0, np.pi / 2.0, 0.)
-        self.StepVelocityId = pb.addUserDebugParameter("Step Velocity", 0.001,
-                                                       3., 0.1)
-
+            "Lateral Fraction", -np.pi / 2.0, np.pi / 2.0, self.angular_vel_above_half*action_multiplier)
+        self.StepVelocityId = pb.addUserDebugParameter("Step Velocity", 0.0001,
+                                                       3., self.linear_vel*action_multiplier)
+        # self.StepVelocityId = pb.addUserDebugParameter("Step Velocity", 0.001,
+        #                                                3., 0.1)
         self.ClearanceHeightId = pb.addUserDebugParameter(
             "Clearance Height", 0.0, 0.1, 0.03)
         self.PenetrationDepthId = pb.addUserDebugParameter(
@@ -158,8 +166,8 @@ class GUI:
         # args = default_arguments.get_defaults() 
         # run(args)
 
-        args = default_arguments.get_defaults() 
+        # args = default_arguments.get_defaults() 
 
-        run_test.run(args)
+        # run_test.run(args)
 
         return pos, orn, StepLength, LateralFraction, YawRate, StepVelocity, ClearanceHeight, PenetrationDepth

@@ -595,6 +595,15 @@ class Spot(object):
         orn = self.GetBaseOrientation()
         roll, pitch, yaw = self._pybullet_client.getEulerFromQuaternion(
             [orn[0], orn[1], orn[2], orn[3]])
+        
+        # # self.roll2, self.pitch2, self.yaw2 = p.getEulerFromQuaternion(self.orn2)
+        # self.body_vxyz2, self.base_rot_vel2 = self._pybullet_client.getBaseVelocity(self.Id2)
+
+        # self.roll_vel2 = self.base_rot_vel2[0]
+        # self.pitch_vel2 = self.base_rot_vel2[1]
+        # self.yaw_vel2 = self.base_rot_vel2[2]
+
+
         rpy = LA.RPY(roll, pitch, yaw)
         R, _ = LA.TransToRp(rpy)
         T_wb = LA.RpToTrans(R, np.array([pos[0], pos[1], pos[2]]))
@@ -603,6 +612,9 @@ class Spot(object):
 
         # Get Linear and Angular Twist in WORLD FRAME
         lin_twist, ang_twist = self.GetBaseTwist()
+
+        # print("linear_vel",lin_twist)
+        print("angular_vel",ang_twist)
 
         Vw = np.concatenate((ang_twist, lin_twist))
         Vb = np.dot(Adj_Tbw, Vw)

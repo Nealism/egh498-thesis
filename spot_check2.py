@@ -6,7 +6,8 @@ p.connect(p.GUI)  # or p.DIRECT for non-graphical simulation
 p.setAdditionalSearchPath(pybullet_data.getDataPath())  # Add path to additional resources
 
 # Load Spot URDF model
-spot_urdf_file = "/home/kom018/spot_mini_mini/spot_best/spot_2/src/spotmicro/util/pybullet_data/assets/urdf/spot.urdf"
+# spot_urdf_file = "/home/kom018/spot_mini_mini/spot_best/spot_2/src/spotmicro/util/pybullet_data/assets/urdf/spot.urdf"
+spot_urdf_file = "/home/kom018/spot_ros/spot_description/urdf/spot.urdf.xacro"
 robot_id = p.loadURDF(spot_urdf_file, [0, 0, 0], useFixedBase=True)
 
 # Get information about the robot's joints and links

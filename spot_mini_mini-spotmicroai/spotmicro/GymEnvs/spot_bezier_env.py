@@ -160,7 +160,7 @@ class spotBezierEnv(spotGymEnv):
         # Discard all but joint angles
         action = self.ja
 
-        print("action",action)
+        # print("action",action)
 
         self._last_base_position = self.spot.GetBasePosition()
         self._last_base_orientation = self.spot.GetBaseOrientation()

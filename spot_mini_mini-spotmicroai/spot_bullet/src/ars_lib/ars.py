@@ -499,7 +499,7 @@ class ARSAgent():
 
             joint_angles = self.spot.IK(orn, pos, T_bf)
 
-            print("joint_angles",joint_angles)
+            # print("joint_angles",joint_angles)
             # Pass Joint Angles
             self.env.pass_joint_angles(joint_angles.reshape(-1))
 

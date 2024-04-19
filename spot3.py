@@ -9,6 +9,7 @@ objects = p.loadMJCF("./assets/xmls/ground.xml")
 worldId = objects[0]
 
 # Load the Spot URDF model
+
 spot_urdf_file = "/home/kom018/spot_mini_mini/spot_best/spot_2/src/spotmicro/util/pybullet_data/assets/urdf/spot.urdf"
 spot_robot = p.loadURDF(spot_urdf_file, [0, 0, 2])
 

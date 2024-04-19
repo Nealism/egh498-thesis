@@ -83,6 +83,8 @@ def run(args):
     # print("traced_script_module1",traced_script_module1)
     # print("traced_script_module2",traced_script_module2)
     st=time.time()
+    action_saving1=[]
+    action_saving2=[]
 
     while True:
 
@@ -93,7 +95,15 @@ def run(args):
         else:
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
 
-        # print ("action", action)
+        # print ("action", action);exit()
+
+        action_saving1.append(action[0][0])
+        action_saving2.append(action[0][1])
+        accc1=pd.DataFrame(action_saving1)
+        accc2=pd.DataFrame(action_saving2)
+        accc = pd.concat([accc1, accc2], axis=1)
+        # print(accc,type(accc))
+        accc.to_csv("action_test.csv")
         current_time = time.time() - st
         # print(current_time)
         st=time.time()
