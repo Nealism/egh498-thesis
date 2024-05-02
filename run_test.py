@@ -47,7 +47,7 @@ def run(args):
     
     Env, args = default_arguments.get_env(args)   
     args.render = True
-    #args.render = False
+    # args.render = False
     args.record_sim = False
     env = Env(PATH=PATH, args=args)
 
@@ -73,11 +73,11 @@ def run(args):
 
     model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
     traced_script_module1 = torch.jit.script(model1)
-    # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net.jit")
+    traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net.jit")
 
     model2 = copy.deepcopy(pol.pi.z_net).to('cpu')
     traced_script_module2 = torch.jit.script(model2)
-    # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net.jit")
+    traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net.jit")
 
 
     # print("traced_script_module1",traced_script_module1)
@@ -97,13 +97,13 @@ def run(args):
 
         # print ("action", action);exit()
 
-        action_saving1.append(action[0][0])
-        action_saving2.append(action[0][1])
-        accc1=pd.DataFrame(action_saving1)
-        accc2=pd.DataFrame(action_saving2)
-        accc = pd.concat([accc1, accc2], axis=1)
-        # print(accc,type(accc))
-        accc.to_csv("action_test.csv")
+        # action_saving1.append(action[0][0])
+        # action_saving2.append(action[0][1])
+        # accc1=pd.DataFrame(action_saving1)
+        # accc2=pd.DataFrame(action_saving2)
+        # accc = pd.concat([accc1, accc2], axis=1)
+        # # print(accc,type(accc))
+        # accc.to_csv("action_test.csv")
         current_time = time.time() - st
         # print(current_time)
         st=time.time()

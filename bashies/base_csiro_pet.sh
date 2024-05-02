@@ -3,7 +3,7 @@ sbatch <<EOT
 #!/bin/bash
 #SBATCH --job-name=$2
 #SBATCH --time=$4
-#SBATCH --mem=500g
+#SBATCH --mem=90g
 #SBATCH --ntasks-per-node=32
 #SBATCH --nodes=1
 ulimit -s 10240

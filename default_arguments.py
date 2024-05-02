@@ -56,6 +56,7 @@ def get_defaults():
     parser.add_argument('--emitter', default="")
     parser.add_argument('--folder', default="")
     parser.add_argument('--reward', type=int, default=1)
+    parser.add_argument('--cur_thres', type=float, default=0.5)
     parser.add_argument('--exp', default="test")
     parser.add_argument('--goal', default="end_effector")
     parser.add_argument('--tree_type', default="")
@@ -86,6 +87,18 @@ def get_defaults():
     parser.add_argument('--experiment_2', default=False, action="store_true")
     parser.add_argument('--experiment_3', default=False, action="store_true")
     parser.add_argument('--randomness', type=int, default=1)
+
+
+    # ========================================================================
+    # Spot
+    # ========================================================================
+    parser.add_argument('--with_initial_cmd', default=False, action="store_true")
+    parser.add_argument('--yaw_first', default=False, action="store_true")
+    parser.add_argument('--use_yaw_vel', default=False, action="store_true")
+    parser.add_argument('--scale_yaw_cmds', default=False, action="store_true")
+    parser.add_argument('--yaw_rew_scale', default=1.0, type=float)
+    parser.add_argument('--yaw_cmd_dif', default=1.5, type=float)
+    parser.add_argument('--ang_vel_tracking_sigma', default=0.5, type=float)
 
     
 
@@ -133,7 +146,7 @@ def get_defaults():
     parser.add_argument('--save_freq', type=int, default=10)
     parser.add_argument('--local_epoch_len', type=int, default=4096)
     parser.add_argument('--max_ep_len', type=int, default=1024)
-    parser.add_argument('--epochs', type=int, default=8000)
+    parser.add_argument('--epochs', type=int, default=7000)
     parser.add_argument('--cpu', type=int, default=1)
     parser.add_argument('--episodes', type=int, default=100)
     parser.add_argument('--reward_fn', type=int, default=1)
@@ -193,7 +206,9 @@ def get_env(args):
     if args.env == "humanoid_pb":
         from assets.env_humanoid_pb import Env
     elif args.env == "multi_robot_pb":
-        from assets.env_multi_robot_pb import Env 
+        from assets.env_multi_robot_pb import Env
+    elif args.env == "spot_pb":
+        from assets.env_spot_pb import Env 
     elif args.env == "biped_pb":
         from assets.env_biped_pb import Env 
     elif args.env == "franka_ball_mj":

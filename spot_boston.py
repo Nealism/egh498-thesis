@@ -46,9 +46,9 @@ for i in range(num_joints):
 
 # Control loop parameters
 t = 0
-linear_velocity = 0.2  # Adjust as needed
-angular_velocity = 0.2  # Adjust as needed
-lateral_fraction = 0.1  # Adjust as needed
+linear_velocity = 0  # Adjust as needed
+angular_velocity = 0  # Adjust as needed
+lateral_fraction = 0  # Adjust as needed
 
 # Main control loop
 while True:

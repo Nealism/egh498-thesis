@@ -1,6 +1,0 @@
-# Request
-int8 servo_num
-float32 servo_angle
----
-# Response
-string Response

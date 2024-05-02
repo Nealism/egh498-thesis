@@ -400,24 +400,37 @@ class Env(EnvBasePB):
             # timestep = p.getPhysicsEngineParameters()["fixedTimeStep"]
             # print(timestep)
             #self.occupancy_maps=[]
+
             turtlebot_data=[]
-            self.local_heightmaps=[]
-            self.local_heightmap_positions=[]
+            local_heightmaps=[]
+            local_heightmap_positions=[]
+
+
+
             for robot_pos,robot_orn in zip(self.robots_pos,self.robots_orn):
 
                 local_heightmap, local_heightmap_position = self.get_heightmap(robot_pos,robot_orn)
-                self.local_heightmaps.append(local_heightmap)
-                self.local_heightmap_positions.append(local_heightmap_position)
+                # array_shape = (65,75)
+                # local_heightmap = np.zeros(array_shape)
+                
+                # print("in_function",local_heightmap.shape)
+                # print("in_function_pos",local_heightmap_position)
+
+                local_heightmaps.append(local_heightmap)
+                local_heightmap_positions.append(local_heightmap_position)
                 turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
 
-            
-            M=self.visualize_maps(self.global_map_list, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos,self.gap_walls1_centre,self.gap_walls2_centre,self.side_walls1_centre,self.side_walls2_centre)
+            # print("self.local_heightmaps",np.array(local_heightmaps).shape)
+            # print("self.global_Map",np.array(self.global_map_list).shape)
+            M=self.visualize_maps(self.global_map_list, local_heightmaps,local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos,self.gap_walls1_centre,self.gap_walls2_centre,self.side_walls1_centre,self.side_walls2_centre)
             #N=self.visualize_maps(self.global_map2, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos)
             # self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
             # self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
             # current_time = time.time()
             # print("current",current_time-self.start_time)
-            self.occupancy_maps=deepcopy(self.local_heightmaps)
+            # print("local_hmap",np.array(self.local_heightmaps).shape)
+            # print("reshape",[self.args.num_robots]+self.im_size)
+            self.occupancy_maps=deepcopy(local_heightmaps)
             # self.occupancy_maps_reshaped=np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size)
 
             # if current_time-self.start_time==0.2:
@@ -435,7 +448,49 @@ class Env(EnvBasePB):
             #     self.global_map = np.zeros((self.global_num_rows, self.global_num_cols), dtype=np.float32)
             #     self.global_map_list.append(self.global_map)
         #print(self.occupancy_maps);exit()
+        # else:
+        #     pass
+        # print("imsize",self.im_size,"occ_size",np.array(self.occupancy_maps[0]).shape,np.array(self.occupancy_maps[1]).shape)
+        # print([self.args.num_robots]+self.im_size,np.array(self.occupancy_maps).shape)
+        # print([self.args.num_robots]+self.im_size,np.array(self.occupancy_maps).shape)
+
+        
+
         return np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size)
+    
+    # def get_image(self):
+    #     # if self.args.occupancy_map and self.steps % 2 == 0:
+    #     if self.args.occupancy_map:
+    #         turtlebot_data = []
+    #         self.local_heightmaps = []
+    #         self.local_heightmap_positions = []
+    #         for robot_pos, robot_orn in zip(self.robots_pos, self.robots_orn):
+    #             local_heightmap, local_heightmap_position = self.get_heightmap(robot_pos, robot_orn)
+    #             self.local_heightmaps.append(local_heightmap)
+    #             self.local_heightmap_positions.append(local_heightmap_position)
+    #             turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
+
+    #         M = self.visualize_maps(self.global_map_list, self.local_heightmaps, self.local_heightmap_positions, self.robots_pos, self.Goals_pos, self.Obstacles_pos, self.gap_walls1_centre, self.gap_walls2_centre, self.side_walls1_centre, self.side_walls2_centre)
+
+    #         self.occupancy_maps = []
+    #         for hmap in self.local_heightmaps:
+    #             if isinstance(hmap, np.ndarray):
+    #                 self.occupancy_maps.append(hmap)
+    #             else:
+    #                 self.occupancy_maps.append(np.array(hmap))
+    #         # self.args.num_robots=[2]
+    #         # self.im_size
+    #         print("imsize",self.im_size,type(self.im_size),np.array(self.occupancy_maps).shape)
+    #         # Check if all elements are numpy arrays
+    #         if all(isinstance(hmap, np.ndarray) for hmap in self.occupancy_maps):
+    #             return np.array(self.occupancy_maps).reshape([self.args.num_robots] + self.im_size)
+    #         else:
+    #             print("Error: Some elements in occupancy_maps are not numpy arrays.")
+    #             return None
+    #     else:
+    #         return None
+
+    
     
     def get_observation(self):
 
@@ -530,12 +585,82 @@ class Env(EnvBasePB):
         # )
 
     # Function to get the local heightmap
-    def get_heightmap(self,robot_position,robot_orientation):
+    # def get_heightmap(self,robot_position,robot_orientation):
+    #     # Calculate the boundaries of the local map based on robot_position and local_map_size
+    #     local_x_min = robot_position[0] - self.local_map_size_x / 2
+    #     local_x_max = robot_position[0] + self.local_map_size_x / 2
+    #     local_y_min = robot_position[1] - self.local_map_size_y / 2
+    #     local_y_max = robot_position[1] + self.local_map_size_y / 2
+
+    #     # Calculate grid indices for the local map within the global map
+    #     local_x_indices = np.clip(
+    #         np.array(((local_x_min + self.global_map_size_x / 2) / self.global_resolution), dtype=int), 0, self.global_num_rows - 1
+    #     )
+    #     local_y_indices = np.clip(
+    #         np.array(((local_y_min + self.global_map_size_y / 2) / self.global_resolution), dtype=int), 0, self.global_num_cols - 1
+    #     )
+
+    #     for global_map in self.global_map_list:
+    #         # Extract the local heightmap from the global map
+    #         local_heightmap = global_map[
+    #             local_x_indices:local_x_indices + self.local_num_rows, local_y_indices:local_y_indices + self.local_num_cols
+    #         ]
+
+
+        
+
+    #         # Calculate the position of the local heightmap within the local map
+    #         local_heightmap_x_min = local_x_min
+    #         local_heightmap_x_max = local_x_max
+    #         local_heightmap_y_min = local_y_min
+    #         local_heightmap_y_max = local_y_max
+
+    #         #print("local_heightmap", local_heightmap,local_heightmap.shape)
+    #         # Rotate the local heightmap based on the robot's orientation
+    #         local_heightmap = np.rot90(local_heightmap, k=int(math.degrees(robot_orientation) / 90))
+
+    #         # array_shape = (65,75)
+    #         # local_heightmap = np.zeros(array_shape)
+    #         print("before_Lmap",local_heightmap.shape)
+
+    #         # Pad heightmaps if their shape is less than (80, 80)
+    #             # Calculate padding
+    #         pad_height = max(80 - local_heightmap.shape[0], 0)
+    #         pad_width = max(80 - local_heightmap.shape[1], 0)
+            
+    #         # Pad heightmaps if their shape is less than (80, 80)
+    #         local_heightmap = np.pad(local_heightmap, ((0, pad_height), (0, pad_width)), mode='constant', constant_values=0)
+
+    #         print("after_Lmap",local_heightmap.shape)
+
+    #     return local_heightmap, (local_heightmap_x_min, local_heightmap_x_max, local_heightmap_y_min, local_heightmap_y_max)
+
+    def get_heightmap(self, robot_position, robot_orientation):
+
+        # robot_position=(50,50)
+        robot_position=list(robot_position)
+        if robot_position[0] > 40:
+            robot_position[0]=40
+        elif robot_position[0] < -40:
+            robot_position[0]=-40
+        # else:
+        #     robot_position[0]=robot_position[0]
+
+        if robot_position[1] > 40:
+            robot_position[1]=40
+        elif robot_position[1] < -40:
+            robot_position[1]=-40
+        # else:
+        #     robot_position[1]=robot_position[1]
+
+        # print("robot_position[0]",robot_position[0],"robot_position[1]",robot_position[1])
         # Calculate the boundaries of the local map based on robot_position and local_map_size
         local_x_min = robot_position[0] - self.local_map_size_x / 2
         local_x_max = robot_position[0] + self.local_map_size_x / 2
         local_y_min = robot_position[1] - self.local_map_size_y / 2
         local_y_max = robot_position[1] + self.local_map_size_y / 2
+
+        # print(" self.local_num_rows", self.local_num_rows," self.local_num_cols", self.local_num_cols)
 
         # Calculate grid indices for the local map within the global map
         local_x_indices = np.clip(
@@ -545,14 +670,12 @@ class Env(EnvBasePB):
             np.array(((local_y_min + self.global_map_size_y / 2) / self.global_resolution), dtype=int), 0, self.global_num_cols - 1
         )
 
+        # print("local_x_indices",local_x_indices,"local_y_indices",local_y_indices)
         for global_map in self.global_map_list:
             # Extract the local heightmap from the global map
             local_heightmap = global_map[
                 local_x_indices:local_x_indices + self.local_num_rows, local_y_indices:local_y_indices + self.local_num_cols
             ]
-
-
-        
 
             # Calculate the position of the local heightmap within the local map
             local_heightmap_x_min = local_x_min
@@ -560,12 +683,25 @@ class Env(EnvBasePB):
             local_heightmap_y_min = local_y_min
             local_heightmap_y_max = local_y_max
 
-            #print("local_heightmap", local_heightmap,local_heightmap.shape)
             # Rotate the local heightmap based on the robot's orientation
             local_heightmap = np.rot90(local_heightmap, k=int(math.degrees(robot_orientation) / 90))
-         
+
+        #     # Pad heightmaps if their shape is less than (80, 80)
+        #     # Calculate padding
+        #     pad_height = max(80 - local_heightmap.shape[0], 0)
+        #     pad_width = max(80 - local_heightmap.shape[1], 0)
+        #     # print("before_hm",local_heightmap.shape)
+        #     # Pad heightmaps if their shape is less than (80, 80)
+        #     local_heightmap_final = np.pad(local_heightmap, ((0, pad_height), (0, pad_width)), mode='constant', constant_values=0)
+
+        #     # Update the positions after padding
+        #     local_heightmap_x_max += pad_height * self.global_resolution
+        #     local_heightmap_y_max += pad_width * self.global_resolution
+        # # print("after_hm",local_heightmap_final.shape)
 
         return local_heightmap, (local_heightmap_x_min, local_heightmap_x_max, local_heightmap_y_min, local_heightmap_y_max)
+
+
 
     # Function to visualize the maps using OpenCV
     
@@ -685,12 +821,80 @@ class Env(EnvBasePB):
             globalmap_images.append(global_map_image)
             heightmap_images.append(heightmap_image)
         #print("aa",heightmap_images)
-        #print(len(globalmap_images));exit()
+        # print(len(global_map_image),len(globalmap_images[0]))
         for global_map_image in globalmap_images:
-            for i in range(len(self.robots_pos)):
-                global_map_image[
-                x_min[i]:x_max[i],
-                y_min[i]:y_max[i],] = heightmap_images[i]
+            for i in range (2):#(len(self.robots_pos)):
+                # print(len(self.robots_pos))
+                # print(len(global_map_image),len(heightmap_images[i]),x_min[i],x_max[i],y_min[i],y_max[i])
+                # print("globals",np.array(global_map_image).shape,np.array(global_map_image[0]).shape,np.array(global_map_image[1]).shape)
+                # print("locals",np.array(heightmap_images[i]).shape,np.array(heightmap_images[i][0]).shape,np.array(heightmap_images[i][1]).shape)
+                # print(x_min[i],x_max[i],y_min[i],y_max[i])
+                
+                # global_map_image[
+                # x_min[i]:x_max[i],
+                # y_min[i]:y_max[i],] = heightmap_images[i]
+
+                if heightmap_images[i].shape == (80, 80, 3):
+                    global_map_image[
+                        x_min[i]:x_max[i],
+                        y_min[i]:y_max[i],:] = heightmap_images[i]
+                else:
+                    print("Skipping assignment due to shape mismatch.")
+
+
+                # # Calculate padding
+                # # Calculate padding
+                # pad_height = max(80 - local_heightmap.shape[0], 0)
+                # pad_width = max(80 - local_heightmap.shape[1], 0)
+
+                # # Adjust x_min, x_max, y_min, y_max if they are less than 80
+                # x_min_adjusted = max(x_min[i], 80 - pad_height)
+                # x_max_adjusted = min(x_max[i], 80 + local_heightmap.shape[0])
+                # y_min_adjusted = max(y_min[i], 80 - pad_width)
+                # y_max_adjusted = min(y_max[i], 80 + local_heightmap.shape[1])
+
+                # # Adjust heightmap size to match the region
+                # heightmap_shape = (max(x_max_adjusted - x_min_adjusted, 1), max(y_max_adjusted - y_min_adjusted, 1))
+                # local_heightmap_resized = cv2.resize(local_heightmap, heightmap_shape[::-1], interpolation=cv2.INTER_AREA)
+
+                # # Create an empty image with the same shape as global_map_image
+                # heightmap_image = np.zeros((heightmap_shape[0], heightmap_shape[1], 3), dtype=np.uint8)
+
+                # # Insert the resized heightmap into the empty image
+                # heightmap_image[
+                #     :local_heightmap_resized.shape[0],
+                #     :local_heightmap_resized.shape[1], :] = cv2.cvtColor(local_heightmap_resized, cv2.COLOR_GRAY2BGR)
+
+                # # Overlay the heightmap image onto the global map image
+                # global_map_image[
+                #     x_min_adjusted:x_min_adjusted + heightmap_shape[0],
+                #     y_min_adjusted:y_min_adjusted + heightmap_shape[1],:] = heightmap_image
+
+
+
+
+
+
+                # # Adjust heightmap size to match the region
+                # heightmap_shape = (x_max[i] - x_min[i], y_max[i] - y_min[i])
+                # local_heightmap_resized = cv2.resize(local_heightmap, heightmap_shape[::-1], interpolation=cv2.INTER_AREA)
+
+                # # Create an empty image with the same shape as global_map_image
+                # heightmap_image = np.zeros_like(global_map_image)
+
+                # print("local_heightmap_resized",local_heightmap_resized.shape)
+                # # Insert the resized heightmap into the empty image
+                # heightmap_image[
+                #     x_min[i]:x_max[i],
+                #     y_min[i]:y_max[i],:] = cv2.cvtColor(local_heightmap_resized, cv2.COLOR_GRAY2BGR)
+
+                # # Overlay the heightmap image onto the global map image
+                # global_map_image = cv2.addWeighted(global_map_image, 1, heightmap_image, 0.5, 0)
+
+                # global_map_image[
+                # x_min[i]:x_max[i],
+                # y_min[i]:y_max[i],] = heightmap_images[i]
+                # print(len(global_map_image),len(self.robots_pos[0:1]),len(self.robots_pos))
         #print(i)
         # Find obstacle cells and mark them as red
         if self.args.obstacle_avoidance:
