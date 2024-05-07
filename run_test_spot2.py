@@ -9,7 +9,7 @@ home = str(Path.home())
 
 def run(args): 
 
-    args.env = "spot_pb"
+    args.env = "multi_robot_pb"
 
     if args.hpc:
         path_home = home + "/hpc-scratch/" + home.split("/")[-1]
@@ -53,7 +53,7 @@ def run(args):
 
     # else:
         # pol = torch.jit.load("./logs/chuck/exported/Oct18_09-03-12_/policy_1.pt")
-
+    
     obs = env.reset()
     if args.use_perception:
         im = env.get_image()
@@ -61,8 +61,9 @@ def run(args):
     # print("obs",obs)
     n=0
     while True:
+        # print("env",env)
         # print("observations",obs)
-        print("Commands",env.commands)
+        print("commands",env.commands)
 
         if args.use_perception:
             print(im)

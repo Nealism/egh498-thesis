@@ -21,9 +21,13 @@ class EnvBasePB(EnvBase):
     loaded_sim = False
     terrain = np.zeros(terrain_size)
 
-    timeStep = 1/10
+    # timeStep = 1/10
 
-    simStep = 1/100
+    # simStep = 1/100
+
+    timeStep = 1/50
+
+    simStep = 1/200
 
     def load_robot(self):
             

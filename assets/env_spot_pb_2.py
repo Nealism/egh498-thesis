@@ -17,6 +17,8 @@ import copy
 
 from assets.env_base_pb import EnvBasePB
 from statistics import mean
+import torch
+import numpy as np
 
 
 
@@ -24,6 +26,9 @@ from statistics import mean
 #Inflation radious code are specified some in reset, some in reward function and mostly in observation.
 
 class Env(EnvBasePB):
+
+    timeStep=1/50
+    simStep=1/200
     terrain_size = im_size = [1,100,100]
     
     def __init__(self, PATH=None, args=None, writer=None,posi=None):
@@ -50,6 +55,9 @@ class Env(EnvBasePB):
         #self.obs_fn_name = f'get_hlp_obs_{self.args.obs_fn}'
         self.reset_fn_name = f'reset_{self.args.reset_fn}'
         self.step_fn_name = f'step_{self.args.step_fn}'
+
+
+        self.ac_size_walk_model=12
 
         
         if "pumpkin" in self.args.env:
@@ -99,8 +107,37 @@ class Env(EnvBasePB):
         self.dd=0
         self.start_time = time.time() 
         self.pre_action=[0]*2
-        
 
+        self.torque_kp = 20.0
+        self.torque_kd = 0.5
+
+        self.default_joints = np.array([0.0, 1.2, -2.0]*4)
+
+        self.action_scale = 0.5
+        self.max_vx = 0.5
+        self.max_vy = 0.0
+        self.max_yaw_vel = 0.0
+
+        self.min_vx = 0.5
+        self.min_vy = -0.0
+        self.min_yaw_vel = -0.0
+
+        self.target_max_vx = 1.0
+        self.target_max_vy = 0.5
+        self.target_max_yaw_vel = 1.5
+
+        self.target_min_vx = -0.5
+        self.target_min_vy = -0.5
+        self.target_min_yaw_vel = -1.5
+        self.cmd_cur = True
+
+        self.w_cont = 0.1
+
+        self.cmd_update_rate = 100
+
+        
+        SPOT_MODEL_PATH = "./resources/spot/2024_04_30_08_59_43/model.pt" 
+        self.spot_pol = torch.load(SPOT_MODEL_PATH)
         
 
         if self.args.obstacle_avoidance and self.args.static_robots > 1 and self.args.single_collision_curr or self.args.cur:
@@ -246,69 +283,136 @@ class Env(EnvBasePB):
     #     self.ground_truth = Hfield(gt_arr, gt_path, gt_name, gt_position, gt_size) 
     #     self.terrains.append(self.ground_truth)
 
+
     def load_specific_robot(self):
+        
+        robot1=self.load_urdf_robot("./assets/urdfs/spot/urdf/spot.urdf")
+        self.contact_list = [['base_link','front_rail','real_front_rail', 'real_rear_rail','rear_rail','front_left_hip','front_left_upper_leg', 'front_right_hip', 'front_right_upper_leg','rear_left_hip', 'rear_left_upper_leg','rear_right_hip', 'rear_right_upper_leg']]
 
-        if "pumpkin" in self.args.env:
-            self.load_urdf_robot("./assets/urdfs/pumpkin.urdf")
-            self.contact_list = ['pumpkin_chassis', 'pumpkin_lower_chassis']
-        else:
-            #state_object= [random.uniform(-4,4),random.uniform(4,1),0.00]
-            robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
-            self.contact_list = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
-            if self.args.static_robots > 1 and self.args.insert_robot2:
-                robot2=self.load_urdf_robot2("./assets/urdfs/dynamic_titan.urdf")
-            if self.args.insert_box:
-                wall_dir= "Wall_URDF/"
-                self.square = p.loadURDF(wall_dir + "square.urdf", [0,2,0.5], useFixedBase=True)
-
-            
-            #robot2=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
-            self.contact_list2 = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
-            wall_dir= "Wall_URDF/"
-            #self.square = p.loadURDF(wall_dir + "square.urdf", [0,2,0.5], useFixedBase=True)
-
-            # wallA = p.loadURDF(wall_dir + "Wall.urdf", [11.25,0,0], useFixedBase=True)
-            # wallB = p.loadURDF(wall_dir + "Wall.urdf", [-11.25,0,0], useFixedBase=True)
-            # wall2A = p.loadURDF(wall_dir + "Wall2.urdf", [0,11.25,0], useFixedBase=True)
-            # wall2A = p.loadURDF(wall_dir + "Wall2.urdf", [0,-11.25,0], useFixedBase=True)
-            #wall2A = p.loadURDF(wall_dir + "Wall2_small.urdf", [-2,0,0], useFixedBase=True)
-            #wall2A = p.loadURDF(wall_dir + "Wall2_small.urdf", [-2,1,0], useFixedBase=True)
-            #wall2A = p.loadURDF(wall_dir + "Wall2_small.urdf", [2,0,0], useFixedBase=True)
-            #wall2A = p.loadURDF(wall_dir + "Wall2_small.urdf", [2,1,0], useFixedBase=True)
-            # wall2A = p.loadURDF("/home/komol/00_STUDY_DRIVE/Codes/mobile_robot/Wall_URDF/Wall2_small.urdf", [2,-1,0], useFixedBase=True)
-            #wall2A = p.loadURDF("/home/komol/00_STUDY_DRIVE/Codes/mobile_robot/Wall_URDF/Wall2_small.urdf", [-2,1,0], useFixedBase=True)
-            #state_object= [random.uniform(-4,4),random.uniform(-4,1),0.00]
-            #state_object=[-2,-3,0.00]
-            state_object=[np.random.uniform(-2, 2),np.random.uniform(-3, -3.5),0.00]
-            wall_dir= "Wall_URDF/"
-            self.Goal = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=state_object)
-            
-            
-            
-            
-            #p.setCollisionFilterPair(self.Id, self.Id2, -1, -1, 0)
-            
-            #print(aabbMin)
-
-        self.left_track = []
-        self.right_track = []
+        self.jdict = {}
+        self.feet_dict = {}
+        self.leg_dict = {}
+        self.body_dict = {}
+        self.feet = ["rear_left_lower_leg", "rear_right_lower_leg", "front_left_lower_leg", "front_right_lower_leg"]
+        self.legs = ["rear_left_upper_leg", "rear_right_upper_leg", "front_left_upper_leg", "front_right_upper_leg"]
+        self.feet_contact = {f:True for f in self.feet}
+        self.ordered_joints = []
+        self.ordered_joint_indices = []
         self.contact_dict = {}
-        self.wheel_dict = {}
+        self.shin_dict = {}
+        self.arm_dict = {}
         for j in range( p.getNumJoints(self.Id) ):
             info = p.getJointInfo(self.Id, j)
+            # print()
             link_name = info[12].decode("ascii")
-            if "wheel" in link_name: self.wheel_dict[link_name] = j
+            if link_name in self.feet: self.feet_dict[link_name] = j
+            if link_name in self.legs: self.leg_dict[link_name] = j
+            if link_name=="pelvis": self.body_dict["body_link"] = j
             if link_name in self.contact_list: self.contact_dict[link_name] = j
+            self.ordered_joint_indices.append(j)
             if info[2] != p.JOINT_REVOLUTE: continue
             jname = info[1].decode("ascii")
-            if "left" in jname:
-                self.left_track.append(j)
-            elif "right" in jname:
-                self.right_track.append(j)
-        self.motors = []
-        # Works much better if using husky wheel interias in the URDF
-        # for key in self.wheel_dict:
-        # 	p.changeDynamics(self.Id, self.wheel_dict[key], lateralFriction=0.9, spinningFriction=0.01, rollingFriction=0.01)
+            # print(jname)
+
+            lower, upper = (info[8], info[9])
+            self.ordered_joints.append( (j, lower, upper) )
+            self.jdict[jname] = j
+        
+        # exit()
+
+        # Do not change this order!! Else joint postions will be wrong
+        self.motor_names = ["front_left_hip_x"]
+        self.motor_names += ["front_left_hip_y"]
+        self.motor_names += ["front_left_knee"]
+        self.motor_names += ["front_right_hip_x"]
+        self.motor_names += ["front_right_hip_y"]
+        self.motor_names += ["front_right_knee"]
+        self.motor_names += ["rear_left_hip_x"]
+        self.motor_names += ["rear_left_hip_y"]
+        self.motor_names += ["rear_left_knee"]
+        self.motor_names += ["rear_right_hip_x"]
+        self.motor_names += ["rear_right_hip_y"]
+        self.motor_names += ["rear_right_knee"]
+        self.motor_power =  [20]*len(self.motor_names)       
+
+        self.motors = [self.jdict[n] for n in self.motor_names]
+            
+        forces = np.ones(len(self.motors))*240
+
+        state_object=[np.random.uniform(-2, 2),np.random.uniform(-3, -3.5),0.00]
+        wall_dir= "Wall_URDF/"
+        self.Goal = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=state_object)
+        # self.actions =
+        #  {key:0.0 for key in self.motor_names}
+
+        p.setJointMotorControlArray(self.Id, self.motors, controlMode=p.VELOCITY_CONTROL, forces=[0.] * len(self.motor_names))
+
+        for key in self.feet_dict:
+            p.changeDynamics(self.Id, self.feet_dict[key],lateralFriction=0.9, spinningFriction=0.9)
+
+    # def load_specific_robot(self):
+
+    #     if "pumpkin" in self.args.env:
+    #         self.load_urdf_robot("./assets/urdfs/pumpkin.urdf")
+    #         self.contact_list = ['pumpkin_chassis', 'pumpkin_lower_chassis']
+    #     else:
+    #         #state_object= [random.uniform(-4,4),random.uniform(4,1),0.00]
+    #         robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
+    #         self.contact_list = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
+    #         if self.args.static_robots > 1 and self.args.insert_robot2:
+    #             robot2=self.load_urdf_robot2("./assets/urdfs/dynamic_titan.urdf")
+    #         if self.args.insert_box:
+    #             wall_dir= "Wall_URDF/"
+    #             self.square = p.loadURDF(wall_dir + "square.urdf", [0,2,0.5], useFixedBase=True)
+
+            
+    #         #robot2=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
+    #         self.contact_list2 = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
+    #         wall_dir= "Wall_URDF/"
+    #         #self.square = p.loadURDF(wall_dir + "square.urdf", [0,2,0.5], useFixedBase=True)
+
+    #         # wallA = p.loadURDF(wall_dir + "Wall.urdf", [11.25,0,0], useFixedBase=True)
+    #         # wallB = p.loadURDF(wall_dir + "Wall.urdf", [-11.25,0,0], useFixedBase=True)
+    #         # wall2A = p.loadURDF(wall_dir + "Wall2.urdf", [0,11.25,0], useFixedBase=True)
+    #         # wall2A = p.loadURDF(wall_dir + "Wall2.urdf", [0,-11.25,0], useFixedBase=True)
+    #         #wall2A = p.loadURDF(wall_dir + "Wall2_small.urdf", [-2,0,0], useFixedBase=True)
+    #         #wall2A = p.loadURDF(wall_dir + "Wall2_small.urdf", [-2,1,0], useFixedBase=True)
+    #         #wall2A = p.loadURDF(wall_dir + "Wall2_small.urdf", [2,0,0], useFixedBase=True)
+    #         #wall2A = p.loadURDF(wall_dir + "Wall2_small.urdf", [2,1,0], useFixedBase=True)
+    #         # wall2A = p.loadURDF("/home/komol/00_STUDY_DRIVE/Codes/mobile_robot/Wall_URDF/Wall2_small.urdf", [2,-1,0], useFixedBase=True)
+    #         #wall2A = p.loadURDF("/home/komol/00_STUDY_DRIVE/Codes/mobile_robot/Wall_URDF/Wall2_small.urdf", [-2,1,0], useFixedBase=True)
+    #         #state_object= [random.uniform(-4,4),random.uniform(-4,1),0.00]
+    #         #state_object=[-2,-3,0.00]
+    #         state_object=[np.random.uniform(-2, 2),np.random.uniform(-3, -3.5),0.00]
+    #         wall_dir= "Wall_URDF/"
+    #         self.Goal = p.loadURDF(wall_dir + "simplegoal.urdf", basePosition=state_object)
+            
+            
+            
+            
+    #         #p.setCollisionFilterPair(self.Id, self.Id2, -1, -1, 0)
+            
+    #         #print(aabbMin)
+
+    #     self.left_track = []
+    #     self.right_track = []
+    #     self.contact_dict = {}
+    #     self.wheel_dict = {}
+    #     for j in range( p.getNumJoints(self.Id) ):
+    #         info = p.getJointInfo(self.Id, j)
+    #         link_name = info[12].decode("ascii")
+    #         if "wheel" in link_name: self.wheel_dict[link_name] = j
+    #         if link_name in self.contact_list: self.contact_dict[link_name] = j
+    #         if info[2] != p.JOINT_REVOLUTE: continue
+    #         jname = info[1].decode("ascii")
+    #         if "left" in jname:
+    #             self.left_track.append(j)
+    #         elif "right" in jname:
+    #             self.right_track.append(j)
+    #     self.motors = []
+    #     # Works much better if using husky wheel interias in the URDF
+    #     # for key in self.wheel_dict:
+    #     # 	p.changeDynamics(self.Id, self.wheel_dict[key], lateralFriction=0.9, spinningFriction=0.01, rollingFriction=0.01)
 
 
     def get_log_things(self):
@@ -731,6 +835,20 @@ class Env(EnvBasePB):
 
         self.k=0
 
+        self.paused = True
+
+        self.total_return = 0
+
+        self.commands = np.zeros(3)
+
+        self.actions_walk_model = np.zeros(self.ac_size_walk_model)
+        self.prev_actions_walk_model = self.actions_walk_model
+
+        self.ob_dict = {}
+        for foot in self.feet_dict:
+            self.ob_dict[foot] = False
+            self.ob_dict["prev_" + foot] = False
+
         
 
         
@@ -804,8 +922,10 @@ class Env(EnvBasePB):
 
         
             
-
+        
         self.get_observation()
+        self.get_observation2()
+        
 
         
         
@@ -995,6 +1115,58 @@ class Env(EnvBasePB):
         # ===========================
         # This is an expert functionexper
         # ===========================
+
+    def compute_torques(self, actions):
+        # print(actions.shape, self.default_joints.shape, sel)
+        return self.torque_kp*(self.action_scale*actions + self.default_joints - np.array(self.joints)) - self.torque_kd*(np.array(self.joint_vel))
+    
+    def step2(self):
+
+        self.actions_walk_model = self.Lower_action
+
+        # for _ in range(int(self.timeStep/self.simStep)):
+        jointStates = p.getJointStates(self.Id,self.ordered_joint_indices)
+        self.joints = list(np.array([jointStates[j[0]][0] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]))
+        
+        # Scale vels 
+        self.joint_vel = list(np.array([jointStates[j[0]][1] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]) / 10) 
+        # print("actions",self.Lower_action)
+        forces = self.compute_torques(self.Lower_action)
+
+        if self.args.cur:
+            if self.Kp > 0:
+                exp_forces = self.apply_forces()
+
+                hips = [0,3,6,9]
+                exp_forces[hips] = 0.0
+                forces = forces + (self.Kp/self.initial_Kp) * exp_forces
+        forces = forces.reshape(-1)
+        # print("forces",forces)
+        p.setJointMotorControlArray(self.Id, self.motors, controlMode=p.TORQUE_CONTROL, forces=forces)
+
+            # p.stepSimulation()
+
+        # if (self.steps % int(4 / self.timeStep) == 0 and self.steps != 0) or (self.paused and self.steps > 100):
+        #     self.paused = False
+        #     # if True:
+        #         # self.commands = np.array([0,0,np.random.choice([-1.5, 1.5])])
+        #     # else:
+        #     self.commands = np.random.uniform([self.min_vx, self.min_vy, self.min_yaw_vel],[self.max_vx, self.max_vy, self.max_yaw_vel])
+        #     self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
+        #     # Set low lin velocities to zeros
+        #     self.commands[0] *= abs(self.commands[0])>0.1
+        #     self.commands[1] *= abs(self.commands[1])>0.1
+        #     self.commands[2] *= abs(self.commands[2])>0.1
+        #     self.target_yaw = self.yaw        
+
+        self.get_observation2()
+        self.save_sim_state()
+        reward, done = self.get_reward_walk_model()
+        self.total_return += reward
+        self.steps += 1
+
+        return self.obs_buf, reward, done, None
+    
     def motor_action(self,actions):
         # print("motor action",actions,self)
         self.exp_actions = [0.0]*2
@@ -1426,6 +1598,14 @@ class Env(EnvBasePB):
         # self.dd +=actions[0]
         # print('dd',self.dd)
         # print("actions",actions,self)
+
+        
+
+
+
+
+
+
         if self.args.just_expert or (self.args.cur or self.args.expert_curr):
             #Make sure to uncomment it when freezing robot when hitting wall lines to work with multi robot
             if (self.args.reward_fn == 25 or self.args.reward_fn == 26 or self.args.reward_fn == 27) and (np.array(self.contacts) == True).any():#(self.intersection_r1_box or self.intersection_r1_r or self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):
@@ -1451,12 +1631,117 @@ class Env(EnvBasePB):
         
         # Network now outputs a twist message
         # print("actions",self,actions)
-        track_actions = self.twist_to_tracks(self.applied_actions)
+        # while True:
+
+    def motor_action_LL(self):
+        
+        # self.Higher_input=self.obs_buf
+
+        # print("self.applied_actions",self.applied_actions)
+        # lin_vel = np.array([self.applied_actions[0], 1.0, 1.0])#1.0
+        # ang_vel = np.array([1.0, 1.0, self.applied_actions[1]])#1.0
+
+        lin_vel = np.array([1.0, 1.0, 1.0])#1.0
+        ang_vel = np.array([1.0, 1.0, 1.0])#1.0
+        commands_scale = np.array([1.0, 1.0, 1.0])
+        dof_pos = 1.0
+        dof_vel = 0.05
+        # self.commands=np.array([self.applied_actions[0],0,self.applied_actions[1]])
+        
+        #clip actions to max min vx 
+        self.Higher_input = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
+                                (self.base_ang_vel  * ang_vel).reshape([1,3]),
+                                np.array([[self.roll, self.pitch]]),
+                                (self.commands[:3] * commands_scale).reshape([1,3]),
+                                ((self.dof_pos - self.default_joints) * dof_pos).reshape([1,self.ac_size_walk_model]),
+                                (self.dof_vel * dof_vel).reshape([1,self.ac_size_walk_model]),
+                                (np.array(self.contacts_floor)).reshape([1,8]),
+                                self.actions_walk_model.reshape([1,self.ac_size_walk_model])
+                                ),axis=-1)
+
+        # for _ in range(int(self.timeStep/self.simStep)):
+        
+
+        # Higher_linear_actions=np.array([0.3069041,  0.05872102, 0.47403039])#np.array([self.applied_actions[0], 0, 0])
+        # Higher_angular_actions=np.array([-3.346469,   -1.6080254,   0.83651376])#np.array([0, 0, self.applied_actions[1]])
+        # # self.Higher_input=
+
+        # # self.dof_pos = np.array(self.joints)
+        # self.dof_vel = np.array([  3.14587668,   0.16804795,  -6.85212477,   3.45666942,  -0.83747341, 4.0189136,    4.94808308,   1.87168048,   0.82480419,  10.8847448, 4.10811149, -19.75402442])#np.array([0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0])#np.array(self.joint_vel)
+        # self.dof_pos = np.array([-0.00524743,  1.20811998, -1.51958988, -0.34898557,  0.77817123, -1.10813608, -0.54351444,  1.27973002, -1.58647328,  0.51006984,  1.50482686, -2.23545662])#np.array([0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0])#np.array(self.joint_vel)
+        # lin_vel = 1.0
+        # ang_vel = 1.0
+        # commands_scale = np.array([1.0, 1.0, 1.0])
+        # dof_pos = 1.0
+        # dof_vel = 0.05
+        # self.commands[:3]=np.array([-0.5,  0.0,   0.0 ])
+
+        # self.foot_contacts=[True,True,True,True,True,True,True,True]
+
+        # self.old_actions=np.array([[ 1.1265888,  -0.44527876, -2.4895365,  -1.9018472,   0.93964946,  6.4939218, -1.1059839,   4.492701,    1.9065948,   0.5188203,   4.074628,   -2.9967926 ]])#np.array([0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0])
+
+        # print(self.foot_contacts)
+        # print(self.dof_vel,dof_vel,self.ac_size,((self.dof_pos - self.default_joints) * dof_pos).reshape([1,12]))
+
+        # self.Higher_input = np.concatenate((  (Higher_linear_actions * lin_vel).reshape([1,3]),
+        #                         (Higher_angular_actions  * ang_vel).reshape([1,3]),
+        #                         np.array([[0.003986827737951175,-0.06317648787363646]]),
+        #                         (self.commands[:3] * commands_scale).reshape([1,3]),
+        #                         ((self.dof_pos - self.default_joints) * dof_pos).reshape([1,12]),
+        #                         (self.dof_vel * dof_vel).reshape([1,12]),
+        #                         (np.array(self.foot_contacts)).reshape([1,8]),
+        #                         self.old_actions.reshape([1,12])
+        #                         ),axis=-1)
+        
+        # print(self.steps)
+        # start = 100
+        # # print(env.steps)
+        # if self.steps < start:
+        #     self.commands = np.array([0., 0.0, 0.0])
+        # elif self.steps < start + 200:
+        #     self.commands = np.array([0., 0.0, 1.5])
+        # elif self.steps < start + 400:
+        #     self.commands = np.array([0., 0.0, -1.5])
+        # elif self.steps < start + 500:
+        #     self.commands = np.array([1., 0.0, 0])
+        # elif self.steps < start + 700:
+        #     self.commands = np.array([-0.5, 0.0, 0])
+        # elif self.steps < start + 800:
+        #     self.commands = np.array([0., 0.5, 0])
+        # elif self.steps < start + 900:
+        #     self.commands = np.array([0., -0.5, 0])
+
+        # if self.args.use_perception:
+        #     # print(im)
+        #     Lower_action = self.spot_pol.step(torch.tensor(np.array(Higher_input).astype(np.float32)), torch.tensor(np.array(im).astype(np.float32)), stochastic=False)[0]
+        # else:
+        #     # action = pol(torch.tensor(np.array(obs).astype(np.float32))).detach().numpy()[0]
+        
+        self.Lower_action = self.spot_pol.step(torch.tensor(np.array(self.Higher_input).astype(np.float32)), stochastic=False)[0]
+
+        print("self.Lower_action",self.Lower_action,"Higher_Input",self.Higher_input)
+
+        # self.Higher_input,r,d,_=self.step2(self.Lower_action)
+
+            # jointStates = p.getJointStates(self.Id,self.ordered_joint_indices)
+            # self.joints = list(np.array([jointStates[j[0]][0] for j in self.ordered_joints[:int(12)]]))
+            
+            # # Scale vels 
+            # self.joint_vel = list(np.array([jointStates[j[0]][1] for j in self.ordered_joints[:int(12)]]) / 10) 
+
+            # forces = self.compute_torques(Lower_action)
+
+            
+            # forces = forces.reshape(-1)
+            # # print("forces",forces)
+            # p.setJointMotorControlArray(self.Id, self.motors, controlMode=p.TORQUE_CONTROL, forces=forces)
+            # p.stepSimulation()
+        # track_actions = self.twist_to_tracks(self.applied_actions)
         
         # action_saving=[]
-        for (a, tracks) in zip(track_actions,[self.left_track, self.right_track]):
-            for track in tracks:
-                p.setJointMotorControl2(self.Id, track, p.VELOCITY_CONTROL, targetVelocity=a*20, force=100)
+        # for (a, tracks) in zip(track_actions,[self.left_track, self.right_track]):
+        #     for track in tracks:
+        #         p.setJointMotorControl2(self.Id, track, p.VELOCITY_CONTROL, targetVelocity=a*20, force=100)
             # print([a],track_actions,type([a]))
         # action_saving.append(a)
         # accc=pd.DataFrame(action_saving)
@@ -1801,6 +2086,99 @@ class Env(EnvBasePB):
             #print(self.wp_pos_robot)
             return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel]+[0]*2*(self.args.num_robots-1)) #+ zeros_array
 
+    
+    def get_reward_walk_model(self):
+        
+        tracking_sigma = 0.1
+        ang_vel_tracking_sigma = self.args.ang_vel_tracking_sigma
+        
+        _reward_tracking_lin_vel = 0.0
+        _reward_tracking_ang_vel = 0.0
+        orientation = 0.0
+        rate = 0
+        contacts = 0.0
+        height = 0.0
+        joints = 0.0
+        rate = 0.0
+
+        if self.args.scale_yaw_cmds:
+            command_scales = np.clip(abs(self.commands), a_min=0.3, a_max=1.5) 
+        else:
+            command_scales = [1.0]*3
+
+        # ang_vel_error = np.sum(np.square(np.array([self.target_yaw - self.yaw, self.commands[2] - self.base_ang_vel[2] ])))
+        ang_vel_error = np.sum(np.square(np.array([self.commands[2] - self.base_ang_vel[2] ])))
+
+        _reward_tracking_ang_vel = 1.0*command_scales[2]*np.exp(-ang_vel_error/ang_vel_tracking_sigma)
+
+        if True:
+
+            lin_vx_error = np.sum(np.square(self.commands[0] - self.base_lin_vel[0]))
+            _reward_tracking_lin_vel = 0.5*command_scales[0]*np.exp(-lin_vx_error/tracking_sigma)
+
+            lin_vy_error = np.sum(np.square(self.commands[1] - self.base_lin_vel[1]))
+                
+            _reward_tracking_lin_vel += 0.5*command_scales[1]*np.exp(-lin_vy_error/tracking_sigma)
+
+            orientation = -1.2*np.sum(np.square([self.roll, self.pitch]))
+            # orientation += -0.0005*np.sum(np.square([self.roll_vel, self.pitch_vel]))
+
+            height = -0.5 * abs(self.body_xyz[2] - 0.5)
+
+            not_hips = [1,2,4,5,7,8,10,11]
+            joints = -0.2*self.w_cont * np.sum(np.square(self.default_joints[not_hips] - np.array(self.joints)[not_hips]))
+
+            if abs(self.commands[1]) < 0.1 and abs(self.commands[2]) < 0.1:
+                 # More emphasis on hip joints being zero when not needed
+                hips = [0,3,6,9]
+                joints += -0.2*self.w_cont * np.sum(np.square(np.array(self.joints)[hips]))
+
+            if (self.commands == 0).all():
+                contacts = -self.w_cont*((1 - self.ob_dict["rear_left_lower_leg"]) + (1-self.ob_dict["rear_right_lower_leg"]) + (1-self.ob_dict["front_right_lower_leg"]) + (1-self.ob_dict["front_left_lower_leg"])) 
+            else:
+                # Foot pairs should be the same
+                contacts = -self.w_cont*(abs(self.ob_dict["rear_left_lower_leg"] - self.ob_dict["front_right_lower_leg"]))
+                contacts += -self.w_cont*(abs(self.ob_dict["rear_right_lower_leg"] - self.ob_dict["front_left_lower_leg"]))
+                
+                # If a pair is off the ground, the other pair should be on the ground, but ok if all on the ground
+                if not self.ob_dict["rear_left_lower_leg"]:
+                    contacts += -self.w_cont*((1 - self.ob_dict["rear_right_lower_leg"]) + (1 - self.ob_dict["front_left_lower_leg"]))
+                if not self.ob_dict["front_right_lower_leg"]:
+                    contacts += -self.w_cont*((1 - self.ob_dict["rear_right_lower_leg"]) + (1 - self.ob_dict["front_left_lower_leg"]))
+                if not self.ob_dict["rear_right_lower_leg"]:
+                    contacts += -self.w_cont*((1 - self.ob_dict["rear_left_lower_leg"]) + (1 - self.ob_dict["front_right_lower_leg"]))
+                if not self.ob_dict["front_left_lower_leg"]:
+                    contacts += -self.w_cont*((1 - self.ob_dict["rear_left_lower_leg"]) + (1 - self.ob_dict["front_right_lower_leg"]))
+                    
+                # No foot pair should be in contact at the same time, doesn't like standing still
+                # contacts = -self.w_cont*(abs(self.ob_dict["rear_left_lower_leg"] - self.ob_dict["front_right_lower_leg"]) + abs(self.ob_dict["rear_left_lower_leg"] - (1 - self.ob_dict["front_left_lower_leg"])) + abs(self.ob_dict["rear_left_lower_leg"] - (1 - self.ob_dict["rear_right_lower_leg"])))      
+                # contacts += -self.w_cont*(abs(self.ob_dict["rear_right_lower_leg"] - self.ob_dict["front_left_lower_leg"]) + abs(self.ob_dict["rear_right_lower_leg"] - (1 - self.ob_dict["front_right_lower_leg"])) + abs(self.ob_dict["rear_right_lower_leg"] - (1 - self.ob_dict["rear_left_lower_leg"])))      
+                # contacts += -self.w_cont*(abs(self.ob_dict["front_right_lower_leg"] - (1 - self.ob_dict["front_left_lower_leg"])) + abs(self.ob_dict["front_right_lower_leg"] - (1 - self.ob_dict["rear_right_lower_leg"])))      
+                # contacts += -self.w_cont*(abs(self.ob_dict["front_left_lower_leg"] - (1 - self.ob_dict["front_right_lower_leg"])) + abs(self.ob_dict["front_left_lower_leg"] - (1 - self.ob_dict["rear_left_lower_leg"])))    
+
+            rate = -0.0001 * np.sum(np.square(self.actions_walk_model - self.prev_actions_walk_model))
+            self.prev_actions_walk_model = self.actions_walk_model
+
+        reward = 1.*_reward_tracking_lin_vel + _reward_tracking_ang_vel + orientation + height + joints + contacts + rate
+
+        # self.ep_reward_dict["Reward/lin_vel"] += _reward_tracking_lin_vel
+        # self.ep_reward_dict["Reward/ang_vel"] += _reward_tracking_ang_vel
+        # self.ep_reward_dict["Reward/orien"] += orientation
+        # self.ep_reward_dict["Reward/height"] += height
+        # self.ep_reward_dict["Reward/joints"] += joints
+        # self.ep_reward_dict["Reward/contacts"] += contacts
+        # self.ep_reward_dict["Reward/rate"] += rate
+        # self.ep_reward_dict["Reward/avg"] += reward
+
+        done = False
+        if self.body_xyz[2] < 0.2 or (abs(np.array([self.pitch, self.roll])) > 1.0).any() or (np.array(self.leg_contacts)).any():
+            done = True
+            # print("fallen")
+        return reward, done
+    
+    
+    
+    
     # def get_reward_1(self):
     #     """
     #     Reward Function 1
@@ -2815,6 +3193,9 @@ class Env(EnvBasePB):
         
             
         if self.tipped == True:
+            done = True
+
+        if self.body_xyz[2] < 0.2 or (abs(np.array([self.pitch, self.roll])) > 1.0).any() or (np.array(self.leg_contacts)).any():
             done = True
             
         return reward, done
@@ -4502,6 +4883,9 @@ class Env(EnvBasePB):
         
             
         if self.tipped == True:
+            done = True
+
+        if self.body_xyz[2] < 0.2 or (abs(np.array([self.pitch, self.roll])) > 1.0).any() or (np.array(self.leg_contacts)).any():
             done = True
             
         return reward, done
@@ -8632,6 +9016,86 @@ class Env(EnvBasePB):
         #     print(self.heading_error_to_robot2)
 
 
+    def get_observation2(self):
+        jointStates = p.getJointStates(self.Id,self.ordered_joint_indices)
+        self.joints = list(np.array([jointStates[j[0]][0] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]))
+        
+        # Scale vels 
+        if self.args.load_path != "":
+            # Used an additionally scaling for training translation.pt
+            self.joint_vel = list(np.array([jointStates[j[0]][1] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]) / 10) 
+        else:
+            self.joint_vel = list(np.array([jointStates[j[0]][1] for j in self.ordered_joints[:int(self.ac_size_walk_model)]])) 
+        
+        self.ob_dict.update({n + '_pos':j for n,j in zip(self.motor_names, self.joints)})
+
+
+        self.body_xyz, (self.qx, self.qy, self.qz, self.qw) = p.getBasePositionAndOrientation(self.Id)
+        self.pos = self.body_xyz
+        self.orn = [self.qx, self.qy, self.qz, self.qw]
+        self.roll, self.pitch, self.yaw = p.getEulerFromQuaternion([self.qx, self.qy, self.qz, self.qw])
+
+        self.body_vxyz, self.base_rot_vel = p.getBaseVelocity(self.Id)
+        
+        self.roll_vel = self.base_rot_vel[0]
+        self.pitch_vel = self.base_rot_vel[1]
+        self.yaw_vel = self.base_rot_vel[2]
+
+        rot_speed = np.array(
+        [[np.cos(-self.yaw), -np.sin(-self.yaw), 0],
+            [np.sin(-self.yaw), np.cos(-self.yaw), 0],
+            [		0,			 0, 1]]
+        )
+
+        self.vx, self.vy, self.vz = np.dot(rot_speed, (self.body_vxyz[0],self.body_vxyz[1],self.body_vxyz[2]))
+        
+        # Policy shouldn't know yaw
+        self.body = [self.vx, self.vy, self.vz, self.roll, self.pitch, self.roll_vel, self.pitch_vel, self.yaw_vel, self.body_xyz[2] - self.z_offset]
+
+        self.leg_contacts = []
+        for leg in self.leg_dict:
+            self.ob_dict[leg] = len(p.getContactPoints(self.Id, -1, self.leg_dict[leg], -1))>0
+            self.leg_contacts += [self.ob_dict[leg]]
+
+
+        self.contacts_floor = []
+        for foot in self.feet_dict:
+            self.ob_dict["prev_" + foot] = self.ob_dict[foot]
+            self.ob_dict[foot] = len(p.getContactPoints(self.Id, -1, self.feet_dict[foot], -1))>0
+            self.contacts_floor += [self.ob_dict[foot], self.ob_dict["prev_" + foot]]
+
+        self.target_yaw += self.commands[2] * self.timeStep 
+        
+        self.base_lin_vel = np.array([self.vx, self.vy, self.vz])
+        self.base_ang_vel = np.array([self.roll_vel, self.pitch_vel, self.yaw_vel])
+        self.dof_pos = np.array(self.joints)
+        self.dof_vel = np.array(self.joint_vel)
+        lin_vel = np.array([1.0, 1.0, 1.0])#1.0
+        ang_vel = np.array([1.0, 1.0, 1.0])#1.0
+        commands_scale = np.array([1.0, 1.0, 1.0])
+        dof_pos = 1.0
+        dof_vel = 0.05
+
+        higher_action_linear=np.array([0.12,0.36,0.28])
+        higher_action_angular=np.array([-0.16,0.4,-0.012])
+
+        # print("self.commands",self.commands[:3],"commadn_scale",commands_scale)
+        # print("self.contacts",self.contacts,"self.actions",self.actions)
+
+        # print("self.dof_pos",self.dof_pos,"self.dof_vel",self.dof_vel,"dof_vel",dof_vel,"self.ac_size",self.ac_size,(self.dof_vel * dof_vel).reshape([1,self.ac_size]))
+
+        # print("self.base_lin_vel",self.base_lin_vel,"self.base_ang_vel",self.base_ang_vel,"self.roll",self.roll, "self.pitch", self.pitch)
+     
+        self.obs_buf = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
+                                (self.base_ang_vel  * ang_vel).reshape([1,3]),
+                                np.array([[self.roll, self.pitch]]),
+                                (self.commands[:3] * commands_scale).reshape([1,3]),
+                                ((self.dof_pos - self.default_joints) * dof_pos).reshape([1,self.ac_size_walk_model]),
+                                (self.dof_vel * dof_vel).reshape([1,self.ac_size_walk_model]),
+                                (np.array(self.contacts_floor)).reshape([1,8]),
+                                self.actions_walk_model.reshape([1,self.ac_size_walk_model])
+                                ),axis=-1)
+    
     def set_obstacles(self, list_of_obs_bbox):
         self.obstacles=list_of_obs_bbox
     

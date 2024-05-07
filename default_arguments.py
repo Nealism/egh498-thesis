@@ -209,6 +209,8 @@ def get_env(args):
         from assets.env_multi_robot_pb import Env
     elif args.env == "spot_pb":
         from assets.env_spot_pb import Env 
+    elif args.env == "spot_pb_2":
+        from assets.env_spot_pb_2 import Env 
     elif args.env == "biped_pb":
         from assets.env_biped_pb import Env 
     elif args.env == "franka_ball_mj":

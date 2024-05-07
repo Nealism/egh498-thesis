@@ -350,7 +350,7 @@ class Env(EnvBasePB):
             
             # Scale vels 
             self.joint_vel = list(np.array([jointStates[j[0]][1] for j in self.ordered_joints[:int(self.ac_size)]]) / 10) 
-
+            # print("actions",actions)
             forces = self.compute_torques(actions)
 
             if self.args.cur:
@@ -361,6 +361,7 @@ class Env(EnvBasePB):
                     exp_forces[hips] = 0.0
                     forces = forces + (self.Kp/self.initial_Kp) * exp_forces
             forces = forces.reshape(-1)
+            # print("forces",forces)
             p.setJointMotorControlArray(self.Id, self.motors, controlMode=p.TORQUE_CONTROL, forces=forces)
 
             p.stepSimulation()
@@ -368,18 +369,18 @@ class Env(EnvBasePB):
         if self.args.render:
             time.sleep(self.timeStep)
         
-        if (self.steps % int(4 / self.timeStep) == 0 and self.steps != 0) or (self.paused and self.steps > 100):
-            self.paused = False
-            # if True:
-                # self.commands = np.array([0,0,np.random.choice([-1.5, 1.5])])
-            # else:
-            self.commands = np.random.uniform([self.min_vx, self.min_vy, self.min_yaw_vel],[self.max_vx, self.max_vy, self.max_yaw_vel])
-            self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
-            # Set low lin velocities to zeros
-            self.commands[0] *= abs(self.commands[0])>0.1
-            self.commands[1] *= abs(self.commands[1])>0.1
-            self.commands[2] *= abs(self.commands[2])>0.1
-            self.target_yaw = self.yaw        
+        # if (self.steps % int(4 / self.timeStep) == 0 and self.steps != 0) or (self.paused and self.steps > 100):
+        #     self.paused = False
+        #     # if True:
+        #         # self.commands = np.array([0,0,np.random.choice([-1.5, 1.5])])
+        #     # else:
+        #     self.commands = np.random.uniform([self.min_vx, self.min_vy, self.min_yaw_vel],[self.max_vx, self.max_vy, self.max_yaw_vel])
+        #     self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
+        #     # Set low lin velocities to zeros
+        #     self.commands[0] *= abs(self.commands[0])>0.1
+        #     self.commands[1] *= abs(self.commands[1])>0.1
+        #     self.commands[2] *= abs(self.commands[2])>0.1
+        #     self.target_yaw = self.yaw        
 
         self.get_observation()
         self.save_sim_state()
@@ -475,7 +476,7 @@ class Env(EnvBasePB):
         done = False
         if self.body_xyz[2] < 0.2 or (abs(np.array([self.pitch, self.roll])) > 1.0).any() or (np.array(self.leg_contacts)).any():
             done = True
-            print("fallen")
+            # print("fallen")
         return reward, done
 
     def get_observation(self):
@@ -532,11 +533,21 @@ class Env(EnvBasePB):
         self.base_ang_vel = np.array([self.roll_vel, self.pitch_vel, self.yaw_vel])
         self.dof_pos = np.array(self.joints)
         self.dof_vel = np.array(self.joint_vel)
-        lin_vel = 1.0
-        ang_vel = 1.0
+        lin_vel = np.array([1.0, 1.0, 1.0])#1.0
+        ang_vel = np.array([1.0, 1.0, 1.0])#1.0
         commands_scale = np.array([1.0, 1.0, 1.0])
         dof_pos = 1.0
         dof_vel = 0.05
+
+        higher_action_linear=np.array([0.12,0.36,0.28])
+        higher_action_angular=np.array([-0.16,0.4,-0.012])
+
+        # print("self.commands",self.commands[:3],"commadn_scale",commands_scale)
+        # print("self.contacts",self.contacts,"self.actions",self.actions)
+
+        # print("self.dof_pos",self.dof_pos,"self.dof_vel",self.dof_vel,"dof_vel",dof_vel,"self.ac_size",self.ac_size,(self.dof_vel * dof_vel).reshape([1,self.ac_size]))
+
+        print("self.base_lin_vel",self.base_lin_vel,"self.base_ang_vel",self.base_ang_vel,"self.roll",self.roll, "self.pitch", self.pitch)
      
         self.obs_buf = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
                                 (self.base_ang_vel  * ang_vel).reshape([1,3]),

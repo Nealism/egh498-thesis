@@ -1,4 +1,5 @@
-from assets.env_titan_pb_2 import Env as RobotEnv
+from assets.env_titan_pb_2 import Env as TitanEnv
+from assets.env_spot_pb_2 import Env as SpotEnv
 import pybullet as p
 from assets.env_base_pb import EnvBasePB
 from mpi4py import MPI
@@ -76,7 +77,8 @@ class Env(EnvBasePB):
         objects = p.loadMJCF("./assets/xmls/ground.xml")
         self.worldId = objects[0]
         
-        self.robots=[RobotEnv(PATH=PATH, args=args, writer=writer) for n in range(args.num_robots)]
+        # self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer) for n in range(args.num_robots)]
+        self.robots=[SpotEnv(PATH=PATH, args=args, writer=writer) for n in range(args.num_robots)]
         # for Robot in self.robots:
 
 
@@ -144,7 +146,7 @@ class Env(EnvBasePB):
 
         bodies_to_remove = [self.rectangle_id1, self.rectangle_id2]
         
-        random_0_10=random.uniform(0,10),random.uniform(0,10),0.31
+        random_0_10=random.uniform(0,10),random.uniform(0,10),0.5 + np.random.uniform(-0.05, 0.05)
 
         for Robot in self.robots:
             self.initial_goal_distances.append(Robot.initial_goal_dist)
@@ -166,8 +168,8 @@ class Env(EnvBasePB):
 
         if self.args.num_robots ==4:
             self.robottogoal_angles=[(self.robots[0],0),(self.robots[1],0),(self.robots[2],0),(self.robots[3],0)]
-            self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31]),(self.robots[2],[list(random_0_10)[0]+0,list(random_0_10)[1]-2,0.31]),(self.robots[3],[list(random_0_10)[0]+0,list(random_0_10)[1]-4,0.31])]
-            # self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[2.5,2.5,0.31]),(self.robots[2],[4,4,0.31])]
+            self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.5 + np.random.uniform(-0.05, 0.05)]),(self.robots[2],[list(random_0_10)[0]+0,list(random_0_10)[1]-2,0.5 + np.random.uniform(-0.05, 0.05)]),(self.robots[3],[list(random_0_10)[0]+0,list(random_0_10)[1]-4,0.5 + np.random.uniform(-0.05, 0.05)])]
+            # self.external_robots_pos=[(self.robots[0],[1,1,0.5 + np.random.uniform(-0.05, 0.05)]),(self.robots[1],[2.5,2.5,0.5 + np.random.uniform(-0.05, 0.05)]),(self.robots[2],[4,4,0.5 + np.random.uniform(-0.05, 0.05)])]
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
                 self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
                 self.external_goals_states.append(self.external_goal_state)
@@ -175,8 +177,8 @@ class Env(EnvBasePB):
 
         elif self.args.num_robots ==3:
             self.robottogoal_angles=[(self.robots[0],0),(self.robots[1],0),(self.robots[2],0)]
-            self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31]),(self.robots[2],[list(random_0_10)[0]+0,list(random_0_10)[1]-2,0.31])]
-            # self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[2.5,2.5,0.31]),(self.robots[2],[4,4,0.31])]
+            self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.5 + np.random.uniform(-0.05, 0.05)]),(self.robots[2],[list(random_0_10)[0]+0,list(random_0_10)[1]-2,0.5 + np.random.uniform(-0.05, 0.05)])]
+            # self.external_robots_pos=[(self.robots[0],[1,1,0.5 + np.random.uniform(-0.05, 0.05)]),(self.robots[1],[2.5,2.5,0.5 + np.random.uniform(-0.05, 0.05)]),(self.robots[2],[4,4,0.5 + np.random.uniform(-0.05, 0.05)])]
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
                 self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
                 self.external_goals_states.append(self.external_goal_state)
@@ -191,12 +193,12 @@ class Env(EnvBasePB):
 
 
             if self.args.randomness==0:
-                self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.31])]
+                self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,0.5 + np.random.uniform(-0.05, 0.05)])]
             elif self.args.randomness==1:
-                self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+self.robot_goal_synchroniser,0.31])]
+                self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+self.robot_goal_synchroniser,0.5 + np.random.uniform(-0.05, 0.05)])]
             elif self.args.randomness==2:
-                self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.choice([-1,0,-0,1]),list(random_0_10)[1]+self.robot_goal_synchroniser,0.31])]
-            # self.external_robots_pos=[(self.robots[0],[0,0,0.31]),(self.robots[1],[-2,-1.5,0.31])]
+                self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.choice([-1,0,-0,1]),list(random_0_10)[1]+self.robot_goal_synchroniser,0.5 + np.random.uniform(-0.05, 0.05)])]
+            # self.external_robots_pos=[(self.robots[0],[0,0,0.5 + np.random.uniform(-0.05, 0.05)]),(self.robots[1],[-2,-1.5,0.5 + np.random.uniform(-0.05, 0.05)])]
             # print("list(random_0_10)[1]-2",list(random_0_10)[1]-2)
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
                 self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
@@ -206,7 +208,7 @@ class Env(EnvBasePB):
         else:
             self.robottogoal_angles=[(self.robots[0],0)]
             self.external_robots_pos=[(self.robots[0],list(random_0_10))]
-            #self.external_robots_pos=[(self.robots[0],[0,1,0.31])]
+            #self.external_robots_pos=[(self.robots[0],[0,1,0.5 + np.random.uniform(-0.05, 0.05)])]
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
                 self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
                 self.external_goals_states.append(self.external_goal_state)
@@ -295,6 +297,8 @@ class Env(EnvBasePB):
             
                 # self.gap_walls_length.append(Robot.each_wall_length)
         self.get_observation()
+
+
         #print("GREAAATTTTTT", self.initial_goal_distances)
         return res
 
@@ -332,8 +336,23 @@ class Env(EnvBasePB):
         #     for Robot in self.robots:
         #         self.obstacles.append(Robot.square_bbox)
 
-        for action,Robot in zip(actions,self.robots):
+        # for action,Robot in zip(actions,self.robots):
             
+        #     Robot.motor_action(action)
+
+        #     if self.args.gap_avoidance:
+        #         self.Both_Robots_stuck.append(Robot.robot1_near_robot2)
+
+
+        #     # print("self.Both_Robots_stuck",self.Both_Robots_stuck,len(self.Both_Robots_stuck))
+        #     if all(self.Both_Robots_stuck) and len(self.Both_Robots_stuck)==2:
+                
+        #         self.turn_both=True
+        #         # print("turn_both",self.turn_both)
+
+        
+        for action,Robot in zip(actions,self.robots):
+        
             Robot.motor_action(action)
 
             if self.args.gap_avoidance:
@@ -345,9 +364,20 @@ class Env(EnvBasePB):
                 
                 self.turn_both=True
                 # print("turn_both",self.turn_both)
+        demo1=1/10
+        demo2=1/50
+        print("OUTSIDELOOOOP",int(demo1/demo2))
+        for _ in range(int(demo1/demo2)):
+            print("LOOOOOP111111111111111111")
+            for action,Robot in zip(actions,self.robots):
+                Robot.motor_action_LL()
+            for _ in range(1/50/1/200):
+                print("LOOOOOP___________22222222222")
 
-        for _ in range(int(self.timeStep/self.simStep)):
-            p.stepSimulation()
+                Robot.step2()
+                p.stepSimulation()
+                print("ANything")
+            Robot.get_observation2()
         # p.stepSimulation()
         #print("action_length",actions,"robot",self.robots)
         for action,Robot in zip(actions,self.robots):
@@ -521,19 +551,19 @@ class Env(EnvBasePB):
 
         # if self.args.num_robots ==3:
         #     self.robottogoal_angles=[(self.robots[0],10),(self.robots[1],30),(self.robots[2],50)]
-        #     self.external_robots_pos=[(self.robots[0],[1,1,0.31]),(self.robots[1],[2.5,2.5,0.31]),(self.robots[2],[4,4,0.31])]
+        #     self.external_robots_pos=[(self.robots[0],[1,1,0.5 + np.random.uniform(-0.05, 0.05)]),(self.robots[1],[2.5,2.5,0.5 + np.random.uniform(-0.05, 0.05)]),(self.robots[2],[4,4,0.5 + np.random.uniform(-0.05, 0.05)])]
         #     for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
         #         self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
         #         self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         # elif self.args.num_robots ==2:
         #     self.robottogoal_angles=[(self.robots[0],0),(self.robots[1],0)]
-        #     self.external_robots_pos=[(self.robots[0],[0,0,0.31]),(self.robots[1],[0,2.5,0.31])]
+        #     self.external_robots_pos=[(self.robots[0],[0,0,0.5 + np.random.uniform(-0.05, 0.05)]),(self.robots[1],[0,2.5,0.5 + np.random.uniform(-0.05, 0.05)])]
         #     for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
         #         self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
         #         self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         # else:
         #     self.robottogoal_angles=[(self.robots[0],0)]
-        #     self.external_robots_pos=[(self.robots[0],[1,1,0.31])]
+        #     self.external_robots_pos=[(self.robots[0],[1,1,0.5 + np.random.uniform(-0.05, 0.05)])]
         #     for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
         #         self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
         #         self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))

@@ -1,0 +1,34 @@
+<mxfile host="app.diagrams.net" modified="2024-05-02T13:03:22.355Z" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.0.0" etag="c0wcNIKJCjchFPPgk7Ie" version="24.3.1" type="device">
+  <diagram name="Page-1" id="lJQXZbTC7CbISkWZEhc3">
+    <mxGraphModel dx="1314" dy="804" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="teGebU0v7Rw1-kVLdgjY-1" value="Multi_robot_env" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="229" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="teGebU0v7Rw1-kVLdgjY-2" value="spot env" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="414" y="119" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="teGebU0v7Rw1-kVLdgjY-3" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="414" y="236" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="teGebU0v7Rw1-kVLdgjY-4" value="INIT and LOAD Spot URDF" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="420" y="250" width="104" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="teGebU0v7Rw1-kVLdgjY-5" value="Define Actions are Linear and ANgular" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="414" y="359" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="teGebU0v7Rw1-kVLdgjY-6" value="Reset as Before" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="412" y="452" width="120" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="teGebU0v7Rw1-kVLdgjY-7" value="Pass Actions Linear and Angular to Step" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="414" y="555" width="120" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="teGebU0v7Rw1-kVLdgjY-8" value="Step&lt;div&gt;1. input the action -linear and angular velocity&lt;/div&gt;&lt;div&gt;2. adjust with action multiplier and expert action&lt;/div&gt;&lt;div&gt;3. Input Linear and ANgular Velocity into External Spot Walking Model and Get output&amp;nbsp;&lt;/div&gt;&lt;div&gt;4. Calculate force = calculate_torque function based on action output, joint, joint_vel&lt;/div&gt;&lt;div&gt;5. Setjointmotorcontrol Torque based and apply Force&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="408" y="651" width="276" height="119" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
