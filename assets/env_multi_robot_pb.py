@@ -372,11 +372,13 @@ class Env(EnvBasePB):
                 Robot.motor_action_LL()
             for _ in range(int(self.timeStep_50Hz/self.simStep)):
                 # print("LOOOOOP___________22222222222")
+                for action,Robot in zip(actions,self.robots):
 
-                Robot.step2()
+                    Robot.step2()
                 p.stepSimulation()
                 # print("ANything")
-            Robot.get_observation2()
+            for action,Robot in zip(actions,self.robots):
+                Robot.get_observation2()
         # p.stepSimulation()
         #print("action_length",actions,"robot",self.robots)
         for action,Robot in zip(actions,self.robots):
@@ -852,7 +854,7 @@ class Env(EnvBasePB):
         #print("aa",heightmap_images)
         # print(len(global_map_image),len(globalmap_images[0]))
         for global_map_image in globalmap_images:
-            for i in range (2):#(len(self.robots_pos)):
+            for i in range (len(self.robots_pos)):
                 # print(len(self.robots_pos))
                 # print(len(global_map_image),len(heightmap_images[i]),x_min[i],x_max[i],y_min[i],y_max[i])
                 # print("globals",np.array(global_map_image).shape,np.array(global_map_image[0]).shape,np.array(global_map_image[1]).shape)

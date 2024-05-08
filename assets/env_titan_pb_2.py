@@ -43,7 +43,7 @@ class Env(EnvBasePB):
         
         
         
-        # self.timeStep = 1/120
+        # self.timeStep_10Hz = 1/120
         super().__init__(PATH)
 
         self.reward_fn_name = f'get_reward_{self.args.reward_fn}'
@@ -879,7 +879,7 @@ class Env(EnvBasePB):
         # Estimate time to target, velocity in steps + time to turn + current steps + buffer for going around a robot / acceleration
         # Keep an eye on this, need to make sure there's enough time to get to the goal
         self.heading_error, _ = self.calc_angle_error(state_object, [initial_x, initial_y], yaw)
-        self.time_to_target = dist / self.timeStep + abs(self.heading_error) / self.timeStep + self.steps + 500000
+        self.time_to_target = dist / self.timeStep_10Hz + abs(self.heading_error) / self.timeStep_10Hz + self.steps + 500000
         #print(self.time_to_target)
         
         if self.args.gap_avoidance:
@@ -1629,9 +1629,9 @@ class Env(EnvBasePB):
 
             self.goal_success.append(True)
             self.time_to_goal=self.steps
-            # print(self.time_to_goal,self.steps,self.timeStep,self.timeStep*self.steps,self)
+            # print(self.time_to_goal,self.steps,self.timeStep_10Hz,self.timeStep_10Hz*self.steps,self)
             # print("Event")
-            # print("Time_to_goal",self.timeStep*self.steps,self)
+            # print("Time_to_goal",self.timeStep_10Hz*self.steps,self)
             # print("self.goal_success",self.goal_success,self)
 
 
@@ -1847,8 +1847,8 @@ class Env(EnvBasePB):
     #     #print(state_object[0])
     #     #print("prev",self.prev_dist_to_goal)
     #     #print(self.prev_dist_to_goal)
-    #     #print((self.steps * self.timeStep)+1)
-    #     # TT= self.steps * self.timeStep + 1
+    #     #print((self.steps * self.timeStep_10Hz)+1)
+    #     # TT= self.steps * self.timeStep_10Hz + 1
     #     # print(TT) # time travel per episode ( It is not travel time to goal. I want to stop the robot at the goal. So, I add time of whole episode)
         
         
@@ -1876,7 +1876,7 @@ class Env(EnvBasePB):
     #     # if dist_to_goal < .2:
     #     #     reward = 1000/TT
     #     #print(reward)
-    #     #print((self.steps * self.timeStep)+1,"dist_to_goal", dist_to_goal,"time_to_goal",T, "reward", reward)
+    #     #print((self.steps * self.timeStep_10Hz)+1,"dist_to_goal", dist_to_goal,"time_to_goal",T, "reward", reward)
     #     #print("time",T)
     #     #reward = (max(self.prev_dist_to_goal - dist_to_goal, 0))/TT
     #     #print(reward)
@@ -3079,7 +3079,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -3305,7 +3305,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -3427,7 +3427,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -3552,7 +3552,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -3909,7 +3909,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -4047,7 +4047,7 @@ class Env(EnvBasePB):
                 # print("true5")
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -4218,7 +4218,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -4340,7 +4340,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -8093,7 +8093,7 @@ class Env(EnvBasePB):
             
             #self.gap_point_moving = self.gap[2]
             self.dist_gapwp_mv=self.distance(self.pos,self.gap_point1)
-            # TT1= self.steps * self.timeStep + 1
+            # TT1= self.steps * self.timeStep_10Hz + 1
             # T=False
             # time=None
             # if self.dist_gapwp1<1:
