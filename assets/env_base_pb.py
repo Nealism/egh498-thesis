@@ -21,11 +21,11 @@ class EnvBasePB(EnvBase):
     loaded_sim = False
     terrain = np.zeros(terrain_size)
 
-    # timeStep = 1/10
+    timeStep_10Hz = 1/10
 
     # simStep = 1/100
 
-    timeStep = 1/50
+    timeStep_50Hz = 1/50
 
     simStep = 1/200
 

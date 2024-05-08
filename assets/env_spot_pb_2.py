@@ -1632,6 +1632,8 @@ class Env(EnvBasePB):
         # Network now outputs a twist message
         # print("actions",self,actions)
         # while True:
+        self.prev_actions = actions
+
 
     def motor_action_LL(self):
         
@@ -1646,8 +1648,8 @@ class Env(EnvBasePB):
         commands_scale = np.array([1.0, 1.0, 1.0])
         dof_pos = 1.0
         dof_vel = 0.05
-        # self.commands=np.array([self.applied_actions[0],0,self.applied_actions[1]])
-        
+        self.commands=np.array([self.applied_actions[0],0,self.applied_actions[1]])
+        # print("commands",self.commands[:3])
         #clip actions to max min vx 
         self.Higher_input = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
                                 (self.base_ang_vel  * ang_vel).reshape([1,3]),
@@ -1757,7 +1759,7 @@ class Env(EnvBasePB):
         # df1 = pd.DataFrame({'Column1': column1})
         # df2 = pd.DataFrame({'Column2': column2})
 
-        self.prev_actions = actions
+        # self.prev_actions = actions
 
         # p.stepSimulation()
 
