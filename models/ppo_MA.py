@@ -766,8 +766,9 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #print(d)
             #print("im",im)
             timeout = ep_lens[0] == env.args.max_ep_len
-            #print("Done",d)
+            # print("Done",d)
             if all(d):
+            # if any(d):
                 terminal = True
             else:
                 terminal = timeout

@@ -27,8 +27,8 @@ import numpy as np
 
 class Env(EnvBasePB):
 
-    timeStep=1/50
-    simStep=1/200
+    # timeStep_10Hz=1/50
+    # simStep=1/200
     terrain_size = im_size = [1,100,100]
     
     def __init__(self, PATH=None, args=None, writer=None,posi=None):
@@ -48,7 +48,7 @@ class Env(EnvBasePB):
         
         
         
-        # self.timeStep = 1/120
+        # self.timeStep_10Hz = 1/120
         super().__init__(PATH)
 
         self.reward_fn_name = f'get_reward_{self.args.reward_fn}'
@@ -136,7 +136,8 @@ class Env(EnvBasePB):
         self.cmd_update_rate = 100
 
         
-        SPOT_MODEL_PATH = "./resources/spot/2024_04_30_08_59_43/model.pt" 
+        # SPOT_MODEL_PATH = "./resources/spot/2024_04_30_08_59_43/model.pt"
+        SPOT_MODEL_PATH = "./resources/spot/2024_05_08_21_23_04/model.pt"  
         self.spot_pol = torch.load(SPOT_MODEL_PATH)
         
 
@@ -999,7 +1000,7 @@ class Env(EnvBasePB):
         # Estimate time to target, velocity in steps + time to turn + current steps + buffer for going around a robot / acceleration
         # Keep an eye on this, need to make sure there's enough time to get to the goal
         self.heading_error, _ = self.calc_angle_error(state_object, [initial_x, initial_y], yaw)
-        self.time_to_target = dist / self.timeStep + abs(self.heading_error) / self.timeStep + self.steps + 500000
+        self.time_to_target = dist / self.timeStep_10Hz + abs(self.heading_error) / self.timeStep_10Hz + self.steps + 500000
         #print(self.time_to_target)
         
         if self.args.gap_avoidance:
@@ -1118,35 +1119,29 @@ class Env(EnvBasePB):
 
     def compute_torques(self, actions):
         # print(actions.shape, self.default_joints.shape, sel)
-        return self.torque_kp*(self.action_scale*actions + self.default_joints - np.array(self.joints)) - self.torque_kd*(np.array(self.joint_vel))
+        return self.torque_kp*(self.action_scale*actions + self.default_joints - np.array(self.joints)) - self.torque_kd*(np.array(self.joint_vel_walking))
     
     def step2(self):
 
         self.actions_walk_model = self.Lower_action
 
-        # for _ in range(int(self.timeStep/self.simStep)):
-        jointStates = p.getJointStates(self.Id,self.ordered_joint_indices)
-        self.joints = list(np.array([jointStates[j[0]][0] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]))
+        # for _ in range(int(self.timeStep_10Hz/self.simStep)):
+        jointStates_walking = p.getJointStates(self.Id,self.ordered_joint_indices)
+        self.joints = list(np.array([jointStates_walking[j[0]][0] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]))
         
         # Scale vels 
-        self.joint_vel = list(np.array([jointStates[j[0]][1] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]) / 10) 
+        self.joint_vel_walking = list(np.array([jointStates_walking[j[0]][1] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]) / 10) 
         # print("actions",self.Lower_action)
         forces = self.compute_torques(self.Lower_action)
 
-        if self.args.cur:
-            if self.Kp > 0:
-                exp_forces = self.apply_forces()
-
-                hips = [0,3,6,9]
-                exp_forces[hips] = 0.0
-                forces = forces + (self.Kp/self.initial_Kp) * exp_forces
+        
         forces = forces.reshape(-1)
         # print("forces",forces)
         p.setJointMotorControlArray(self.Id, self.motors, controlMode=p.TORQUE_CONTROL, forces=forces)
 
             # p.stepSimulation()
 
-        # if (self.steps % int(4 / self.timeStep) == 0 and self.steps != 0) or (self.paused and self.steps > 100):
+        # if (self.steps % int(4 / self.timeStep_10Hz) == 0 and self.steps != 0) or (self.paused and self.steps > 100):
         #     self.paused = False
         #     # if True:
         #         # self.commands = np.array([0,0,np.random.choice([-1.5, 1.5])])
@@ -1648,9 +1643,14 @@ class Env(EnvBasePB):
         commands_scale = np.array([1.0, 1.0, 1.0])
         dof_pos = 1.0
         dof_vel = 0.05
-        self.commands=np.array([self.applied_actions[0],0,self.applied_actions[1]])
+        clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 1)
+        clipped_angular_vel_command=np.clip(self.applied_actions[1], -1.5, 1.5)
+        self.commands=np.array([clipped_linear_vel_command,0,clipped_angular_vel_command])
+        # self.commands=np.array([self.applied_actions[0],0,self.applied_actions[1]])
         # print("commands",self.commands[:3])
         #clip actions to max min vx 
+        # print("self.dof_vel",self.dof_vel)
+        print("clipped_linear_vel_command",clipped_linear_vel_command,"clipped_angular_vel_command",clipped_angular_vel_command)
         self.Higher_input = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
                                 (self.base_ang_vel  * ang_vel).reshape([1,3]),
                                 np.array([[self.roll, self.pitch]]),
@@ -1661,7 +1661,7 @@ class Env(EnvBasePB):
                                 self.actions_walk_model.reshape([1,self.ac_size_walk_model])
                                 ),axis=-1)
 
-        # for _ in range(int(self.timeStep/self.simStep)):
+        # for _ in range(int(self.timeStep_10Hz/self.simStep)):
         
 
         # Higher_linear_actions=np.array([0.3069041,  0.05872102, 0.47403039])#np.array([self.applied_actions[0], 0, 0])
@@ -1846,8 +1846,9 @@ class Env(EnvBasePB):
             # print("Success",self.number_Goal_Reached)
             self.goal_reaching=True
             #print("self.Goal_pos",self.Goal_pos)
-            self.opposite_angle =0#175
-            # self.opposite_angle *= -1
+            # self.opposite_angle =0
+            self.opposite_angle =175
+            self.opposite_angle *= -1
             self.wp1_reach=0
             self.wp2_reach=0
             self.wp3_reach=0
@@ -1875,7 +1876,7 @@ class Env(EnvBasePB):
                 
                 # print("opposite_angle",self.opposite_angle,self.robottogoal_angle)
                 # print("observation self.robottogoal_angle",self.robottogoal_angle)
-
+                print("pos_z",self.pos[2],self)
                 self.move_goal_and_static_robot(initial_x=self.pos[0], initial_y=self.pos[1], yaw=self.initial_yaw,robottogoal_angle=self.opposite_angle-self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
 
                 self.counter +=1
@@ -1916,9 +1917,9 @@ class Env(EnvBasePB):
 
             self.goal_success.append(True)
             self.time_to_goal=self.steps
-            # print(self.time_to_goal,self.steps,self.timeStep,self.timeStep*self.steps,self)
+            # print(self.time_to_goal,self.steps,self.timeStep_10Hz,self.timeStep_10Hz*self.steps,self)
             # print("Event")
-            # print("Time_to_goal",self.timeStep*self.steps,self)
+            # print("Time_to_goal",self.timeStep_10Hz*self.steps,self)
             # print("self.goal_success",self.goal_success,self)
 
 
@@ -1963,7 +1964,7 @@ class Env(EnvBasePB):
         
         # self.endt = time.time()  # Record the end time after the simulation step
         # self.timest = self.endt - self.st  # Calculate the time elapsed during the simulation step
-        # print("Timestep:", self.timest/self.steps, "seconds")
+        # print("Timestep_10timeStep_10Hz:", self.timest/self.steps, "seconds")
 
         self.steps += 1
         
@@ -2227,8 +2228,8 @@ class Env(EnvBasePB):
     #     #print(state_object[0])
     #     #print("prev",self.prev_dist_to_goal)
     #     #print(self.prev_dist_to_goal)
-    #     #print((self.steps * self.timeStep)+1)
-    #     # TT= self.steps * self.timeStep + 1
+    #     #print((self.steps * self.timeStep_10Hz)+1)
+    #     # TT= self.steps * self.timeStep_10Hz + 1
     #     # print(TT) # time travel per episode ( It is not travel time to goal. I want to stop the robot at the goal. So, I add time of whole episode)
         
         
@@ -2256,7 +2257,7 @@ class Env(EnvBasePB):
     #     # if dist_to_goal < .2:
     #     #     reward = 1000/TT
     #     #print(reward)
-    #     #print((self.steps * self.timeStep)+1,"dist_to_goal", dist_to_goal,"time_to_goal",T, "reward", reward)
+    #     #print((self.steps * self.timeStep_10Hz)+1,"dist_to_goal", dist_to_goal,"time_to_goal",T, "reward", reward)
     #     #print("time",T)
     #     #reward = (max(self.prev_dist_to_goal - dist_to_goal, 0))/TT
     #     #print(reward)
@@ -3462,7 +3463,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -3688,7 +3689,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -3810,7 +3811,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -3935,7 +3936,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -4292,7 +4293,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -4430,7 +4431,7 @@ class Env(EnvBasePB):
                 # print("true5")
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -4601,7 +4602,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -4723,7 +4724,7 @@ class Env(EnvBasePB):
                 goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
             #print("goal",goal)
         # print(self.steps/20 )
-        # print(self.timeStep )
+        # print(self.timeStep_10Hz )
         # current_time = time.time() - self.start_time
         # distance = 10 - dist_to_goal
         # print("TIME",current_time)
@@ -8479,7 +8480,7 @@ class Env(EnvBasePB):
             
             #self.gap_point_moving = self.gap[2]
             self.dist_gapwp_mv=self.distance(self.pos,self.gap_point1)
-            # TT1= self.steps * self.timeStep + 1
+            # TT1= self.steps * self.timeStep_10Hz + 1
             # T=False
             # time=None
             # if self.dist_gapwp1<1:
@@ -9019,21 +9020,22 @@ class Env(EnvBasePB):
 
 
     def get_observation2(self):
-        jointStates = p.getJointStates(self.Id,self.ordered_joint_indices)
-        self.joints = list(np.array([jointStates[j[0]][0] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]))
+        jointStates_walking = p.getJointStates(self.Id,self.ordered_joint_indices)
+        self.joints_walking = list(np.array([jointStates_walking[j[0]][0] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]))
         
         # Scale vels 
-        if self.args.load_path != "":
-            # Used an additionally scaling for training translation.pt
-            self.joint_vel = list(np.array([jointStates[j[0]][1] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]) / 10) 
-        else:
-            self.joint_vel = list(np.array([jointStates[j[0]][1] for j in self.ordered_joints[:int(self.ac_size_walk_model)]])) 
+        # if self.args.load_path != "":
+        # #     # Used an additionally scaling for training translation.pt
+        # #     self.joint_vel = list(np.array([jointStates_walking[j[0]][1] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]) / 10) 
+        # # else:
+        self.joint_vel_walking = list(np.array([jointStates_walking[j[0]][1] for j in self.ordered_joints[:int(self.ac_size_walk_model)]])) 
         
-        self.ob_dict.update({n + '_pos':j for n,j in zip(self.motor_names, self.joints)})
+        self.ob_dict.update({n + '_pos':j for n,j in zip(self.motor_names, self.joints_walking)})
 
 
         self.body_xyz, (self.qx, self.qy, self.qz, self.qw) = p.getBasePositionAndOrientation(self.Id)
         self.pos = self.body_xyz
+        # print("pos_obs2",self.pos,self)
         self.orn = [self.qx, self.qy, self.qz, self.qw]
         self.roll, self.pitch, self.yaw = p.getEulerFromQuaternion([self.qx, self.qy, self.qz, self.qw])
 
@@ -9066,20 +9068,20 @@ class Env(EnvBasePB):
             self.ob_dict[foot] = len(p.getContactPoints(self.Id, -1, self.feet_dict[foot], -1))>0
             self.contacts_floor += [self.ob_dict[foot], self.ob_dict["prev_" + foot]]
 
-        self.target_yaw += self.commands[2] * self.timeStep 
+        self.target_yaw += self.commands[2] * self.timeStep_10Hz 
         
         self.base_lin_vel = np.array([self.vx, self.vy, self.vz])
         self.base_ang_vel = np.array([self.roll_vel, self.pitch_vel, self.yaw_vel])
-        self.dof_pos = np.array(self.joints)
-        self.dof_vel = np.array(self.joint_vel)
+        self.dof_pos = np.array(self.joints_walking)
+        self.dof_vel = np.array(self.joint_vel_walking)
         lin_vel = np.array([1.0, 1.0, 1.0])#1.0
         ang_vel = np.array([1.0, 1.0, 1.0])#1.0
         commands_scale = np.array([1.0, 1.0, 1.0])
         dof_pos = 1.0
         dof_vel = 0.05
 
-        higher_action_linear=np.array([0.12,0.36,0.28])
-        higher_action_angular=np.array([-0.16,0.4,-0.012])
+        # higher_action_linear=np.array([0.12,0.36,0.28])
+        # higher_action_angular=np.array([-0.16,0.4,-0.012])
 
         # print("self.commands",self.commands[:3],"commadn_scale",commands_scale)
         # print("self.contacts",self.contacts,"self.actions",self.actions)
@@ -9087,7 +9089,7 @@ class Env(EnvBasePB):
         # print("self.dof_pos",self.dof_pos,"self.dof_vel",self.dof_vel,"dof_vel",dof_vel,"self.ac_size",self.ac_size,(self.dof_vel * dof_vel).reshape([1,self.ac_size]))
 
         # print("self.base_lin_vel",self.base_lin_vel,"self.base_ang_vel",self.base_ang_vel,"self.roll",self.roll, "self.pitch", self.pitch)
-     
+        # print("self.dof_vel",self.dof_vel) 
         self.obs_buf = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
                                 (self.base_ang_vel  * ang_vel).reshape([1,3]),
                                 np.array([[self.roll, self.pitch]]),

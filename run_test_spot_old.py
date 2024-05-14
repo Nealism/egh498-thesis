@@ -44,8 +44,7 @@ def run(args):
     USE_SPOT = True
     # USE_SPOT = False
     if USE_SPOT:
-        # SPOT_MODEL_PATH = "./resources/spot/2024_04_30_08_59_43/model.pt" 
-        SPOT_MODEL_PATH = "./resources/spot/2024_05_08_21_23_04/model.pt" 
+        SPOT_MODEL_PATH = "./resources/spot/2024_04_30_08_59_43/model.pt" 
         pol = torch.load(SPOT_MODEL_PATH)
 
     else:
@@ -59,8 +58,12 @@ def run(args):
     if args.use_perception:
         im = env.get_image()
 
+    # print("obs",obs)
     n=0
     while True:
+        # print("observations",obs)
+        print("Commands",env.commands)
+
         if args.use_perception:
             print(im)
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), torch.tensor(np.array(im).astype(np.float32)), stochastic=False)[0]
@@ -68,27 +71,28 @@ def run(args):
             # action = pol(torch.tensor(np.array(obs).astype(np.float32))).detach().numpy()[0]
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
         obs, rew, done, _ = env.step(action)
-
-        start = 100
-        if env.steps < start:
-            env.commands = np.array([0., 0.0, 0.0])
-        elif env.steps < start + 200:
-            env.commands = np.array([0., 0.0, 1.5])
-        elif env.steps < start + 400:
-            env.commands = np.array([0., 0.0, -1.5])
-        elif env.steps < start + 500:
-            env.commands = np.array([1., 0.0, 0])
-        elif env.steps < start + 700:
-            env.commands = np.array([-0.5, 0.0, 0])
-        elif env.steps < start + 800:
-            env.commands = np.array([0., 0.5, 0])
-        elif env.steps < start + 900:
-            env.commands = np.array([0., -0.5, 0])
+        # print(action)
+        # start = 100
+        # # print(env.steps)
+        # if env.steps < start:
+        #     env.commands = np.array([0., 0.0, 0.0])
+        # elif env.steps < start + 200:
+        #     env.commands = np.array([0., 0.0, 1.5])
+        # elif env.steps < start + 400:
+        #     env.commands = np.array([0., 0.0, -1.5])
+        # elif env.steps < start + 500:
+        #     env.commands = np.array([1., 0.0, 0])
+        # elif env.steps < start + 700:
+        #     env.commands = np.array([-0.5, 0.0, 0])
+        # elif env.steps < start + 800:
+        #     env.commands = np.array([0., 0.5, 0])
+        # elif env.steps < start + 900:
+        #     env.commands = np.array([0., -0.5, 0])
          
-        print(rew)
-        print(env.commands)
-        print(env.vx, env.vy, env.yaw_vel)
-        print()
+        # print(rew)
+        # print(env.commands)
+        # print(env.vx, env.vy, env.yaw_vel)
+        # print()
         if args.use_perception:
             im = env.get_image()
 

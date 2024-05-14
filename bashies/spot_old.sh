@@ -4,12 +4,10 @@
 # Experiment type
 # ==================================================================================
 declare -a Experiments=(
-                        "spotify/all_5_5"
-                        "spotify/all_5_7"
-                        "spotify/all_3_5"
-                        "spotify/all_3_7"
-                        "spotify/all_7_7"
-                        "spotify/all_7_9"
+                        "spot_pet/all_5_6"
+                        "spot_pet/all_5_8"
+                        "spot_pet/all_3_5"
+                        "spot_pet/all_3_7"
 
 
                         )
@@ -18,8 +16,6 @@ declare -a Arguments=(
     "--cpu 64 --env spot_pb --cur --ang_vel_tracking_sigma 0.5 --cur_thres 0.7 --with_initial_cmd"  
     "--cpu 64 --env spot_pb --cur --ang_vel_tracking_sigma 0.3 --cur_thres 0.5 --with_initial_cmd"  
     "--cpu 64 --env spot_pb --cur --ang_vel_tracking_sigma 0.3 --cur_thres 0.7 --with_initial_cmd"  
-    "--cpu 64 --env spot_pb --cur --ang_vel_tracking_sigma 0.7 --cur_thres 0.7 --with_initial_cmd"  
-    "--cpu 64 --env spot_pb --cur --ang_vel_tracking_sigma 0.7 --cur_thres 0.9 --with_initial_cmd"  
 )
             
 export SBATCH_ACCOUNT=OD-235390

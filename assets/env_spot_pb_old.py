@@ -112,7 +112,7 @@ class Env(EnvBasePB):
 
         self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Difficulty": self.terrain_difficulty}
 
-        self.reward_names = ["Reward/lin_vel", "Reward/lin_vx_error", "Reward/lin_vy_error", "Reward/ang_vel", "Reward/ang_vel_error", "Reward/orien", "Reward/height", "Reward/joints", "Reward/contacts", "Reward/rate", "Reward/avg"]
+        self.reward_names = ["Reward/lin_vel", "Reward/ang_vel", "Reward/orien", "Reward/height", "Reward/joints", "Reward/contacts", "Reward/rate", "Reward/avg"]
         self.cmd_names = ["Cmd/self.max_vx",
                         "Cmd/self.max_vy",
                         "Cmd/self.max_yaw_vel",
@@ -192,13 +192,12 @@ class Env(EnvBasePB):
     def get_success(self):
         if self.steps == 0:
             return False
-        return self.ep_reward_dict["Reward/avg"]/self.steps > self.args.cur_thres and self.steps > 200
+        return self.ep_reward_dict["Reward/avg"]/self.steps > self.args.cur_thres and self.steps > 300
 
     def reset(self, terrain=None, test=False, restore_state=None):
 
         # Wait until both feet are on the ground before starting walking
-        # self.paused = True
-        self.paused = False
+        self.paused = True
 
         if self.episodes > -1:
             self.ep_success = self.get_success()
@@ -322,18 +321,7 @@ class Env(EnvBasePB):
         self.actions = np.zeros(self.ac_size)
         self.prev_actions = self.actions
         
-        # self.commands = np.zeros(3)
-
-        self.commands = np.random.uniform([self.min_vx, self.min_vy, self.min_yaw_vel],[self.max_vx, self.max_vy, self.max_yaw_vel])
-        self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
-        # Set low lin velocities to zeros
-        
-        self.commands[0] *= abs(self.commands[0])>0.1
-        self.commands[1] *= abs(self.commands[1])>0.1
-        self.commands[2] *= abs(self.commands[2])>0.1
-        self.target_yaw = self.yaw       
-
-
+        self.commands = np.zeros(3)
         self.target_yaw = self.yaw
         self.sign = 1
 
@@ -348,6 +336,7 @@ class Env(EnvBasePB):
         return self.obs_buf
 
     def compute_torques(self, actions):
+        # print(actions.shape, self.default_joints.shape, sel)
         return self.kp*(self.action_scale*actions + self.default_joints - np.array(self.joints)) - self.kd*(np.array(self.joint_vel))
 
 
@@ -361,7 +350,7 @@ class Env(EnvBasePB):
             
             # Scale vels 
             self.joint_vel = list(np.array([jointStates[j[0]][1] for j in self.ordered_joints[:int(self.ac_size)]]) / 10) 
-
+            # print("actions",actions)
             forces = self.compute_torques(actions)
 
             if self.args.cur:
@@ -372,6 +361,7 @@ class Env(EnvBasePB):
                     exp_forces[hips] = 0.0
                     forces = forces + (self.Kp/self.initial_Kp) * exp_forces
             forces = forces.reshape(-1)
+            # print("forces",forces)
             p.setJointMotorControlArray(self.Id, self.motors, controlMode=p.TORQUE_CONTROL, forces=forces)
 
             p.stepSimulation()
@@ -379,16 +369,18 @@ class Env(EnvBasePB):
         if self.args.render:
             time.sleep(self.timeStep)
         
-        if (self.steps % int(4 / self.timeStep) == 0 and self.steps != 0):
-            self.paused = False
-            self.commands = np.random.uniform([self.min_vx, self.min_vy, self.min_yaw_vel],[self.max_vx, self.max_vy, self.max_yaw_vel])
-            self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
-            # Set low lin velocities to zeros
-            
-            self.commands[0] *= abs(self.commands[0])>0.1
-            self.commands[1] *= abs(self.commands[1])>0.1
-            self.commands[2] *= abs(self.commands[2])>0.1
-            self.target_yaw = self.yaw        
+        # if (self.steps % int(4 / self.timeStep) == 0 and self.steps != 0) or (self.paused and self.steps > 100):
+        #     self.paused = False
+        #     # if True:
+        #         # self.commands = np.array([0,0,np.random.choice([-1.5, 1.5])])
+        #     # else:
+        #     self.commands = np.random.uniform([self.min_vx, self.min_vy, self.min_yaw_vel],[self.max_vx, self.max_vy, self.max_yaw_vel])
+        #     self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
+        #     # Set low lin velocities to zeros
+        #     self.commands[0] *= abs(self.commands[0])>0.1
+        #     self.commands[1] *= abs(self.commands[1])>0.1
+        #     self.commands[2] *= abs(self.commands[2])>0.1
+        #     self.target_yaw = self.yaw        
 
         self.get_observation()
         self.save_sim_state()
@@ -431,55 +423,49 @@ class Env(EnvBasePB):
                 
             _reward_tracking_lin_vel += 0.5*command_scales[1]*np.exp(-lin_vy_error/tracking_sigma)
 
-            orientation = -1.5*np.sum(np.square([self.roll, self.pitch]))
-            orientation += -0.001*np.sum(np.square([self.roll_vel, self.pitch_vel]))
+            orientation = -1.2*np.sum(np.square([self.roll, self.pitch]))
+            # orientation += -0.0005*np.sum(np.square([self.roll_vel, self.pitch_vel]))
 
-            height = -1.0 * abs(self.body_xyz[2] - 0.5)
-
-            self.motor_names = ["front_left_hip_x"]
-            self.motor_names += ["front_left_hip_y"]
-            self.motor_names += ["front_left_knee"]
-            self.motor_names += ["front_right_hip_x"]
-            self.motor_names += ["front_right_hip_y"]
-            self.motor_names += ["front_right_knee"]
-            self.motor_names += ["rear_left_hip_x"]
-            self.motor_names += ["rear_left_hip_y"]
-            self.motor_names += ["rear_left_knee"]
-            self.motor_names += ["rear_right_hip_x"]
-            self.motor_names += ["rear_right_hip_y"]
-            self.motor_names += ["rear_right_knee"]
+            height = -0.5 * abs(self.body_xyz[2] - 0.5)
 
             not_hips = [1,2,4,5,7,8,10,11]
             joints = -0.2*self.w_cont * np.sum(np.square(self.default_joints[not_hips] - np.array(self.joints)[not_hips]))
-
-            
-            joints = -0.8*self.w_cont * np.sum(np.square(np.array(self.joints)[[1,2]] - np.array(self.joints)[[10,11]]))
-            joints = -0.8*self.w_cont * np.sum(np.square(np.array(self.joints)[[4,5]] - np.array(self.joints)[[7,8]]))
 
             if abs(self.commands[1]) < 0.1 and abs(self.commands[2]) < 0.1:
                  # More emphasis on hip joints being zero when not needed
                 hips = [0,3,6,9]
                 joints += -0.2*self.w_cont * np.sum(np.square(np.array(self.joints)[hips]))
 
-                joints += -0.8*self.w_cont * np.sum(np.square(np.array(self.joints[0] - self.joints[3])))
-                joints += -0.8*self.w_cont * np.sum(np.square(np.array(self.joints[6] - self.joints[9])))
-
-            contacts = -self.w_cont*(abs(self.ob_dict["rear_left_lower_leg"] - self.ob_dict["front_right_lower_leg"]) + abs(self.ob_dict["rear_left_lower_leg"] - (1 - self.ob_dict["front_left_lower_leg"])) + abs(self.ob_dict["rear_left_lower_leg"] - (1 - self.ob_dict["rear_right_lower_leg"])))      
-            contacts += -self.w_cont*(abs(self.ob_dict["rear_right_lower_leg"] - self.ob_dict["front_left_lower_leg"]) + abs(self.ob_dict["rear_right_lower_leg"] - (1 - self.ob_dict["front_right_lower_leg"])))     
-            contacts += -self.w_cont*(abs(self.ob_dict["front_right_lower_leg"] - (1 - self.ob_dict["front_left_lower_leg"])))      
+            if (self.commands == 0).all():
+                contacts = -self.w_cont*((1 - self.ob_dict["rear_left_lower_leg"]) + (1-self.ob_dict["rear_right_lower_leg"]) + (1-self.ob_dict["front_right_lower_leg"]) + (1-self.ob_dict["front_left_lower_leg"])) 
+            else:
+                # Foot pairs should be the same
+                contacts = -self.w_cont*(abs(self.ob_dict["rear_left_lower_leg"] - self.ob_dict["front_right_lower_leg"]))
+                contacts += -self.w_cont*(abs(self.ob_dict["rear_right_lower_leg"] - self.ob_dict["front_left_lower_leg"]))
+                
+                # If a pair is off the ground, the other pair should be on the ground, but ok if all on the ground
+                if not self.ob_dict["rear_left_lower_leg"]:
+                    contacts += -self.w_cont*((1 - self.ob_dict["rear_right_lower_leg"]) + (1 - self.ob_dict["front_left_lower_leg"]))
+                if not self.ob_dict["front_right_lower_leg"]:
+                    contacts += -self.w_cont*((1 - self.ob_dict["rear_right_lower_leg"]) + (1 - self.ob_dict["front_left_lower_leg"]))
+                if not self.ob_dict["rear_right_lower_leg"]:
+                    contacts += -self.w_cont*((1 - self.ob_dict["rear_left_lower_leg"]) + (1 - self.ob_dict["front_right_lower_leg"]))
+                if not self.ob_dict["front_left_lower_leg"]:
+                    contacts += -self.w_cont*((1 - self.ob_dict["rear_left_lower_leg"]) + (1 - self.ob_dict["front_right_lower_leg"]))
+                    
+                # No foot pair should be in contact at the same time, doesn't like standing still
+                # contacts = -self.w_cont*(abs(self.ob_dict["rear_left_lower_leg"] - self.ob_dict["front_right_lower_leg"]) + abs(self.ob_dict["rear_left_lower_leg"] - (1 - self.ob_dict["front_left_lower_leg"])) + abs(self.ob_dict["rear_left_lower_leg"] - (1 - self.ob_dict["rear_right_lower_leg"])))      
+                # contacts += -self.w_cont*(abs(self.ob_dict["rear_right_lower_leg"] - self.ob_dict["front_left_lower_leg"]) + abs(self.ob_dict["rear_right_lower_leg"] - (1 - self.ob_dict["front_right_lower_leg"])) + abs(self.ob_dict["rear_right_lower_leg"] - (1 - self.ob_dict["rear_left_lower_leg"])))      
+                # contacts += -self.w_cont*(abs(self.ob_dict["front_right_lower_leg"] - (1 - self.ob_dict["front_left_lower_leg"])) + abs(self.ob_dict["front_right_lower_leg"] - (1 - self.ob_dict["rear_right_lower_leg"])))      
+                # contacts += -self.w_cont*(abs(self.ob_dict["front_left_lower_leg"] - (1 - self.ob_dict["front_right_lower_leg"])) + abs(self.ob_dict["front_left_lower_leg"] - (1 - self.ob_dict["rear_left_lower_leg"])))    
 
             rate = -0.0001 * np.sum(np.square(self.actions - self.prev_actions))
             self.prev_actions = self.actions
 
         reward = 1.*_reward_tracking_lin_vel + _reward_tracking_ang_vel + orientation + height + joints + contacts + rate
 
-        # print(_reward_tracking_ang_vel, _reward_tracking_lin_vel)
-
         self.ep_reward_dict["Reward/lin_vel"] += _reward_tracking_lin_vel
-        self.ep_reward_dict["Reward/lin_vx_error"] += lin_vx_error
-        self.ep_reward_dict["Reward/lin_vy_error"] += lin_vy_error
         self.ep_reward_dict["Reward/ang_vel"] += _reward_tracking_ang_vel
-        self.ep_reward_dict["Reward/ang_vel_error"] += ang_vel_error
         self.ep_reward_dict["Reward/orien"] += orientation
         self.ep_reward_dict["Reward/height"] += height
         self.ep_reward_dict["Reward/joints"] += joints
@@ -488,8 +474,9 @@ class Env(EnvBasePB):
         self.ep_reward_dict["Reward/avg"] += reward
 
         done = False
-        if self.body_xyz[2] < 0.3 or (abs(np.array([self.pitch, self.roll])) > 1.0).any() or (np.array(self.leg_contacts)).any():
+        if self.body_xyz[2] < 0.2 or (abs(np.array([self.pitch, self.roll])) > 1.0).any() or (np.array(self.leg_contacts)).any():
             done = True
+            # print("fallen")
         return reward, done
 
     def get_observation(self):
@@ -546,11 +533,21 @@ class Env(EnvBasePB):
         self.base_ang_vel = np.array([self.roll_vel, self.pitch_vel, self.yaw_vel])
         self.dof_pos = np.array(self.joints)
         self.dof_vel = np.array(self.joint_vel)
-        lin_vel = 1.0
-        ang_vel = 1.0
+        lin_vel = np.array([1.0, 1.0, 1.0])#1.0
+        ang_vel = np.array([1.0, 1.0, 1.0])#1.0
         commands_scale = np.array([1.0, 1.0, 1.0])
         dof_pos = 1.0
         dof_vel = 0.05
+
+        higher_action_linear=np.array([0.12,0.36,0.28])
+        higher_action_angular=np.array([-0.16,0.4,-0.012])
+
+        # print("self.commands",self.commands[:3],"commadn_scale",commands_scale)
+        # print("self.contacts",self.contacts,"self.actions",self.actions)
+
+        # print("self.dof_pos",self.dof_pos,"self.dof_vel",self.dof_vel,"dof_vel",dof_vel,"self.ac_size",self.ac_size,(self.dof_vel * dof_vel).reshape([1,self.ac_size]))
+
+        print("self.base_lin_vel",self.base_lin_vel,"self.base_ang_vel",self.base_ang_vel,"self.roll",self.roll, "self.pitch", self.pitch)
      
         self.obs_buf = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
                                 (self.base_ang_vel  * ang_vel).reshape([1,3]),

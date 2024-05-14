@@ -23,11 +23,11 @@ class EnvBasePB(EnvBase):
 
     timeStep_10Hz = 1/10
 
-    # simStep = 1/100
+    simStep = 1/100
 
     timeStep_50Hz = 1/50
 
-    simStep = 1/200
+    # simStep = 1/200
 
     def load_robot(self):
             
