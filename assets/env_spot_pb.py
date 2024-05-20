@@ -325,8 +325,12 @@ class Env(EnvBasePB):
         # self.commands = np.zeros(3)
 
         self.commands = np.random.uniform([self.min_vx, self.min_vy, self.min_yaw_vel],[self.max_vx, self.max_vy, self.max_yaw_vel])
-        self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
+        # self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
         # Set low lin velocities to zeros
+        if np.random.random() < 0.8:
+            self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(1.0, self.target_max_yaw_vel)
+        else:
+            self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(0, 1.0)
         
         self.commands[0] *= abs(self.commands[0])>0.1
         self.commands[1] *= abs(self.commands[1])>0.1
@@ -382,9 +386,14 @@ class Env(EnvBasePB):
         if (self.steps % int(4 / self.timeStep) == 0 and self.steps != 0):
             self.paused = False
             self.commands = np.random.uniform([self.min_vx, self.min_vy, self.min_yaw_vel],[self.max_vx, self.max_vy, self.max_yaw_vel])
-            self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
+            # self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
             # Set low lin velocities to zeros
-            
+            # self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
+            # Set low lin velocities to zeros
+            if np.random.random() < 0.8:
+                self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(1.0, self.target_max_yaw_vel)
+            else:
+                self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(0, 1.0)
             self.commands[0] *= abs(self.commands[0])>0.1
             self.commands[1] *= abs(self.commands[1])>0.1
             self.commands[2] *= abs(self.commands[2])>0.1

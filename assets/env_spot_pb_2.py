@@ -42,6 +42,7 @@ class Env(EnvBasePB):
         Initial_distance_to_goal=0
         self.number_Goal_Reached=0
         self.trial=0
+        self.fall_count=0
         
         self.prev_dist_to_goal= Initial_distance_to_goal
 
@@ -137,7 +138,8 @@ class Env(EnvBasePB):
 
         
         # SPOT_MODEL_PATH = "./resources/spot/2024_04_30_08_59_43/model.pt"
-        SPOT_MODEL_PATH = "./resources/spot/2024_05_08_21_23_04/model.pt"  
+        # SPOT_MODEL_PATH = "./resources/spot/2024_05_08_21_23_04/model.pt"  
+        SPOT_MODEL_PATH = "./resources/spot/2024_05_08_21_23_04/model.pt" 
         self.spot_pol = torch.load(SPOT_MODEL_PATH)
         
 
@@ -558,7 +560,8 @@ class Env(EnvBasePB):
         # initial_x, initial_y = np.random.uniform(-3, 3), np.random.uniform(3, 3.5) 
         initial_x, initial_y = np.random.uniform(0,4), np.random.uniform(0, 4) 
         #initial_x, initial_y = -2, -2 
-        self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
+        # self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
+        self.initial_yaw = 0.0#np.random.uniform(-np.pi, np.pi) 
         # print("self.initial_yaw",self.initial_yaw)
         self.initial_orn = p.getQuaternionFromEuler([0,0,self.initial_yaw])
         # print("self.initial_orn",self.initial_orn)
@@ -1119,7 +1122,7 @@ class Env(EnvBasePB):
 
     def compute_torques(self, actions):
         # print(actions.shape, self.default_joints.shape, sel)
-        return self.torque_kp*(self.action_scale*actions + self.default_joints - np.array(self.joints)) - self.torque_kd*(np.array(self.joint_vel_walking))
+        return self.torque_kp*(self.action_scale*actions + self.default_joints - np.array(self.joints_walking)) - self.torque_kd*(np.array(self.joint_vel_walking))
     
     def step2(self):
 
@@ -1127,7 +1130,7 @@ class Env(EnvBasePB):
 
         # for _ in range(int(self.timeStep_10Hz/self.simStep)):
         jointStates_walking = p.getJointStates(self.Id,self.ordered_joint_indices)
-        self.joints = list(np.array([jointStates_walking[j[0]][0] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]))
+        self.joints_walking = list(np.array([jointStates_walking[j[0]][0] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]))
         
         # Scale vels 
         self.joint_vel_walking = list(np.array([jointStates_walking[j[0]][1] for j in self.ordered_joints[:int(self.ac_size_walk_model)]]) / 10) 
@@ -1650,7 +1653,7 @@ class Env(EnvBasePB):
         # print("commands",self.commands[:3])
         #clip actions to max min vx 
         # print("self.dof_vel",self.dof_vel)
-        print("clipped_linear_vel_command",clipped_linear_vel_command,"clipped_angular_vel_command",clipped_angular_vel_command)
+        # print("clipped_linear_vel_command",clipped_linear_vel_command,"clipped_angular_vel_command",clipped_angular_vel_command)
         self.Higher_input = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
                                 (self.base_ang_vel  * ang_vel).reshape([1,3]),
                                 np.array([[self.roll, self.pitch]]),
@@ -1718,10 +1721,10 @@ class Env(EnvBasePB):
         #     Lower_action = self.spot_pol.step(torch.tensor(np.array(Higher_input).astype(np.float32)), torch.tensor(np.array(im).astype(np.float32)), stochastic=False)[0]
         # else:
         #     # action = pol(torch.tensor(np.array(obs).astype(np.float32))).detach().numpy()[0]
-        
+        # while True:
         self.Lower_action = self.spot_pol.step(torch.tensor(np.array(self.Higher_input).astype(np.float32)), stochastic=False)[0]
 
-        print("self.Lower_action",self.Lower_action,"Higher_Input",self.Higher_input)
+        # print("self.Lower_action",self.Lower_action,"Higher_Input",self.Higher_input)
 
         # self.Higher_input,r,d,_=self.step2(self.Lower_action)
 
@@ -1846,9 +1849,9 @@ class Env(EnvBasePB):
             # print("Success",self.number_Goal_Reached)
             self.goal_reaching=True
             #print("self.Goal_pos",self.Goal_pos)
-            # self.opposite_angle =0
-            self.opposite_angle =175
-            self.opposite_angle *= -1
+            self.opposite_angle =0
+            # self.opposite_angle =175
+            # self.opposite_angle *= -1
             self.wp1_reach=0
             self.wp2_reach=0
             self.wp3_reach=0
@@ -2129,12 +2132,12 @@ class Env(EnvBasePB):
             height = -0.5 * abs(self.body_xyz[2] - 0.5)
 
             not_hips = [1,2,4,5,7,8,10,11]
-            joints = -0.2*self.w_cont * np.sum(np.square(self.default_joints[not_hips] - np.array(self.joints)[not_hips]))
+            joints = -0.2*self.w_cont * np.sum(np.square(self.default_joints[not_hips] - np.array(self.joints_walking)[not_hips]))
 
             if abs(self.commands[1]) < 0.1 and abs(self.commands[2]) < 0.1:
                  # More emphasis on hip joints being zero when not needed
                 hips = [0,3,6,9]
-                joints += -0.2*self.w_cont * np.sum(np.square(np.array(self.joints)[hips]))
+                joints += -0.2*self.w_cont * np.sum(np.square(np.array(self.joints_walking)[hips]))
 
             if (self.commands == 0).all():
                 contacts = -self.w_cont*((1 - self.ob_dict["rear_left_lower_leg"]) + (1-self.ob_dict["rear_right_lower_leg"]) + (1-self.ob_dict["front_right_lower_leg"]) + (1-self.ob_dict["front_left_lower_leg"])) 
@@ -5683,7 +5686,7 @@ class Env(EnvBasePB):
     
     def get_reward_28(self):
         """
-        Reward Function 2
+        Reward Function: Reset at Multi_robot Collision with Penalty 150 and Reset wall collision with penaly 150 following reward 21
         """
        
         done=False
@@ -5694,77 +5697,34 @@ class Env(EnvBasePB):
         heading = 0.25*np.exp(-0.5*self.heading_error**2)
         #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
         neg = 0
-        if self.vx < 0 and not any(self.int_check_lines_vs_rbbox):
-            neg = 0.25*self.vx
-        elif any(self.int_check_lines_vs_rbbox) and self.vx < 0:
-            neg=0
-        elif self.turn_both and self.vx < 0:
-            #print("TURN_BBBBBBBBBBBBTJH")
-            neg = 0
-
+        if self.vx < 0:
+            neg = 0.25
 
         reach =0
-        if self.dist_to_wp<1:
-            reach =1000
-
         
-           
-        if self.args.obstacle_avoidance and (self.obs_check or self.obs_check_2 or self.obs_check_3):
-            goal = np.exp(-0.5*(3.0 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -3*0.25*np.exp(-0.5*self.heading_error_to_obs**2)
-        elif self.args.gap_avoidance and any(self.int_check_lines_vs_rbbox) :
-            goal = -np.exp(-0.5*(3 - self.heading_vx)**2) if self.vx > 0 else 0.0
-        elif self.args.gap_avoidance and any(self.int_check_lines_vs_rbbox) and ((self.wall2_head or self.wall2_side1 or self.wall2_side2) or (self.wall1_head or self.wall1_side1 or self.wall1_side2) ) :
-            goal = -np.exp(-0.5*(3 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            #print("true")
             
 
-            #heading = -3*0.25*np.exp(-0.5*self.heading_error_other_robot**2)
+        if self.dist_to_wp<1:
+            reach =1000
+            # self.k=self.k+1
+            
+            
+        # if self.k>0:
+        #     done = True
+        # print(self.k,self,done)
 
-        # elif self.args.gap_avoidance and any(self.int_check_lines_vs_rbbox) and ((self.wall2_head or self.wall2_side1 or self.wall2_side2) or (self.wall1_head or self.wall1_side1 or self.wall1_side2) or ((self.wall1_head or self.wall1_side1 or self.wall1_side2) and (self.wall2_head or self.wall2_side1 or self.wall2_side2))):
-        #     goal = 0
-        #     heading = 0.25*np.exp(-0.5*self.heading_error_other_robot**2)
-            #print("heading_MA",heading)
-        elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2) and not (self.wall2_head or self.wall2_side1 or self.wall2_side2) and not any(self.int_check_lines_vs_rbbox):
-            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -5*0.25*np.exp(-0.5*self.heading_error_to_wall1**2)
-        elif self.args.gap_avoidance and (self.wall2_head or self.wall2_side1 or self.wall2_side2) and not (self.wall1_head or self.wall1_side1 or self.wall1_side2) and not any(self.int_check_lines_vs_rbbox):
-            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            heading = -5*0.25*np.exp(-0.5*self.heading_error_to_wall2**2)
-        # elif self.args.gap_avoidance and (self.wall1_head or self.wall1_side1 or self.wall1_side2) and (self.wall2_head or self.wall2_side1 or self.wall2_side2):
-        #     goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
-        #     heading = (-1*0.25*np.exp(-0.5*self.heading_error_to_wall1**2))-(1*0.25*np.exp(-0.5*self.heading_error_to_wall2**2))
-        else:
-            if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
-                #print("False")
-                goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
-            #print("goal",goal)
-        
-        
-        # if self.args.obstacle_avoidance and self.intersection_r1_box:   #Multi RObot Collision
-        #     collision= -10000
-        #     done=True
-            #print("Hit_Obstacle-------Hit_Hit",done)
-        # if self.args.gap_avoidance and (self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2):   #Multi RObot Collision
-        #     collision= -10000
-            #done=True
-            #print("Hit_GAP_WALL-------Hit_Hit",done)
-        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-        #     #collision= -10000
-        #     print("Hit_-------Hit_Hit",done)
-            #done=True
+
+        if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
+            #print("False")
+            goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
+         
 
         collision=0
         MA_colision=0     
-        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-        #     collision= -5000
-        #     #print("HIT_WALL")
-        #     done=True
-
-        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
-        #     #MA_colision= -5000
-        #     #done=True
-        #     print("MA Collision----------------")
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            collision= -150
+            # print("HIT")
+            done=True
 
         reward = goal + neg + heading +reach+collision+MA_colision
         
@@ -5781,11 +5741,16 @@ class Env(EnvBasePB):
         
         self.prev_dist_to_goal = dist_to_goal
         
+        if self.body_xyz[2] < 0.3 or (abs(np.array([self.pitch, self.roll])) > 1.0).any() or (np.array(self.leg_contacts)).any():
+            # self.fall_count=self.fall_count+1
+            # print("self.fall_count",self.fall_count)
+            done = True
 
         
-        # if self.args.static_robots > 1 and self.intersection_r1_r2:   #Multi RObot Collision
-        #     done=True
-        #     print("Robot_hit_static_Robot",done)
+        if self.intersection_r1_r:   #Multi RObot Collision
+            MA_colision=-150    
+            done=True
+            # print("Robot_hit_other_Robot",done,self)
         
         
         ######################
@@ -9074,8 +9039,8 @@ class Env(EnvBasePB):
         self.base_ang_vel = np.array([self.roll_vel, self.pitch_vel, self.yaw_vel])
         self.dof_pos = np.array(self.joints_walking)
         self.dof_vel = np.array(self.joint_vel_walking)
-        lin_vel = np.array([1.0, 1.0, 1.0])#1.0
-        ang_vel = np.array([1.0, 1.0, 1.0])#1.0
+        lin_vel = 1.0#np.array([1.0, 1.0, 1.0])#1.0
+        ang_vel = 1.0#np.array([1.0, 1.0, 1.0])#1.0
         commands_scale = np.array([1.0, 1.0, 1.0])
         dof_pos = 1.0
         dof_vel = 0.05
@@ -9090,6 +9055,8 @@ class Env(EnvBasePB):
 
         # print("self.base_lin_vel",self.base_lin_vel,"self.base_ang_vel",self.base_ang_vel,"self.roll",self.roll, "self.pitch", self.pitch)
         # print("self.dof_vel",self.dof_vel) 
+        # print("self.default_joints",self.default_joints,self)
+        # self.commands[:3]=[0,0,0]
         self.obs_buf = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
                                 (self.base_ang_vel  * ang_vel).reshape([1,3]),
                                 np.array([[self.roll, self.pitch]]),
