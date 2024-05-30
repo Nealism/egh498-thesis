@@ -11,11 +11,11 @@ declare -a Experiments=(
                     
                       
                       #Step Reward
-                      "301/A1r21G1E3"
-                      "301/A2r21G1E3"
-                      "301/A3r21G1E3"
-                      "301/A4r21G1E3"
-                      "301/A5r21G1E3"
+                      "304/A1r21G1E3"
+                      "304/A2r21G1E3"
+                      "304/A3r21G1E3"
+                      "304/A4r21G1E3"
+                      "304/A5r21G1E3"
                       
                       
 
@@ -23,11 +23,11 @@ declare -a Experiments=(
 
 
                       #Step Reward 2
-                      "301/B1r22G1E3"
-                      "301/B2r22G1E3"
-                      "301/B3r22G1E3"
-                      "301/B4r22G1E3"
-                      "301/B5r22G1E3"
+                      "304/B1r22G1E3"
+                      "304/B2r22G1E3"
+                      "304/B3r22G1E3"
+                      "304/B4r22G1E3"
+                      "304/B5r22G1E3"
                       
 
 
@@ -35,28 +35,28 @@ declare -a Experiments=(
 
 
                       #Regular Reward 
-                      "301/C1r23G1E3"
-                      "301/C2r23G1E3"
-                      "301/C3r23G1E3"
-                      "301/C4r23G1E3"
-                      "301/C5r23G1E3"
+                      "304/C1r23G1E3"
+                      "304/C2r23G1E3"
+                      "304/C3r23G1E3"
+                      "304/C4r23G1E3"
+                      "304/C5r23G1E3"
 
 
                       #Regular Reward 2
-                      "301/CA1r24G1E3"
-                      "301/CA2r24G1E3"
-                      "301/CA3r24G1E3"
-                      "301/CA4r24G1E3"
-                      "301/CA5r24G1E3"
+                      "304/CA1r24G1E3"
+                      "304/CA2r24G1E3"
+                      "304/CA3r24G1E3"
+                      "304/CA4r24G1E3"
+                      "304/CA5r24G1E3"
 
 
 
                       #Regular Reward 4
-                      "301/CB1r26G1E3"
-                      "301/CB2r26G1E3"
-                      "301/CB3r26G1E3"
-                      "301/CB4r26G1E3"
-                      "301/CB5r26G1E3"
+                      "304/CB1r26G1E3"
+                      "304/CB2r26G1E3"
+                      "304/CB3r26G1E3"
+                      "304/CB4r26G1E3"
+                      "304/CB5r26G1E3"
                       
 
 
@@ -65,33 +65,33 @@ declare -a Experiments=(
 
 
                       #Regular Reward 3
-                      "301/D1r25G1E3"
-                      "301/D2r25G1E3"
-                      "301/D3r25G1E3"
-                      "301/D4r25G1E3"
-                      "301/D5r25G1E3"
+                      "304/D1r25G1E3"
+                      "304/D2r25G1E3"
+                      "304/D3r25G1E3"
+                      "304/D4r25G1E3"
+                      "304/D5r25G1E3"
                       
 
 
 
 
                       #Ray Reward 1
-                      "301/E1r27G1E3"
-                      "301/E2r27G1E3"
-                      "301/E3r27G1E3"
-                      "301/E4r27G1E3"
-                      "301/E5r27G1E3"
+                      "304/E1r27G1E3"
+                      "304/E2r27G1E3"
+                      "304/E3r27G1E3"
+                      "304/E4r27G1E3"
+                      "304/E5r27G1E3"
                       
 
 
 
 
                       #Ray Reward 2
-                      "301/F1r29G1E3"
-                      "301/F2r29G1E3"
-                      "301/F3r29G1E3"
-                      "301/F4r29G1E3"
-                      "301/F5r29G1E3"
+                      "304/F1r29G1E3"
+                      "304/F2r29G1E3"
+                      "304/F3r29G1E3"
+                      "304/F4r29G1E3"
+                      "304/F5r29G1E3"
                       
 
 
