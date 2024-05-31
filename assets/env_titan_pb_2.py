@@ -1486,15 +1486,21 @@ class Env(EnvBasePB):
         # Network now outputs a twist message
         # print("actions",self,actions)
 
-        clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 1)
-        clipped_angular_vel_command=np.clip(self.applied_actions[1], -1.5, 1.5)
 
-        self.clipped_applied_actions=[clipped_linear_vel_command,clipped_angular_vel_command]
+
+
+
+        # clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 1)
+        # clipped_angular_vel_command=np.clip(self.applied_actions[1], -1.5, 1.5)
+
+        # self.clipped_applied_actions=[clipped_linear_vel_command,clipped_angular_vel_command]
+
+
 
         # print("clipped_applied_actions",self.clipped_applied_actions,self)
 
-        track_actions = self.twist_to_tracks(self.clipped_applied_actions)
-        # track_actions = self.twist_to_tracks(self.applied_actions)
+        # track_actions = self.twist_to_tracks(self.clipped_applied_actions)
+        track_actions = self.twist_to_tracks(self.applied_actions)
         # print("track_actions",track_actions)
         # action_saving=[]
         for (a, tracks) in zip(track_actions,[self.left_track, self.right_track]):
@@ -4040,10 +4046,14 @@ class Env(EnvBasePB):
 
         reach =0
 
-        
         if self.dist_to_wp<1:
-            # self.k=self.k+1
-            reach =1500
+            self.k=self.k+1
+            reach =1000
+        if self.k>0:
+            done = True
+        # if self.dist_to_wp<1:
+        #     # self.k=self.k+1
+        #     reach =1500
         # if self.k>0:
         #     done = True
         # print(self.k)
@@ -4052,25 +4062,29 @@ class Env(EnvBasePB):
         
         step_counter=0
 
-        if self.steps>0:
-            step_counter=step_counter+1
+        if self.steps>0 and not self.k>0:
+            step_counter+=1
+        elif self.k>0:
+            step_counter+=0
+        # print("stepCounter",step_counter)
         collision=0
         MA_colision=0     
 
         if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
-            MA_colision= -0.5*step_counter
+            MA_colision= -5
             done=True
 
         if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-            collision= -0.002*step_counter
+            collision= -0.2
             #print("HIT_WALL")
             done=True
 
         
             # print("MA Collision----------------")
         # print("self.steps",self.steps,step_counter)
+        # reward = reach+collision+MA_colision-step_counter
         reward = reach+collision+MA_colision-step_counter
-        
+        # print("Reward",reward,self)
         
 
         self.ep_reward_dict["Reward/goal"] += goal
@@ -4169,8 +4183,13 @@ class Env(EnvBasePB):
 
         
         if self.dist_to_wp<1:
-            # self.k=self.k+1
+            self.k=self.k+1
             reach =1000
+        if self.k>0:
+            done = True
+        # if self.dist_to_wp<1:
+        #     # self.k=self.k+1
+        #     reach =1500
         # if self.k>0:
         #     done = True
         # print(self.k)
@@ -4179,20 +4198,23 @@ class Env(EnvBasePB):
         
         step_counter=0
 
-        if self.steps>0:
-            step_counter=step_counter+1
+        if self.steps>0 and not self.k>0:
+            step_counter+=1
+        elif self.k>0:
+            step_counter+=0
         collision=0
         MA_colision=0     
 
-        # if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
-        #     MA_colision= -50*step_counter
-        #     done=True
+        if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
+            MA_colision= -5
+            done=True
 
 
-        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-        #     collision= -10*step_counter
-        #     #print("HIT_WALL")
-        #     done=True
+        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+            # collision= -10*step_counter
+            collision= -0.1
+            #print("HIT_WALL")
+            done=True
 
         
             # print("MA Collision----------------")
@@ -4276,11 +4298,11 @@ class Env(EnvBasePB):
         MA_colision=0  
 
         if self.intersection_r1_r:   #Multi RObot Collision
-            MA_colision=-40  
+            # MA_colision=-10  
             done=True
 
         if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
-            collision= -5
+            collision= -2
             # print("HIT",self.vx)
             done=True
 
@@ -4357,16 +4379,18 @@ class Env(EnvBasePB):
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
             goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
-         
+
+
 
         collision=0
         MA_colision=0  
 
-        
+        if self.intersection_r1_r:   #Multi RObot Collision
+            # MA_colision=-15  
+            done=True
 
         if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
-            collision= -70
-            # print("HIT",self.vx)
+            collision= -7
             done=True
 
         reward = goal + neg + heading +reach+collision+MA_colision
@@ -4439,7 +4463,7 @@ class Env(EnvBasePB):
         # print(self.k,self,done)
 
 
-        if abs(self.heading_error) < 0.5 and not (np.array(self.contacts) == True).any():
+        if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
             goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
@@ -4447,11 +4471,14 @@ class Env(EnvBasePB):
         collision=0
         MA_colision=0  
 
-        
+        if self.intersection_r1_r:   #Multi RObot Collision
+            # print("MA_hit")
+            MA_colision=-10  
+            done=True
 
         if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
-            collision= -5
-            # print("HIT",self.vx)
+            # print("COntacted")
+            collision= -3
             done=True
 
         reward = goal + neg + heading +reach+collision+MA_colision
@@ -4525,7 +4552,7 @@ class Env(EnvBasePB):
         # print(self.k,self,done)
 
 
-        if abs(self.heading_error) < 0.5 and not (np.array(self.contacts) == True).any():
+        if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
             goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
@@ -4534,12 +4561,11 @@ class Env(EnvBasePB):
         MA_colision=0  
 
         if self.intersection_r1_r:   #Multi RObot Collision
-            MA_colision=-40  
+            MA_colision=-10
             done=True
 
         if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
-            collision= -5
-            # print("HIT",self.vx)
+            collision= -7
             done=True
 
         reward = goal + neg + heading +reach+collision+MA_colision
@@ -4648,11 +4674,11 @@ class Env(EnvBasePB):
         MA_colision=0
 
         if self.intersection_r1_r:   #Multi RObot Collision
-            MA_colision=-40    
+            MA_colision=-10    
             done=True
 
         if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-            collision= -5
+            collision= -1
             # #print("HIT_WALL")
             done=True
 
@@ -4813,7 +4839,7 @@ class Env(EnvBasePB):
         reach =0
         if self.dist_to_wp<1:
             # self.k=self.k+1
-            reach =1500
+            reach =1000
 
         # if self.vx>1 or self.vx<-0.5:
         #     reach =-50
@@ -4860,12 +4886,12 @@ class Env(EnvBasePB):
 
         collision=0
         MA_colision=0     
-        # if self.intersection_r1_r:   #Multi RObot Collision
-        #     MA_colision=-25    
-        #     done=True
+        if self.intersection_r1_r:   #Multi RObot Collision
+            # MA_colision=-25    
+            done=True
 
         if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-            collision= -5
+            collision= -1
             # #print("HIT_WALL")
             done=True
 
@@ -5408,7 +5434,7 @@ class Env(EnvBasePB):
         # print("g",len(self.robots_bbox))
         textureId = -1
         
-        self.robot1_bbox=self.bbox_generator_titan1(0.0,self.pos,self.orn,self.lineId1) #0.075
+        self.robot1_bbox=self.bbox_generator_titan1(0.075,self.pos,self.orn,self.lineId1) #0.075
         self.robot1_bbox.append(self.robot1_bbox[0])
         #self.intersection_r1_r1,_= self.intersection_check(self.robot1_bbox,self.robot1_bbox)
         # To set robot collision with obstacle
