@@ -4276,11 +4276,11 @@ class Env(EnvBasePB):
         MA_colision=0  
 
         if self.intersection_r1_r:   #Multi RObot Collision
-            MA_colision=-70  
+            MA_colision=-40  
             done=True
 
         if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
-            collision= -10
+            collision= -5
             # print("HIT",self.vx)
             done=True
 
@@ -4365,7 +4365,7 @@ class Env(EnvBasePB):
         
 
         if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
-            collision= -25
+            collision= -70
             # print("HIT",self.vx)
             done=True
 
@@ -4450,7 +4450,7 @@ class Env(EnvBasePB):
         
 
         if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
-            collision= -10
+            collision= -5
             # print("HIT",self.vx)
             done=True
 
@@ -4534,11 +4534,11 @@ class Env(EnvBasePB):
         MA_colision=0  
 
         if self.intersection_r1_r:   #Multi RObot Collision
-            MA_colision=-70  
+            MA_colision=-40  
             done=True
 
         if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
-            collision= -10
+            collision= -5
             # print("HIT",self.vx)
             done=True
 
@@ -4648,11 +4648,11 @@ class Env(EnvBasePB):
         MA_colision=0
 
         if self.intersection_r1_r:   #Multi RObot Collision
-            MA_colision=-75    
+            MA_colision=-40    
             done=True
 
         if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-            collision= -10
+            collision= -5
             # #print("HIT_WALL")
             done=True
 
@@ -4860,12 +4860,12 @@ class Env(EnvBasePB):
 
         collision=0
         MA_colision=0     
-        if self.intersection_r1_r:   #Multi RObot Collision
-            MA_colision=-25    
-            done=True
+        # if self.intersection_r1_r:   #Multi RObot Collision
+        #     MA_colision=-25    
+        #     done=True
 
         if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-            collision= -10
+            collision= -5
             # #print("HIT_WALL")
             done=True
 
