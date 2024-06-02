@@ -4046,14 +4046,10 @@ class Env(EnvBasePB):
 
         reach =0
 
+        
         if self.dist_to_wp<1:
-            self.k=self.k+1
+            # self.k=self.k+1
             reach =1000
-        if self.k>0:
-            done = True
-        # if self.dist_to_wp<1:
-        #     # self.k=self.k+1
-        #     reach =1500
         # if self.k>0:
         #     done = True
         # print(self.k)
@@ -4062,29 +4058,26 @@ class Env(EnvBasePB):
         
         step_counter=0
 
-        if self.steps>0 and not self.k>0:
-            step_counter+=1
-        elif self.k>0:
-            step_counter+=0
-        # print("stepCounter",step_counter)
+        if self.steps>0:
+            step_counter=step_counter+1
         collision=0
         MA_colision=0     
 
         if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
-            MA_colision= -3
+            MA_colision= -2*step_counter
             done=True
 
-        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-            collision= -0.002
-            #print("HIT_WALL")
-            done=True
+
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     collision= -10*step_counter
+        #     #print("HIT_WALL")
+        #     done=True
 
         
             # print("MA Collision----------------")
         # print("self.steps",self.steps,step_counter)
-        # reward = reach+collision+MA_colision-step_counter
         reward = reach+collision+MA_colision-step_counter
-        # print("Reward",reward,self)
+        
         
 
         self.ep_reward_dict["Reward/goal"] += goal
@@ -4183,13 +4176,8 @@ class Env(EnvBasePB):
 
         
         if self.dist_to_wp<1:
-            self.k=self.k+1
+            # self.k=self.k+1
             reach =1000
-        if self.k>0:
-            done = True
-        # if self.dist_to_wp<1:
-        #     # self.k=self.k+1
-        #     reach =1500
         # if self.k>0:
         #     done = True
         # print(self.k)
@@ -4198,23 +4186,20 @@ class Env(EnvBasePB):
         
         step_counter=0
 
-        if self.steps>0 and not self.k>0:
-            step_counter+=1
-        elif self.k>0:
-            step_counter+=0
+        if self.steps>0:
+            step_counter=step_counter+1
         collision=0
         MA_colision=0     
 
         if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
-            MA_colision= -3
+            # MA_colision= -50*step_counter
             done=True
 
 
-        if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-            # collision= -10*step_counter
-            collision= -0.01
-            #print("HIT_WALL")
-            done=True
+        # if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
+        #     # collision= -10*step_counter
+        #     #print("HIT_WALL")
+        #     done=True
 
         
             # print("MA Collision----------------")
@@ -4251,6 +4236,8 @@ class Env(EnvBasePB):
             done = True
             
         return reward, done
+
+
     
     def get_reward_23(self):
         """
@@ -4291,7 +4278,7 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4378,7 +4365,7 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
 
 
 
@@ -4465,7 +4452,7 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4554,7 +4541,7 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4667,7 +4654,7 @@ class Env(EnvBasePB):
         else:
             if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
                 #print("False")
-                goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4766,7 +4753,7 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4881,7 +4868,7 @@ class Env(EnvBasePB):
         else:
             if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
                 #print("False")
-                goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
