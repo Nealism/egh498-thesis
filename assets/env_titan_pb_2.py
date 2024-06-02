@@ -1490,17 +1490,17 @@ class Env(EnvBasePB):
 
 
 
-        # clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 1)
-        # clipped_angular_vel_command=np.clip(self.applied_actions[1], -1.5, 1.5)
+        clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 1)
+        clipped_angular_vel_command=np.clip(self.applied_actions[1], -1.5, 1.5)
 
-        # self.clipped_applied_actions=[clipped_linear_vel_command,clipped_angular_vel_command]
+        self.clipped_applied_actions=[clipped_linear_vel_command,clipped_angular_vel_command]
 
 
 
         # print("clipped_applied_actions",self.clipped_applied_actions,self)
 
-        # track_actions = self.twist_to_tracks(self.clipped_applied_actions)
-        track_actions = self.twist_to_tracks(self.applied_actions)
+        track_actions = self.twist_to_tracks(self.clipped_applied_actions)
+        # track_actions = self.twist_to_tracks(self.applied_actions)
         # print("track_actions",track_actions)
         # action_saving=[]
         for (a, tracks) in zip(track_actions,[self.left_track, self.right_track]):
@@ -4071,11 +4071,11 @@ class Env(EnvBasePB):
         MA_colision=0     
 
         if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
-            MA_colision= -5
+            MA_colision= -3
             done=True
 
         if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-            collision= -0.2
+            collision= -0.002
             #print("HIT_WALL")
             done=True
 
@@ -4206,13 +4206,13 @@ class Env(EnvBasePB):
         MA_colision=0     
 
         if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
-            MA_colision= -5
+            MA_colision= -3
             done=True
 
 
         if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
             # collision= -10*step_counter
-            collision= -0.1
+            collision= -0.01
             #print("HIT_WALL")
             done=True
 
@@ -4291,7 +4291,7 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4378,7 +4378,7 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
 
 
 
@@ -4465,7 +4465,7 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4554,7 +4554,7 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4667,7 +4667,7 @@ class Env(EnvBasePB):
         else:
             if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
                 #print("False")
-                goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4766,7 +4766,7 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4881,7 +4881,7 @@ class Env(EnvBasePB):
         else:
             if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
                 #print("False")
-                goal = np.exp(-0.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-0.5*(0.8 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
