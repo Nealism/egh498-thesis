@@ -986,7 +986,7 @@ class Env(EnvBasePB):
         radius = 0.14
         width = 0.78/2
         # print(actions)
-        lin_vel = actions[0]*0.55
+        lin_vel = actions[0]#*0.50
         ang_vel = actions[1]*2.5/2
         w_r = (lin_vel + ang_vel*width)/radius
         w_l = (lin_vel - ang_vel*width)/radius
@@ -1003,7 +1003,8 @@ class Env(EnvBasePB):
         # This is an expert functionexper
         # ===========================
     def motor_action(self,actions):
-        
+        # print("titanaction",actions)
+        # actions=[1.0,0.0]
         # actions=np.array([0,1.5])
         # print("motor action",actions,self)
         self.exp_actions = [0.0]*2
@@ -1440,7 +1441,7 @@ class Env(EnvBasePB):
         # print("actions",actions,self)
         # self.exp_actions = [0.0]*2
         # print("self.exp_actions",self.exp_actions)
-        self.exp_actions=self.exp_actions*np.array([50,50])
+        self.exp_actions=self.exp_actions*np.array([30,30])
         # print("self.exp_actions_afer",self.exp_actions)
 
         if self.args.just_expert or (self.args.cur or self.args.expert_curr) and self.goal_moved==False:
@@ -1481,20 +1482,20 @@ class Env(EnvBasePB):
                 #     self.applied_actions += self.action_multiplier*actions
         # print("self.exp_actions_after",self.exp_actions)
 
-        # print("applied_action",self.applied_actions,self)
+        # print("applied_action",self.applied_actions*0.3,self)
         
         # Network now outputs a twist message
         # print("actions",self,actions)
 
-
-
+        # if self.applied_actions[0]*0.3>1 or  self.applied_actions[0]*0.3<-0.5:
+        #     print("tham");exit()
+        
 
 
         clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 1)
         clipped_angular_vel_command=np.clip(self.applied_actions[1], -1.5, 1.5)
 
         self.clipped_applied_actions=[clipped_linear_vel_command,clipped_angular_vel_command]
-
 
 
         # print("clipped_applied_actions",self.clipped_applied_actions,self)
@@ -1533,7 +1534,7 @@ class Env(EnvBasePB):
         self.get_observation()
         self.save_sim_state()
         #reward, done = self.get_reward()
-        reward, done = getattr(self, self.reward_fn_name)()
+        reward, done, termination = getattr(self, self.reward_fn_name)()
         # print("reward_before",reward)
         # print("action",action[1],"pre",self.pre_action[1])
         #-------------------------------------------------------------------------------------------------------
@@ -1737,7 +1738,7 @@ class Env(EnvBasePB):
         self.total_reward += reward
         self.distance_to_goal =self.goal_reaching
         
-        return self.return_state(),reward,done,self.ob_dict
+        return self.return_state(),reward,done,termination,self.ob_dict
         #print("total_reward",self.total_reward)
         #return np.array(self.robot1_bbox[0] +self.robot1_bbox[1] +self.robot1_bbox[2] +self.robot1_bbox[3] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3] + self.contacts + self.contacts2 + list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped]), reward, done, self.ob_dict
         # return np.array(list(self.state_goal)+list(self.body_xyz)+ [self.roll] + [self.pitch] + [self.yaw] + list(self.body_vxyz)+ list(self.base_rot_vel)+ list(self.body_xyz2)+ [self.roll2] + [self.pitch2] + [self.yaw2] + list(self.body_vxyz2)+ list(self.base_rot_vel2)+ [self.tipped]), reward, done, self.ob_dict
@@ -1857,7 +1858,7 @@ class Env(EnvBasePB):
     #     """
     #     Reward Function 1
     #     """
-    #     #reward = 1.5*np.exp(-2.5*max(0, self.target_speed - self.vx)**2)
+    #     #reward = 1.5*np.ex termination=Falsep(-2.5*max(0, self.target_speed - self.vx)**2)
     #     #done = False
     #     done=False
         
@@ -1972,7 +1973,7 @@ class Env(EnvBasePB):
     #         #print("Tipped",done)
 
         
-    #     return reward, done
+    #     return reward, done, termination
 
     
     
@@ -1981,7 +1982,7 @@ class Env(EnvBasePB):
     #     """
     #     Reward Function 3
     #     """
-       
+        termination=False
     #     done=False
         
     #     dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -2018,14 +2019,14 @@ class Env(EnvBasePB):
     #         print("Hit_Gap_wall",done)
         
             
-    #     return reward, done
+    #     return reward, done, termination
 
 
     def get_reward_1(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -2086,13 +2087,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
        
     def get_reward_2(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -2153,14 +2154,14 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
 
     def get_reward_3(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -2216,13 +2217,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     def get_reward_4(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -2312,13 +2313,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     def get_reward_5(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -2408,13 +2409,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     def get_reward_6(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -2494,13 +2495,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     def get_reward_7(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -2588,13 +2589,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     def get_reward_8(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -2686,14 +2687,14 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     #Real_reward--with reach 1000 and 1st collision
     def get_reward_9(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -2781,7 +2782,7 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     
     
@@ -2789,14 +2790,12 @@ class Env(EnvBasePB):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         # print("observation_vx",self.vx,"observation_yvel",self.yaw_vel)
-        if self.vx>1 or self.vx<-0.5:
-            print("self.vx",self.vx)
-            # print("TRUEEEEEEEEEEEEEE")
-        if self.yaw_vel>1 or self.yaw_vel<-1:
-            print("self.yaw_vel",self.yaw_vel)
+        print("Spot_vx",self.vx,"Spot_yevl",self.yaw_vel)
+        if self.vx>1.2:
+            print("titan_tham");exit()
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
         goal=0
         
@@ -2874,14 +2873,14 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
 
     def get_reward_11(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -2973,14 +2972,14 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
 
     def get_reward_12(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -3072,14 +3071,14 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
 
     def get_reward_13(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         # print("actions",self.actions_policy)
@@ -3197,14 +3196,14 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
 
     def get_reward_14(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         # print("actions",self.actions_policy)
@@ -3301,13 +3300,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
 
     def get_reward_15(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -3423,13 +3422,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     def get_reward_16(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -3545,7 +3544,7 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
 
 
@@ -3554,7 +3553,7 @@ class Env(EnvBasePB):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -3670,13 +3669,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     def get_reward_18(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -3786,7 +3785,7 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
 
 
@@ -3795,7 +3794,7 @@ class Env(EnvBasePB):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -3905,13 +3904,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     def get_reward_20(self):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -4027,13 +4026,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     def get_reward_21(self):
         """
         Step Reward
         """
-       
+        termination=False
         done=False
         # nege = -5*0.25*np.exp(-0.5*self.heading_error_other_robot**2)
         # print(self.heading_error_other_robot,nege)
@@ -4051,7 +4050,7 @@ class Env(EnvBasePB):
             # self.k=self.k+1
             reach =1000
         # if self.k>0:
-        #     done = True
+        #     termination = True
         # print(self.k)
         
            
@@ -4106,8 +4105,16 @@ class Env(EnvBasePB):
             
         if self.tipped == True:
             done = True
+
+        if self.dist_to_wp<1:
+            self.k=self.k+1
             
-        return reward, done
+
+        if self.k>0:
+            # termination = True
+            termination=True
+            
+        return reward, done, termination
     
     # def get_reward_sudocode(self):
        
@@ -4161,7 +4168,7 @@ class Env(EnvBasePB):
         """
         Step Reward
         """
-       
+        termination=False
         done=False
         # nege = -5*0.25*np.exp(-0.5*self.heading_error_other_robot**2)
         # print(self.heading_error_other_robot,nege)
@@ -4179,7 +4186,7 @@ class Env(EnvBasePB):
             # self.k=self.k+1
             reach =1000
         # if self.k>0:
-        #     done = True
+        #     termination = True
         # print(self.k)
         
            
@@ -4234,8 +4241,16 @@ class Env(EnvBasePB):
             
         if self.tipped == True:
             done = True
+        
+        if self.dist_to_wp<1:
+            self.k=self.k+1
             
-        return reward, done
+
+        if self.k>0:
+            # termination = True
+            termination=True
+            
+        return reward, done, termination
 
 
     
@@ -4243,7 +4258,7 @@ class Env(EnvBasePB):
         """
         Reward Function: Reset at Multi_robot Collision with Penalty 150 and Reset wall collision with penaly 150 following reward 21
         """
-       
+        termination=False
         done=False
         # print("self.vx",self.vx, "self.yaw_vel",self.yaw_vel)
         
@@ -4263,6 +4278,10 @@ class Env(EnvBasePB):
             # self.k=self.k+1
             reach =1000
 
+        # if self.k>0:
+        #     # termination = True
+        #     termination=True
+
         # if self.vx>1 or self.vx<-0.5:
         #     reach =-50
         #     # print("self.vx",self.vx)
@@ -4274,18 +4293,20 @@ class Env(EnvBasePB):
         # if self.k>0:
         #     done = True
         # print(self.k,self,done)
+        
 
+        #velocityy error = desired vel toward goal - actual vel towards goal
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-2.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
         MA_colision=0  
 
         if self.intersection_r1_r:   #Multi RObot Collision
-            # MA_colision=-10  
+            MA_colision=-10  
             done=True
 
         if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
@@ -4322,15 +4343,23 @@ class Env(EnvBasePB):
             
         if self.tipped == True:
             done = True
+
+        if self.dist_to_wp<1:
+            self.k=self.k+1
             
-        return reward, done
+
+        if self.k>0:
+            # termination = True
+            termination=True
+            
+        return reward, done, termination
     
 
     def get_reward_24(self):
         """
         Reward Function: Reset at Multi_robot Collision with Penalty 150 and Reset wall collision with penaly 150 following reward 21
         """
-       
+        termination=False
         done=False
         # print("self.vx",self.vx, "self.yaw_vel",self.yaw_vel)
         
@@ -4350,92 +4379,9 @@ class Env(EnvBasePB):
             # self.k=self.k+1
             reach =1000
 
-        # if self.vx>1 or self.vx<-0.5:
-        #     reach =-50
-        #     # print("self.vx",self.vx)
-        #     # print("TRUEEEEEEEEEEEEEE")
-        # if self.yaw_vel>1.5 or self.yaw_vel<-1.5:
-        #     reach =-50
-            # print("self.yaw_vel",self.yaw_vel)
-            # print("Falseeeeeeeeeeee")
         # if self.k>0:
-        #     done = True
-        # print(self.k,self,done)
-
-
-        if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
-            #print("False")
-            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
-
-
-
-        collision=0
-        MA_colision=0  
-
-        if self.intersection_r1_r:   #Multi RObot Collision
-            # MA_colision=-15  
-            done=True
-
-        if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
-            collision= -7
-            done=True
-
-        reward = goal + neg + heading +reach+collision+MA_colision
-        
-        
-
-        self.ep_reward_dict["Reward/goal"] += goal
-        self.ep_reward_dict["Reward/neg"] += neg
-        self.ep_reward_dict["Reward/heading"] += heading
-        self.ep_reward_dict["Reward/MA_colision"] += MA_colision
-        self.ep_reward_dict["Reward/collision"] += collision
-        
-        
-        
-        
-        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
-        
-        self.prev_dist_to_goal = dist_to_goal
-        
-
-        
-        
-            # print("Robot_hit_other_Robot",done,self)
-        
-        
-        ######################
-        
-        
-            
-        if self.tipped == True:
-            done = True
-            
-        return reward, done
-    
-
-    def get_reward_25(self):
-        """
-        Reward Function: Reset at Multi_robot Collision with Penalty 150 and Reset wall collision with penaly 150 following reward 21
-        """
-       
-        done=False
-        # print("self.vx",self.vx, "self.yaw_vel",self.yaw_vel)
-        
-
-        
-        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
-        goal=0
-        
-        heading = 0.25*np.exp(-0.5*self.heading_error**2)
-        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
-        neg = 0
-        if self.vx < 0 and not (np.array(self.contacts) == True).any():
-            neg = 0.25*self.vx
-
-        reach =0
-        if self.dist_to_wp<1:
-            # self.k=self.k+1
-            reach =1000
+        #     # termination = True
+        #     termination=True
 
         # if self.vx>1 or self.vx<-0.5:
         #     reach =-50
@@ -4452,19 +4398,18 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
-         
+            goal = np.exp(-2.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
+
+
 
         collision=0
         MA_colision=0  
 
         if self.intersection_r1_r:   #Multi RObot Collision
-            # print("MA_hit")
-            MA_colision=-10  
+            MA_colision=-10 
             done=True
 
         if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
-            # print("COntacted")
             collision= -3
             done=True
 
@@ -4497,18 +4442,27 @@ class Env(EnvBasePB):
             
         if self.tipped == True:
             done = True
+
+        if self.dist_to_wp<1:
+            self.k=self.k+1
             
-        return reward, done
+
+        if self.k>0:
+            # termination = True
+            termination=True
+            
+        return reward, done, termination
     
 
-
-    def get_reward_26(self):
+    def get_reward_25(self):
         """
         Reward Function: Reset at Multi_robot Collision with Penalty 150 and Reset wall collision with penaly 150 following reward 21
         """
-       
+        termination=False
         done=False
-        # print("self.vx",self.vx, "self.yaw_vel",self.yaw_vel)
+        # print("titan.vx",self.vx, "titan.yaw_vel",self.yaw_vel)
+        # if self.vx>1.2:
+        #     print("tham");exit()
         
 
         
@@ -4526,6 +4480,11 @@ class Env(EnvBasePB):
             # self.k=self.k+1
             reach =1000
 
+        # if self.k>0:
+        #     # termination = True
+        #     termination=True
+        # print(self.k,self,done)
+
         # if self.vx>1 or self.vx<-0.5:
         #     reach =-50
         #     # print("self.vx",self.vx)
@@ -4534,25 +4493,27 @@ class Env(EnvBasePB):
         #     reach =-50
             # print("self.yaw_vel",self.yaw_vel)
             # print("Falseeeeeeeeeeee")
-        # if self.k>0:
-        #     done = True
-        # print(self.k,self,done)
-
+        
+        # print("Titan_vx",self.vx,"Titan_yevl",self.yaw_vel)
+        # if self.vx>1:
+        #     print("THAM");exit()
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-2.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
         MA_colision=0  
 
         if self.intersection_r1_r:   #Multi RObot Collision
-            MA_colision=-10
+            # print("MA_hit")
+            MA_colision=-10  
             done=True
 
         if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
-            collision= -7
+            # print("COntacted")
+            collision= -5
             done=True
 
         reward = goal + neg + heading +reach+collision+MA_colision
@@ -4584,15 +4545,128 @@ class Env(EnvBasePB):
             
         if self.tipped == True:
             done = True
+
+        if self.dist_to_wp<1:
+            self.k=self.k+1
             
-        return reward, done
+
+        if self.k>0:
+            # termination = True
+            termination=True
+            
+        return reward, done, termination
+    
+
+
+    def get_reward_26(self):
+        """
+        Reward Function: Reset at Multi_robot Collision with Penalty 150 and Reset wall collision with penaly 150 following reward 21
+        """
+        termination=False
+        done=False
+        # print("self.vx",self.vx, "self.yaw_vel",self.yaw_vel)
+        
+
+        
+        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        goal=0
+        
+        heading = 0.25*np.exp(-0.5*self.heading_error**2)
+        #heading_obs = np.exp(-0.5*self.heading_error_obs**2)
+        neg = 0
+        if self.vx < 0 and not (np.array(self.contacts) == True).any():
+            neg = 0.25*self.vx
+
+        reach =0
+        if self.dist_to_wp<1:
+            # self.k=self.k+1
+            reach =1000
+
+        # if self.k>0:
+        #     # termination = True
+        #     termination=True
+
+        step_counter=0
+
+        if self.steps>0:
+            step_counter=step_counter+1
+
+        # if self.vx>1 or self.vx<-0.5:
+        #     reach =-50
+        #     # print("self.vx",self.vx)
+        #     # print("TRUEEEEEEEEEEEEEE")
+        # if self.yaw_vel>1.5 or self.yaw_vel<-1.5:
+        #     reach =-50
+            # print("self.yaw_vel",self.yaw_vel)
+            # print("Falseeeeeeeeeeee")
+        # if self.k>0:
+        #     done = True
+        # print(self.k,self,done)
+
+
+        if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
+            #print("False")
+            goal = np.exp(-2.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
+         
+
+        collision=0
+        MA_colision=0  
+
+        if self.intersection_r1_r:   #Multi RObot Collision
+            MA_colision=-10
+            done=True
+
+        if ((np.array(self.contacts) == True).any()):  #Collision with Walls/anything
+            collision= -step_counter
+            done=True
+
+        reward = goal + neg + heading +reach+collision+MA_colision
+        
+        
+
+        self.ep_reward_dict["Reward/goal"] += goal
+        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/heading"] += heading
+        self.ep_reward_dict["Reward/MA_colision"] += MA_colision
+        self.ep_reward_dict["Reward/collision"] += collision
+        
+        
+        
+        
+        distance_improve = (max(self.prev_dist_to_goal - dist_to_goal, 0))
+        
+        self.prev_dist_to_goal = dist_to_goal
+        
+
+        
+        
+            # print("Robot_hit_other_Robot",done,self)
+        
+        
+        ######################
+        
+        
+            
+        if self.tipped == True:
+            done = True
+
+
+        if self.dist_to_wp<1:
+            self.k=self.k+1
+            
+
+        if self.k>0:
+            # termination = True
+            termination=True
+            
+        return reward, done, termination
     
 
     def get_reward_27(self):
         """
         Reward Function: Reset at Multi_robot Collision with Penalty 70 and Reset wall collision with penalty 70 following reward 21
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -4613,6 +4687,10 @@ class Env(EnvBasePB):
         if self.dist_to_wp<1:
             # self.k=self.k+1
             reach =1000
+
+        # if self.k>0:
+        #     # termination = True
+        #     termination=True
 
         # if self.vx>1 or self.vx<-0.5:
         #     reach =-50
@@ -4654,7 +4732,7 @@ class Env(EnvBasePB):
         else:
             if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
                 #print("False")
-                goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-2.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4711,14 +4789,23 @@ class Env(EnvBasePB):
             
         if self.tipped == True:
             done = True
+
+
+        if self.dist_to_wp<1:
+            self.k=self.k+1
             
-        return reward, done
+
+        if self.k>0:
+            # termination = True
+            termination=True
+            
+        return reward, done, termination
 
     def get_reward_28(self):
         """
         Reward Function: Reset at Multi_robot Collision with Penalty 150 and Reset wall collision with penaly 150 following reward 21
         """
-       
+        termination=False
         done=False
         # print("self.vx",self.vx, "self.yaw_vel",self.yaw_vel)
         
@@ -4738,6 +4825,10 @@ class Env(EnvBasePB):
             # self.k=self.k+1
             reach =1000
 
+        # if self.k>0:
+        #     # termination = True
+        #     termination=True
+
         # if self.vx>1 or self.vx<-0.5:
         #     reach =-50
         #     # print("self.vx",self.vx)
@@ -4753,7 +4844,7 @@ class Env(EnvBasePB):
 
         if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
             #print("False")
-            goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+            goal = np.exp(-2.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4798,15 +4889,24 @@ class Env(EnvBasePB):
             
         if self.tipped == True:
             done = True
+
+
+        if self.dist_to_wp<1:
+            self.k=self.k+1
             
-        return reward, done
+
+        if self.k>0:
+            # termination = True
+            termination=True
+            
+        return reward, done, termination
     
 
     def get_reward_29(self):
         """
         Reward Function: Reset at Multi_robot Collision with Penalty 70 and Reset wall collision with penalty 70 following reward 21
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -4827,6 +4927,10 @@ class Env(EnvBasePB):
         if self.dist_to_wp<1:
             # self.k=self.k+1
             reach =1000
+
+        # if self.k>0:
+        #     # termination = True
+        #     termination=True
 
         # if self.vx>1 or self.vx<-0.5:
         #     reach =-50
@@ -4868,7 +4972,7 @@ class Env(EnvBasePB):
         else:
             if abs(self.heading_error) < 0.5 and not any(self.int_check_lines_vs_rbbox):
                 #print("False")
-                goal = np.exp(-0.5*(0.5 - self.heading_vx)**2) if self.vx > 0 else 0.0
+                goal = np.exp(-2.5*(1 - self.heading_vx)**2) if self.vx > 0 else 0.0
          
 
         collision=0
@@ -4912,15 +5016,23 @@ class Env(EnvBasePB):
             
         if self.tipped == True:
             done = True
+
+        if self.dist_to_wp<1:
+            self.k=self.k+1
             
-        return reward, done
+
+        if self.k>0:
+            # termination = True
+            termination=True
+            
+        return reward, done, termination
 
     
     def get_reward_30(self):
         """
         Reward Function: Reset at Multi_robot Collision with Penalty 70 and Reset wall collision with penalty 70 following reward 21
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -5036,14 +5148,14 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
 
     def get_reward_31(self):
         """
         Reward Function: Reset at Multi_robot Collision with Penalty 70 and Reset wall collision with penalty 70 following reward 21
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -5159,13 +5271,13 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
 
     def get_reward_32(self):
         """
         Reward Function: Reset at Multi_robot Collision with Penalty 150 and Reset wall collision with penaly 150 following reward 21
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -5228,14 +5340,14 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
 
     def get_reward_33(self):
         """
         Reward Function: Reset at Multi_robot Collision with Penalty 70 and Reset wall collision with penalty 70 following reward 21
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -5297,7 +5409,7 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
 
 
     def get_observation(self):
@@ -6570,8 +6682,9 @@ class Env(EnvBasePB):
 
         point =(center_x, center_y,z1)
         return point
-                
+    
 
+    
 
 
 

@@ -133,7 +133,7 @@ class MLPActorCriticPerception(nn.Module):
         # # policy builder depends on action space
         if isinstance(action_space, Box):
             self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape[0], hidden_sizes, activation)
-        # print(self.pi)
+        # print("self.pi",self.pi)
         # build value function
         self.v  = MLPCriticPerception(obs_dim, hidden_sizes, activation, self.pi.z_net)
 
@@ -148,7 +148,7 @@ class MLPActorCriticPerception(nn.Module):
             # print(a)
         else:
             a = self.pi.mu
-        
+        # print("policy_vel",a)
         logp_a = self.pi._log_prob_from_distribution(pi, a)
         v = self.v(obs, im)
 

@@ -663,7 +663,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
 
             tt=time.time()
-            next_o, r, d, _ = env.step(a)
+            next_o, r, d,termination, _ = env.step(a)
             # print("td", time.time()-tt)
             tt=time.time()
             #print("O_len",len(next_o),len(next_o[0]),"o",next_o)
@@ -765,11 +765,14 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #print(ep_lens)
             #print(d)
             #print("im",im)
-            timeout = ep_lens[0] == env.args.max_ep_len
+            timeout = ep_lens[0] == env.args.max_ep_len  or all(termination) 
             # print("Done",d)
             if all(d):
             # if any(d):
                 terminal = True
+            # elif all(termination):
+            #     # print("tham");exit()
+            #     terminal = timeout
             else:
                 terminal = timeout
             #print("terminal",terminal)
@@ -792,7 +795,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                     v=np.zeros(robot_number)
                     
 
-                #print("complete v",v)
+                # print("complete v",v)
                 
 
                 

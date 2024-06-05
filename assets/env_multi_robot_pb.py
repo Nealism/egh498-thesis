@@ -319,6 +319,7 @@ class Env(EnvBasePB):
         obs = []
         rews=[]
         dones=[]
+        terminations=[]
         self.Both_Robots_stuck=[]
         self.turn_both=False
         # self.ob_dicts=[]
@@ -454,12 +455,13 @@ class Env(EnvBasePB):
                 Robot.set_max_robotcode_gap_width(self.max_gap_among_all_robots_individual_gap_width)
             
                 
-            ob,rew,done, self.ob_dict=Robot.return_step(action)
+            ob,rew,done,termination, self.ob_dict=Robot.return_step(action)
             #print("action_length",action,"robot",Robot)
 
             obs.append(ob)
             rews.append(rew)
             dones.append(done)
+            terminations.append(termination)
             #print("inside_rewards",rews)
 
             self.ob_dicts.append(self.ob_dict)
@@ -469,7 +471,7 @@ class Env(EnvBasePB):
         # print()
         self.steps += 1
         self.get_observation()
-        return obs, rews, dones, self.ob_dict
+        return obs, rews, dones, terminations, self.ob_dict
     
     def get_image(self):
         

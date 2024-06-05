@@ -221,7 +221,7 @@ class Env(EnvBasePB):
             self.max_goal_dist=8
         
         # self.action_multiplier = 0.005
-        self.action_multiplier = 0.1
+        self.action_multiplier = 1#0.1
         # print(10000*np.ones(self.ac_size))
         # Needed if importing as Gym environment--  spaces.Discrete(self.ac_size) 
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
@@ -1166,7 +1166,8 @@ class Env(EnvBasePB):
         return self.obs_buf, reward, done, None
     
     def motor_action(self,actions):
-        # print("motor action",actions,self)
+        # print("spot action",actions,type(actions))
+        # actions=np.array([1.0,0.0])
         self.exp_actions = [0.0]*2
         # ##########################__RAY_LINE___###################
         #if self.args.num_robots > 1:
@@ -1619,6 +1620,7 @@ class Env(EnvBasePB):
         else:
             
                 
+            # print("seq?",actions,type(actions))
             self.applied_actions = self.action_multiplier*actions
         # print("self.applied_actions",self.applied_actions,self)    
                 # self.applied_actions = (self.Kp/self.initial_Kp) * np.array(self.exp_actions)
@@ -1641,8 +1643,8 @@ class Env(EnvBasePB):
         # lin_vel = np.array([self.applied_actions[0], 1.0, 1.0])#1.0
         # ang_vel = np.array([1.0, 1.0, self.applied_actions[1]])#1.0
 
-        lin_vel = np.array([1.0, 1.0, 1.0])#1.0
-        ang_vel = np.array([1.0, 1.0, 1.0])#1.0
+        lin_vel = 1.0#np.array([1.0, 1.0, 1.0])#1.0
+        ang_vel = 1.0#np.array([1.0, 1.0, 1.0])#1.0
         commands_scale = np.array([1.0, 1.0, 1.0])
         dof_pos = 1.0
         dof_vel = 0.05
@@ -1652,6 +1654,7 @@ class Env(EnvBasePB):
         # self.commands=np.array([self.applied_actions[0],0,self.applied_actions[1]])
         # print("commands",self.commands[:3])
         #clip actions to max min vx 
+        # print("spot_cmd",self.commands)
         # print("self.dof_vel",self.dof_vel)
         # print("clipped_linear_vel_command",clipped_linear_vel_command,"clipped_angular_vel_command",clipped_angular_vel_command)
         self.Higher_input = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
@@ -3121,7 +3124,9 @@ class Env(EnvBasePB):
         """
         Reward Function 2
         """
-       
+        print("Spot_vx",self.vx,"Spot_yevl",self.yaw_vel)
+        if self.vx>1.4:
+            print("spot_tham");exit()
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -4901,7 +4906,7 @@ class Env(EnvBasePB):
         """
         Reward Function: Reset at Multi_robot Collision with Penalty 150 and Reset wall collision following reward 21
         """
-       
+        # print("Spot_vx",self.vx,"Spot_yevl",self.yaw_vel)
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))

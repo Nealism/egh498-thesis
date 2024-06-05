@@ -109,13 +109,13 @@ def run(args):
         st=time.time()
         # time_saving.append(current_time)
         
-        obs, _, done, _ = env.step(action)
+        obs, _, done,termination, _ = env.step(action)
 
         if args.use_perception:
                 im = env.get_image()
         
 
-        if done==[True] or env.steps > args.max_ep_len:
+        if done==[True] or termination==[True] or env.steps > args.max_ep_len:
             obs = env.reset()
             if args.use_perception:
                 im = env.get_image()
