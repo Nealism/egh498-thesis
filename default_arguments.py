@@ -12,25 +12,25 @@ def get_defaults():
     # ========================================================================
 
     #Taken From Spot
-    parser.add_argument("-hf",
-                        "--HeightField",
-                        help="Use HeightField",
-                        action='store_true')
-    parser.add_argument("-r",
-                        "--DebugRack",
-                        help="Put Spot on an Elevated Rack",
-                        action='store_true')
-    parser.add_argument("-p",
-                        "--DebugPath",
-                        help="Draw Spot's Foot Path",
-                        action='store_true')
-    parser.add_argument("-gui",
-                        "--GUI",
-                        help="Control The Robot Yourself With a GUI",
-                        action='store_true')
-    parser.add_argument("-a",
-                        "--AgentNum",
-                        help="Agent Number To Load")
+    # parser.add_argument("-hf",
+    #                     "--HeightField",
+    #                     help="Use HeightField",
+    #                     action='store_true')
+    # parser.add_argument("-r",
+    #                     "--DebugRack",
+    #                     help="Put Spot on an Elevated Rack",
+    #                     action='store_true')
+    # parser.add_argument("-p",
+    #                     "--DebugPath",
+    #                     help="Draw Spot's Foot Path",
+    #                     action='store_true')
+    # parser.add_argument("-gui",
+    #                     "--GUI",
+    #                     help="Control The Robot Yourself With a GUI",
+    #                     action='store_true')
+    # parser.add_argument("-a",
+    #                     "--AgentNum",
+    #                     help="Agent Number To Load")
 
 
     parser.add_argument('--render', default=False, action="store_true")
@@ -89,6 +89,9 @@ def get_defaults():
     parser.add_argument('--experiment_1', default=False, action="store_true")
     parser.add_argument('--experiment_2', default=False, action="store_true")
     parser.add_argument('--experiment_3', default=False, action="store_true")
+    parser.add_argument('--unclipped_vel', default=False, action="store_true")
+    parser.add_argument('--gausian_clip', default=False, action="store_true")
+    parser.add_argument('--tanh_clip', default=False, action="store_true")
     parser.add_argument('--randomness', type=int, default=1)
 
 

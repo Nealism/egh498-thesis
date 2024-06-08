@@ -6,7 +6,9 @@ import torch
 import torch.nn as nn
 from torch.distributions.normal import Normal
 from torch.distributions.categorical import Categorical
+import default_arguments
 
+args = default_arguments.get_defaults() 
 def combined_shape(length, shape=None):
     if shape is None:
         return (length,)
@@ -107,6 +109,31 @@ class MLPGaussianActorPerception(ActorPerception):
         self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
         self.std = torch.exp(self.log_std)
         return Normal(self.mu, self.std)
+    
+    def _distribution_clipped(self, obs, im):
+        obs = torch.reshape(obs, [-1, self.obs_dim])
+        z = self.z_net(im)
+        self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
+        self.std = torch.exp(self.log_std)
+
+        
+
+
+        # Sample a raw action from the multivariate Gaussian distribution
+        raw_action = Normal(self.mu, self.std)
+
+        # Define the bounds for each dimension
+        bounds = [(-0.5, 1), (-1.5, 1.5)]
+
+        # Apply the tanh squashing function and scale to the desired bounds for each dimension
+        bounded_action = np.zeros_like(raw_action)
+        for i in range(len(raw_action)):
+            lower_bound, upper_bound = bounds[i]
+            squashed_action = np.tanh(raw_action[i])  # Squash to [-1, 1]
+            scaled_action = (squashed_action + 1) / 2  # Scale to [0, 1]
+            bounded_action[i] = scaled_action * (upper_bound - lower_bound) + lower_bound
+        
+        return bounded_action
 
     def _log_prob_from_distribution(self, pi, act):
         return pi.log_prob(act).sum(axis=-1)    # Last axis sum needed for Torch Normal distribution
@@ -140,15 +167,32 @@ class MLPActorCriticPerception(nn.Module):
 
     def step(self, obs, im, stochastic=True):
         pi = self.pi._distribution(obs, im)
+        # pi = self.pi._distribution_clipped(obs, im)
         
         # print(pi)
 
         if stochastic:
             a = pi.sample()
+            # a = pi.sample()
             # print(a)
         else:
             a = self.pi.mu
-        # print("policy_vel",a)
+        # print(type(a),a,type(a[0]),"check")
+        # r1_clipped_linear_vel_command=torch.tensor(np.clip(a[0][0].detach().numpy(), -0.5, 1))
+        # r1_clipped_angular_vel_command=torch.tensor(np.clip(a[0][1].detach().numpy(), -1.5, 1.5))
+
+        # r2_clipped_linear_vel_command=torch.tensor(np.clip(a[1][0].detach().numpy(), -0.5, 1))
+        # r2_clipped_angular_vel_command=torch.tensor(np.clip(a[1][1].detach().numpy(), -1.5, 1.5))
+
+        if args.gausian_clip:
+            r1_clipped_linear_vel_command=np.clip(a[0][0].detach().numpy(), -0.5, 1)
+            r1_clipped_angular_vel_command=np.clip(a[0][1].detach().numpy(), -1.5, 1.5)
+
+            r2_clipped_linear_vel_command=np.clip(a[1][0].detach().numpy(), -0.5, 1)
+            r2_clipped_angular_vel_command=np.clip(a[1][1].detach().numpy(), -1.5, 1.5)
+
+            a=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+        # print("policy_vel",a,type(a))
         logp_a = self.pi._log_prob_from_distribution(pi, a)
         v = self.v(obs, im)
 
