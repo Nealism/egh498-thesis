@@ -13,6 +13,7 @@ comm = MPI.COMM_WORLD
 import os
 import psutil
 import pandas as pd
+import default_arguments
 
 
 
@@ -767,7 +768,12 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #print("im",im)
             timeout = ep_lens[0] == env.args.max_ep_len  or all(termination) 
             # print("Done",d)
-            if all(d):
+            
+            argus = default_arguments.get_defaults() 
+            if argus.single_done and any(d):
+                terminal=True
+
+            elif all(d):
             # if any(d):
                 terminal = True
             # elif all(termination):
@@ -783,7 +789,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             if terminal or epoch_ended:
                 # if trajectory didn't reach terminal state, bootstrap value target
                 #if (timeout or epoch_ended) and not all(d):
-                if (timeout or epoch_ended) and not all(d):
+                if (timeout or epoch_ended) and not (all(d) or ( argus.single_done and any(d))):
                     if use_perception:
                         _, v, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                     else:

@@ -91,7 +91,7 @@ def get_defaults():
     parser.add_argument('--experiment_3', default=False, action="store_true")
     parser.add_argument('--unclipped_vel', default=False, action="store_true")
     parser.add_argument('--gausian_clip', default=False, action="store_true")
-    parser.add_argument('--tanh_clip', default=False, action="store_true")
+    parser.add_argument('--single_done', default=False, action="store_true")
     parser.add_argument('--randomness', type=int, default=1)
 
 
