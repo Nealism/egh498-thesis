@@ -94,8 +94,16 @@ def run(args):
 
         else:
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
+        print ("action_before", action,type(action))
+        # r1_clipped_linear_vel_command=np.clip(action[0][0], -0.5, 1)
+        # r1_clipped_angular_vel_command=np.clip(action[0][1], -1.5, 1.5)
 
-        # print ("action", action);exit()
+        # r2_clipped_linear_vel_command=np.clip(action[1][0], -0.5, 1)
+        # r2_clipped_angular_vel_command=np.clip(action[1][1], -1.5, 1.5)
+
+        # # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
+        # action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+        # print ("action", action)#;exit()
 
         # action_saving1.append(action[0][0])
         # action_saving2.append(action[0][1])

@@ -11,11 +11,11 @@ declare -a Experiments=(
                     
                       
                       #Simple Reward
-                      "322/A1r21G1E3"
-                      "322/A2r21G1E3"
-                      "322/A3r21G1E3"
-                      "322/A4r21G1E3"
-                      "322/A5r21G1E3"
+                      "322/A1r29G1E3"
+                      "322/A2r29G1E3"
+                      "322/A3r29G1E3"
+                      "322/A4r29G1E3"
+                      "322/A5r29G1E3"
                       
                       
 
@@ -23,11 +23,11 @@ declare -a Experiments=(
 
 
                       #Step Reward 2
-                      "322/B1r22G1E3"
-                      "322/B2r22G1E3"
-                      "322/B3r22G1E3"
-                      "322/B4r22G1E3"
-                      "322/B5r22G1E3"
+                      "322/B1r29G85E3"
+                      "322/B2r29G85E3"
+                      "322/B3r29G85E3"
+                      "322/B4r29G85E3"
+                      "322/B5r29G85E3"
                       
 
 
@@ -35,28 +35,28 @@ declare -a Experiments=(
 
 
                       #Regular Reward 
-                      "322/C1r23G1E3"
-                      "322/C2r23G1E3"
-                      "322/C3r23G1E3"
-                      "322/C4r23G1E3"
-                      "322/C5r23G1E3"
+                      "322/C1r27G1E3"
+                      "322/C2r27G1E3"
+                      "322/C3r27G1E3"
+                      "322/C4r27G1E3"
+                      "322/C5r27G1E3"
 
 
                       #Regular Reward 2
-                      "322/D1r24G1E3"
-                      "322/D2r24G1E3"
-                      "322/D3r24G1E3"
-                      "322/D4r24G1E3"
-                      "322/D5r24G1E3"
+                      "322/D1r27G85E3"
+                      "322/D2r27G85E3"
+                      "322/D3r27G85E3"
+                      "322/D4r27G85E3"
+                      "322/D5r27G85E3"
 
 
 
                       #Regular Reward 4
-                      "322/E1r25G1E3"
-                      "322/E2r25G1E3"
-                      "322/E3r25G1E3"
-                      "322/E4r25G1E3"
-                      "322/E5r25G1E3"
+                      "322/E1r27G1E3SD"
+                      "322/E2r27G1E3SD"
+                      "322/E3r27G1E3SD"
+                      "322/E4r27G1E3SD"
+                      "322/E5r27G1E3SD"
                       
 
 
@@ -65,11 +65,11 @@ declare -a Experiments=(
 
 
                       #Regular Reward 3
-                      "322/F1r26G1E3"
-                      "322/F2r26G1E3"
-                      "322/F3r26G1E3"
-                      "322/F4r26G1E3"
-                      "322/F5r26G1E3"
+                      "322/F1r27G85E3SD"
+                      "322/F2r27G85E3SD"
+                      "322/F3r27G85E3SD"
+                      "322/F4r27G85E3SD"
+                      "322/F5r27G85E3SD"
 
                       
 

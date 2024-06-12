@@ -766,7 +766,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #print(ep_lens)
             #print(d)
             #print("im",im)
-            timeout = ep_lens[0] == env.args.max_ep_len  or all(termination) 
+            timeout = (ep_lens[0] == env.args.max_ep_len)  or all(termination) 
             # print("Done",d)
             
             argus = default_arguments.get_defaults() 
