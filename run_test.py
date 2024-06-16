@@ -59,6 +59,7 @@ def run(args):
     
 
     n=0
+    counting_step=0
     # print(pol)
     if args.use_perception:
         im = env.get_image()
@@ -94,15 +95,16 @@ def run(args):
 
         else:
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
-        print ("action_before", action,type(action))
-        # r1_clipped_linear_vel_command=np.clip(action[0][0], -0.5, 1)
-        # r1_clipped_angular_vel_command=np.clip(action[0][1], -1.5, 1.5)
+        # print ("action_before", action,type(action))
+        if not args.unclipped_vel:
+            r1_clipped_linear_vel_command=np.clip(action[0][0], -0.5, 1)
+            r1_clipped_angular_vel_command=np.clip(action[0][1], -1.5, 1.5)
 
-        # r2_clipped_linear_vel_command=np.clip(action[1][0], -0.5, 1)
-        # r2_clipped_angular_vel_command=np.clip(action[1][1], -1.5, 1.5)
+            r2_clipped_linear_vel_command=np.clip(action[1][0], -0.5, 1)
+            r2_clipped_angular_vel_command=np.clip(action[1][1], -1.5, 1.5)
 
-        # # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
-        # action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+            # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
+            action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
         # print ("action", action)#;exit()
 
         # action_saving1.append(action[0][0])
@@ -118,16 +120,22 @@ def run(args):
         # time_saving.append(current_time)
         
         obs, _, done,termination, _ = env.step(action)
-
+        # print(done,"done?")
         if args.use_perception:
                 im = env.get_image()
+        counting_step+=1
         
+        # print(counting_step*1/10)
+            
 
-        if done==[True] or termination==[True] or env.steps > args.max_ep_len:
+        # if done==[True] or termination==[True] or env.steps > args.max_ep_len:
+        if all(done) or all(termination) or env.steps > args.max_ep_len:
+            
             obs = env.reset()
             if args.use_perception:
                 im = env.get_image()
             n=n+1
+            print("Trial_no",n)
             if n==100:
                 print("100 Iteration Done")
             for a in done:

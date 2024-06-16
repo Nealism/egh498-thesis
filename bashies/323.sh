@@ -11,11 +11,11 @@ declare -a Experiments=(
                     
                       
                       # #Simple Reward
-                      # "323/A1r21G1E3"
-                      # "323/A2r21G1E3"
-                      # "323/A3r21G1E3"
-                      # "323/A4r21G1E3"
-                      # "323/A5r21G1E3"
+                      # "329/A1r21G1E3"
+                      # "329/A2r21G1E3"
+                      # "329/A3r21G1E3"
+                      # "329/A4r21G1E3"
+                      # "329/A5r21G1E3"
                       
                       
 
@@ -23,11 +23,11 @@ declare -a Experiments=(
 
 
                       # #Step Reward 2
-                      # "323/B1r22G1E3"
-                      # "323/B2r22G1E3"
-                      # "323/B3r22G1E3"
-                      # "323/B4r22G1E3"
-                      # "323/B5r22G1E3"
+                      # "329/B1r22G1E3"
+                      # "329/B2r22G1E3"
+                      # "329/B3r22G1E3"
+                      # "329/B4r22G1E3"
+                      # "329/B5r22G1E3"
                       
 
 
@@ -35,28 +35,28 @@ declare -a Experiments=(
 
 
                       #Regular Reward 
-                      "323/C1r23G1E3"
-                      "323/C2r23G1E3"
-                      "323/C3r23G1E3"
-                      "323/C4r23G1E3"
-                      "323/C5r23G1E3"
+                      "329/C1r23G1E3"
+                      "329/C2r23G1E3"
+                      "329/C3r23G1E3"
+                      "329/C4r23G1E3"
+                      "329/C5r23G1E3"
 
 
                       #Regular Reward 2
-                      "323/D1r24G1E3"
-                      "323/D2r24G1E3"
-                      "323/D3r24G1E3"
-                      "323/D4r24G1E3"
-                      "323/D5r24G1E3"
+                      "329/D1r24G1E3"
+                      "329/D2r24G1E3"
+                      "329/D3r24G1E3"
+                      "329/D4r24G1E3"
+                      "329/D5r24G1E3"
 
 
 
                       #Regular Reward 4
-                      "323/E1r25G1E3"
-                      "323/E2r25G1E3"
-                      "323/E3r25G1E3"
-                      "323/E4r25G1E3"
-                      "323/E5r25G1E3"
+                      "329/E1r25G1E3"
+                      "329/E2r25G1E3"
+                      "329/E3r25G1E3"
+                      "329/E4r25G1E3"
+                      "329/E5r25G1E3"
                       
 
 
@@ -65,11 +65,11 @@ declare -a Experiments=(
 
 
                       #Regular Reward 3
-                      "323/F1r23G1E3"
-                      "323/F2r23G1E3"
-                      "323/F3r23G1E3"
-                      "323/F4r23G1E3"
-                      "323/F5r23G1E3"
+                      "329/F1r23G1E3"
+                      "329/F2r23G1E3"
+                      "329/F3r23G1E3"
+                      "329/F4r23G1E3"
+                      "329/F5r23G1E3"
 
                       
 
@@ -78,77 +78,77 @@ declare -a Experiments=(
 
 
                       #Unclipped Reward 3
-                      "323/G1r24G1E3"
-                      "323/G2r24G1E3"
-                      "323/G3r24G1E3"
-                      "323/G4r24G1E3"
-                      "323/G5r24G1E3"
+                      "329/G1r24G1E3"
+                      "329/G2r24G1E3"
+                      "329/G3r24G1E3"
+                      "329/G4r24G1E3"
+                      "329/G5r24G1E3"
 
 
                       
 
 
                       #Unclipped Reward 3
-                      "323/H1r25G1E3"
-                      "323/H2r25G1E3"
-                      "323/H3r25G1E3"
-                      "323/H4r25G1E3"
-                      "323/H5r25G1E3"
+                      "329/H1r25G1E3"
+                      "329/H2r25G1E3"
+                      "329/H3r25G1E3"
+                      "329/H4r25G1E3"
+                      "329/H5r25G1E3"
                       
 
 
 
 
                       #Ray Reward 1
-                      "323/I1r23G1E3"
-                      "323/I2r23G1E3"
-                      "323/I3r23G1E3"
-                      "323/I4r23G1E3"
-                      "323/I5r23G1E3"
+                      "329/I1r23G1E3"
+                      "329/I2r23G1E3"
+                      "329/I3r23G1E3"
+                      "329/I4r23G1E3"
+                      "329/I5r23G1E3"
 
                       #Ray Reward 1
-                      "323/J1r24G1E3"
-                      "323/J2r24G1E3"
-                      "323/J3r24G1E3"
-                      "323/J4r24G1E3"
-                      "323/J5r24G1E3"
+                      "329/J1r24G1E3"
+                      "329/J2r24G1E3"
+                      "329/J3r24G1E3"
+                      "329/J4r24G1E3"
+                      "329/J5r24G1E3"
                       
 
 
 
 
                       #Ray Reward 2
-                      "323/K1r25G1E3"
-                      "323/K2r25G1E3"
-                      "323/K3r25G1E3"
-                      "323/K4r25G1E3"
-                      "323/K5r25G1E3"
+                      "329/K1r25G1E3"
+                      "329/K2r25G1E3"
+                      "329/K3r25G1E3"
+                      "329/K4r25G1E3"
+                      "329/K5r25G1E3"
 
 
 
                       # #Ray Reward 2
-                      # "323/L1r280G1E3"
-                      # "323/L2r280G1E3"
-                      # "323/L3r280G1E3"
-                      # "323/L4r280G1E3"
-                      # "323/L5r280G1E3"
+                      # "329/L1r280G1E3"
+                      # "329/L2r280G1E3"
+                      # "329/L3r280G1E3"
+                      # "329/L4r280G1E3"
+                      # "329/L5r280G1E3"
 
 
 
                       # #Ray Reward 2
-                      # "323/M1r290G1E3"
-                      # "323/M2r290G1E3"
-                      # "323/M3r290G1E3"
-                      # "323/M4r290G1E3"
-                      # "323/M5r290G1E3"
+                      # "329/M1r290G1E3"
+                      # "329/M2r290G1E3"
+                      # "329/M3r290G1E3"
+                      # "329/M4r290G1E3"
+                      # "329/M5r290G1E3"
 
 
                       # #Ray Reward 2
-                      # "323/N1r300G1E3"
-                      # "323/N2r300G1E3"
-                      # "323/N3r300G1E3"
-                      # "323/N4r300G1E3"
-                      # "323/N5r300G1E3"
+                      # "329/N1r300G1E3"
+                      # "329/N2r300G1E3"
+                      # "329/N3r300G1E3"
+                      # "329/N4r300G1E3"
+                      # "329/N5r300G1E3"
                       
 
 

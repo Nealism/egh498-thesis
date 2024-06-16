@@ -75,34 +75,34 @@ declare -a Experiments=(
 
 
                       #Reward With Termination
-                      "318/U1r250G1E1"
-                      "318/U2r250G1E1"
-                      "318/U3r250G1E1"
-                      "318/U4r250G1E1"
-                      "318/U5r250G1E1"
+                      "326/U1r250G1E1"
+                      "326/U2r250G1E1"
+                      "326/U3r250G1E1"
+                      "326/U4r250G1E1"
+                      "326/U5r250G1E1"
 
                       # reward without termintation
-                      "318/Vs1r260G1E1"
-                      "318/Vs2r260G1E1"
-                      "318/Vs3r260G1E1"
-                      "318/Vs4r260G1E1"
-                      "318/Vs5r260G1E1"
+                      "326/Vs1r260G1E1"
+                      "326/Vs2r260G1E1"
+                      "326/Vs3r260G1E1"
+                      "326/Vs4r260G1E1"
+                      "326/Vs5r260G1E1"
 
 
-                      # reward without termintation LOW
-                      "318/LVs1r270G1E1"
-                      "318/LVs2r270G1E1"
-                      "318/LVs3r270G1E1"
-                      "318/LVs4r270G1E1"
-                      "318/LVs5r270G1E1"
+                      # # reward without termintation LOW
+                      # "318/LVs1r270G1E1"
+                      # "318/LVs2r270G1E1"
+                      # "318/LVs3r270G1E1"
+                      # "318/LVs4r270G1E1"
+                      # "318/LVs5r270G1E1"
 
 
-                      # reward without termintation HIGH
-                      "318/LVs1r280G1E1"
-                      "318/LVs2r280G1E1"
-                      "318/LVs3r280G1E1"
-                      "318/LVs4r280G1E1"
-                      "318/LVs5r280G1E1"
+                      # # reward without termintation HIGH
+                      # "318/LVs1r280G1E1"
+                      # "318/LVs2r280G1E1"
+                      # "318/LVs3r280G1E1"
+                      # "318/LVs4r280G1E1"
+                      # "318/LVs5r280G1E1"
 
 
                       # #Unclipped Reward 3
@@ -266,20 +266,20 @@ declare -a Arguments=(
     "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 260 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
 
 
-    #Unclipped Vel Regular Reward 3
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 270 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 270 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 270 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 270 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 270 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
+    # #Unclipped Vel Regular Reward 3
+    # "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 270 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
+    # "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 270 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
+    # "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 270 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
+    # "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 270 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
+    # "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 270 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
 
 
-    #Unclipped Vel Regular Reward 3
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 280 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 280 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 280 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 280 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
-    "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 280 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
+    # #Unclipped Vel Regular Reward 3
+    # "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 280 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
+    # "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 280 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
+    # "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 280 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
+    # "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 280 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
+    # "--cpu 64 --env multi_robot_pb --num_robots 2 --multi_titans --reward_fn 280 --cur_succ 0  --training_on_hpc --gap_avoidance --epochs 5000 --max_ep_len 200 --local_epoch_len 2000  --detect_distance 1.8 --insert_wall --use_perception --occupancy_map  --gap_curr  --gap_decrease 0.05 --starting_gap_width 1.8 --final_gap_width 1  --experiment_1  --ray_wall_type 1 --randomness 2 --load_path ~/behaviour_rl/Saved_models/Realistic_control_rate/D3r25G1E3/2024_06_02_21_38_05/model.pt "
 
 
     # #Unclipped Vel Regular Reward 3
