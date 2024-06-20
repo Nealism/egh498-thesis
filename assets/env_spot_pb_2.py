@@ -3124,9 +3124,9 @@ class Env(EnvBasePB):
         """
         Reward Function 2
         """
-        print("Spot_vx",self.vx,"Spot_yevl",self.yaw_vel)
-        if self.vx>1.4:
-            print("spot_tham");exit()
+        # print("Spot_vx",self.vx,"Spot_yevl",self.yaw_vel)
+        # if self.vx>1.4:
+        #     print("spot_tham");exit()
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -6412,7 +6412,7 @@ class Env(EnvBasePB):
         """
         Reward Function 2
         """
-       
+        termination=False
         done=False
         
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
@@ -6468,7 +6468,7 @@ class Env(EnvBasePB):
         if self.tipped == True:
             done = True
             
-        return reward, done
+        return reward, done, termination
     
     def get_reward_35(self):
         """

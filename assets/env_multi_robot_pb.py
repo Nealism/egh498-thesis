@@ -11,6 +11,9 @@ import math
 from copy import deepcopy
 import random
 import time
+import matplotlib.pyplot as plt
+import os
+import pandas as pd
 
 
 
@@ -149,6 +152,15 @@ class Env(EnvBasePB):
         self.robots_orn_with_IDx=[]
         self.robots_vx_with_IDx=[]
         self.robots_angular_vx_with_IDx=[]
+
+
+        self.buffer_linear_action=[]
+        self.buffer_angular_action=[]
+
+        self.buffer_linear_obs=[]
+        self.buffer_angular_obs=[]
+
+        self.buffer_time=[]
 
         self.random_robot_init=np.random.choice([6,8,9,10])
         
@@ -323,6 +335,7 @@ class Env(EnvBasePB):
         self.Both_Robots_stuck=[]
         self.turn_both=False
         # self.ob_dicts=[]
+        actions=[[0,-1.5]]
 
         # self.obstacles=[]
         # self.robots_bbox=[]
@@ -361,7 +374,42 @@ class Env(EnvBasePB):
                 
         #         self.turn_both=True
         #         # print("turn_both",self.turn_both)
+        # print(actions[0],"a")
+        if self.args.num_robots==1:
+            clipped_linear_vel_command=round(np.clip(actions[0][0], -0.5, 1),2)
+            clipped_angular_vel_command=round(np.clip(actions[0][1], -1.5, 1.5),2)
 
+            self.clipped_applied_actions=[clipped_linear_vel_command,clipped_angular_vel_command]
+            
+            self.buffer_linear_action.append(clipped_linear_vel_command)
+            self.buffer_angular_action.append(clipped_angular_vel_command)
+            ttg=round(self.steps*self.timeStep_10Hz,2)
+            self.buffer_time.append(ttg)
+
+
+            output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots"
+
+            plt.figure()
+            plt.plot(self.buffer_time, self.buffer_linear_action, label='Command Linear Velocity')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Command Linear Velocity')
+            plt.title('Command Linear Velocity over Time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'Command_Linear_Velocity_plot.png'))
+
+            # Plot the angular velocity actions over time
+            plt.figure()
+            plt.plot(self.buffer_time, self.buffer_angular_action, label='Command Angular Velocity')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Command Angular Velocity')
+            plt.title('Command Angular Velocity over Time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'Command_angular_velocity_plot.png'))
+
+
+            # print("self.buffer_linear_action",self.buffer_linear_action,"self.buffer_angular_action",self.buffer_angular_action)
         if self.args.multi_titans or self.args.multi_spots:
             for action,Robot in zip(actions,self.robots):
             
@@ -401,6 +449,7 @@ class Env(EnvBasePB):
 
 
         if self.args.heterogeneous:
+
             for action,Robot in zip(actions,self.robots):
             
                 Robot.motor_action(action)
@@ -457,7 +506,47 @@ class Env(EnvBasePB):
                 
             ob,rew,done,termination, self.ob_dict=Robot.return_step(action)
             #print("action_length",action,"robot",Robot)
+            if self.args.num_robots==1:
+                ob_lin=round(ob[5],4)
+                ob_ang=round(ob[6],4)
+                self.buffer_linear_obs.append(ob_lin)
+                self.buffer_angular_obs.append(ob_ang)
+                output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots"
 
+                plt.figure()
+                plt.plot(self.buffer_time, self.buffer_linear_obs, label='Robot\'s Linear Velocity')
+                plt.xlabel('Time (s)')
+                plt.ylabel('Robot\'s Linear Velocity')
+                plt.title('Robot\'s Linear Velocity over Time')
+                plt.legend()
+                plt.grid(True)
+                plt.savefig(os.path.join(output_dir, 'Robot\'s_Linear_Velocity_plot.png'))
+
+                # Plot the angular velocity actions over time
+                plt.figure()
+                plt.plot(self.buffer_time, self.buffer_angular_obs, label='Robot\'s Angular Velocity')
+                plt.xlabel('Time (s)')
+                plt.ylabel('Robot\'s Angular Velocity')
+                plt.title('Robot\'s Angular Velocity over Time')
+                plt.legend()
+                plt.grid(True)
+                plt.savefig(os.path.join(output_dir, 'Robot\'s_Angular_Velocity_plot.png'))
+
+                data = {
+                    "Time": self.buffer_time,
+                    "Command Linear Velocity": self.buffer_linear_action,
+                    "Command Angular Velocity": self.buffer_angular_action,
+                    "Robot's Linear Velocity": self.buffer_linear_obs,
+                    "Robot's Angular Velocity": self.buffer_angular_obs
+                }
+                df = pd.DataFrame(data)
+                csv_path = os.path.join(output_dir, 'actions_data.csv')
+                df.to_csv(csv_path, index=False)
+                print(ttg)
+                if self.steps*self.timeStep_10Hz>10:
+                    print("THAM");exit()
+
+                
             obs.append(ob)
             rews.append(rew)
             dones.append(done)
@@ -471,6 +560,7 @@ class Env(EnvBasePB):
         # print()
         self.steps += 1
         self.get_observation()
+
         return obs, rews, dones, terminations, self.ob_dict
     
     def get_image(self):
@@ -1304,6 +1394,9 @@ class Env(EnvBasePB):
     
     def distance(self,point1, point2):
         return math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
+    
+
+    
 
 
 

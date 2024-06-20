@@ -737,6 +737,8 @@ class Env(EnvBasePB):
 
         
 
+        
+
 
         
         if self.args.gap_avoidance:
@@ -987,7 +989,7 @@ class Env(EnvBasePB):
         width = 0.78/2
         # print(actions)
         lin_vel = actions[0]#*0.50
-        ang_vel = actions[1]*2.5/2
+        ang_vel = actions[1] *3/2
         w_r = (lin_vel + ang_vel*width)/radius
         w_l = (lin_vel - ang_vel*width)/radius
         # print("action",actions,"wl",w_l,"w_r",w_r,self)
@@ -1004,10 +1006,13 @@ class Env(EnvBasePB):
         # ===========================
     def motor_action(self,actions):
         # print("titanaction",actions)
-        # actions=[1.0,0.0]
+        # actions=[0.0,1.0]
         # actions=np.array([0,1.5])
         # print("motor action",actions,self)
         self.exp_actions = [0.0]*2
+
+        
+        
         # ##########################__RAY_LINE___###################
         #if self.args.num_robots > 1:
         # 	if self.hit[0] == True:
@@ -2801,9 +2806,9 @@ class Env(EnvBasePB):
         termination=False
         done=False
         # print("observation_vx",self.vx,"observation_yvel",self.yaw_vel)
-        print("Spot_vx",self.vx,"Spot_yevl",self.yaw_vel)
-        if self.vx>1.2:
-            print("titan_tham");exit()
+        # print("Spot_vx",self.vx,"Spot_yevl",self.yaw_vel)
+        # if self.vx>1.2:
+        #     print("titan_tham");exit()
         dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
         goal=0
         
