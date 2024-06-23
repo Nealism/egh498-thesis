@@ -989,7 +989,7 @@ class Env(EnvBasePB):
         width = 0.78/2
         # print(actions)
         lin_vel = actions[0]#*0.50
-        ang_vel = actions[1] *3/2
+        ang_vel = actions[1] *2.5/2
         w_r = (lin_vel + ang_vel*width)/radius
         w_l = (lin_vel - ang_vel*width)/radius
         # print("action",actions,"wl",w_l,"w_r",w_r,self)

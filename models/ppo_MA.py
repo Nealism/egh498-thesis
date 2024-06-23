@@ -14,6 +14,15 @@ import os
 import psutil
 import pandas as pd
 import default_arguments
+import cv2
+
+
+from scipy.ndimage import label, generate_binary_structure
+
+import time
+import matplotlib.pyplot as plt
+import os
+
 
 
 
@@ -682,6 +691,148 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             if use_perception:
                 # if time.time() - st1 == 0.2:
                 next_im = env.get_image()
+                print(next_im.shape,"imshape")
+
+                r1_occupancy_map = next_im[0, 0, :, :]
+                r2_occupancy_map = next_im[1, 0, :, :]
+
+                # r1_occupancy_map = next_im[0, :, :]
+                # r2_occupancy_map = next_im[1, :, :]
+
+                # r1_occupancy_map=next_im[0, 0, :, :]
+                # # r2_occupancy_map=next_im[1, 0, :, :]
+
+                r1_occupancy_map_array = np.array(r1_occupancy_map)
+                # print("r1_occupancy_map_array.shape",r1_occupancy_map_array.shape)
+                # Determine the dimensions of the occupancy map
+                rows, cols = r1_occupancy_map_array.shape
+                
+                # Create an empty image with the same dimensions as the occupancy map
+                image_r1 = np.zeros((rows, cols, 3), dtype=np.uint8)
+                
+                # Assign grey color where occupancy_map is 0
+                image_r1[r1_occupancy_map_array == 0] = (128, 128, 128)  # Grey
+                
+                # Assign red color where occupancy_map is 1
+                image_r1[r1_occupancy_map_array == 1] = (0, 0, 255)  # Red
+
+                image_r1 = image_r1 #occupancy_map_to_image(im_ocupancy)
+
+
+                # # Create a window with the specified name
+                cv2.namedWindow("R1 Occupancy Map", cv2.WINDOW_NORMAL)
+
+                # Resize the window to a desired size
+                cv2.resizeWindow("R1 Occupancy Map", 800, 600)
+                # Display the image
+                cv2.imshow("R1 Occupancy Map", image_r1)
+
+                r2_occupancy_map_array = np.array(r2_occupancy_map)
+                # print("r2_occupancy_map_array.shape",r2_occupancy_map_array.shape)
+                # Determine the dimensions of the occupancy map
+                rows_r2, cols_r2 = r2_occupancy_map_array.shape
+                
+                # Create an empty image with the same dimensions as the occupancy map
+                image_r2 = np.zeros((rows_r2, cols_r2, 3), dtype=np.uint8)
+                
+                # Assign grey color where occupancy_map is 0
+                image_r2[r2_occupancy_map_array == 0] = (128, 128, 128)  # Grey
+                
+                # Assign red color where occupancy_map is 1
+                image_r2[r2_occupancy_map_array == 1] = (0, 0, 255)  # Red
+
+                image_r2 = image_r2 #occupancy_map_to_image(im_ocupancy)
+
+
+                # # Create a window with the specified name
+                cv2.namedWindow("R2 Occupancy Map", cv2.WINDOW_NORMAL)
+
+                # Resize the window to a desired size
+                cv2.resizeWindow("R2 Occupancy Map", 800, 600)
+                # Display the image
+                cv2.imshow("R2 Occupancy Map", image_r2)
+                
+
+                cv2.waitKey(1)
+
+                #-------------------------------------------------------------------
+
+                # def mark_edge_cells(occupancy_map):
+                #     # Define a structure for connected components (8-connected neighborhood)
+                #     structure = generate_binary_structure(2, 1)
+                    
+                #     # Label connected components
+                #     labeled_map, num_labels = label(occupancy_map, structure)
+                    
+                #     # Find the unique labels (excluding background label 0)
+                #     unique_labels = np.unique(labeled_map)[1:]
+                    
+                #     # Create a new array for the modified occupancy map
+                #     modified_occupancy_map = np.zeros_like(occupancy_map)
+                    
+                #     # Iterate over each unique label (connected component)
+                #     for labela in unique_labels:
+                #         # Extract the mask for the current connected component
+                #         component_mask = (labeled_map == labela).astype(np.uint8)
+                        
+                #         # Find edge cells that are adjacent to unoccupied cells (0)
+                #         edge_mask = np.zeros_like(component_mask)
+                #         edge_mask[1:-1, 1:-1] = (component_mask[1:-1, 1:-1] > 0) & \
+                #                                 ((component_mask[:-2, 1:-1] == 0) | (component_mask[2:, 1:-1] == 0) | \
+                #                                 (component_mask[1:-1, :-2] == 0) | (component_mask[1:-1, 2:] == 0))
+                        
+                #         # Mark edge cells as 2 in the modified map
+                #         modified_occupancy_map[edge_mask > 0] = 1
+                        
+                #     return modified_occupancy_map
+
+                # r_output_dir_occupancy ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/Merged_Occupancy.png"
+                # # Get the modified occupancy maps
+                # modified_r1_occupancy_map = mark_edge_cells(r1_occupancy_map)
+                # modified_r2_occupancy_map = mark_edge_cells(r2_occupancy_map)
+
+                # # Create a figure with two subplots
+                # fig, axes = plt.subplots(1, 2, figsize=(30, 15))
+
+                # # Plotting the modified occupancy map for Robot 1
+                # axes[0].imshow(modified_r1_occupancy_map, cmap='Reds', origin='upper')
+                # axes[0].set_title("Robot 1 Occupancy Map")
+
+                # for i in range(modified_r1_occupancy_map.shape[0]):
+                #     for j in range(modified_r1_occupancy_map.shape[1]):
+                #         cell_value = int(modified_r1_occupancy_map[i, j])
+                #         color = 'blue' if cell_value == 2 else 'red' if cell_value == 1 else 'black'
+                #         axes[0].text(j, i, cell_value, ha='center', va='center', color=color)
+
+                # # Customizing the subplot for Robot 1
+                # axes[0].set_xticks(np.arange(modified_r1_occupancy_map.shape[1]))
+                # axes[0].set_yticks(np.arange(modified_r1_occupancy_map.shape[0]))
+                # axes[0].grid(True, which='both', color='black', linestyle='-', linewidth=0.5)
+                # axes[0].set_xticks(np.arange(-0.5, modified_r1_occupancy_map.shape[1], 1), minor=True)
+                # axes[0].set_yticks(np.arange(-0.5, modified_r1_occupancy_map.shape[0], 1), minor=True)
+                # axes[0].grid(which='minor', color='black', linestyle='-', linewidth=0.5)
+                # axes[0].tick_params(which='minor', size=0)
+
+                # # Plotting the modified occupancy map for Robot 2
+                # axes[1].imshow(modified_r2_occupancy_map, cmap='Greens', origin='upper')
+                # axes[1].set_title("Robot 2 Occupancy Map")
+
+                # for i in range(modified_r2_occupancy_map.shape[0]):
+                #     for j in range(modified_r2_occupancy_map.shape[1]):
+                #         cell_value = int(modified_r2_occupancy_map[i, j])
+                #         color = 'blue' if cell_value == 2 else 'red' if cell_value == 1 else 'black'
+                #         axes[1].text(j, i, cell_value, ha='center', va='center', color=color)
+
+                # # Customizing the subplot for Robot 2
+                # axes[1].set_xticks(np.arange(modified_r2_occupancy_map.shape[1]))
+                # axes[1].set_yticks(np.arange(modified_r2_occupancy_map.shape[0]))
+                # axes[1].grid(True, which='both', color='black', linestyle='-', linewidth=0.5)
+                # axes[1].set_xticks(np.arange(-0.5, modified_r2_occupancy_map.shape[1], 1), minor=True)
+                # axes[1].set_yticks(np.arange(-0.5, modified_r2_occupancy_map.shape[0], 1), minor=True)
+                # axes[1].grid(which='minor', color='black', linestyle='-', linewidth=0.5)
+                # axes[1].tick_params(which='minor', size=0)
+
+                # plt.savefig(r_output_dir_occupancy, bbox_inches='tight')
                 # print(next_im)
                 # else:
                 #     pass 
@@ -928,3 +1079,32 @@ if __name__ == '__main__':
         ac_kwargs=dict(hidden_sizes=[args.hid]*args.l), gamma=args.gamma, 
         seed=args.seed, steps_per_epoch=args.steps, epochs=args.epochs,
         logger_kwargs=logger_kwargs)
+    
+
+    def mark_edge_cells(occupancy_map):
+            # Define a structure for connected components (8-connected neighborhood)
+            structure = generate_binary_structure(2, 1)
+            
+            # Label connected components
+            labeled_map, num_labels = label(occupancy_map, structure)
+            
+            # Find the unique labels (excluding background label 0)
+            unique_labels = np.unique(labeled_map)[1:]
+            
+            # Create a new array for the modified occupancy map
+            modified_occupancy_map = np.zeros_like(occupancy_map)
+            
+            # Iterate over each unique label (connected component)
+            for labela in unique_labels:
+                # Extract the mask for the current connected component
+                component_mask = (labeled_map == labela).astype(np.uint8)
+                
+                # Find edge cells that are adjacent to unoccupied cells (0)
+                edge_mask = np.zeros_like(component_mask)
+                edge_mask[1:-1, 1:-1] = (component_mask[1:-1, 1:-1] > 0) & \
+                                        ((component_mask[:-2, 1:-1] == 0) | (component_mask[2:, 1:-1] == 0) | \
+                                        (component_mask[1:-1, :-2] == 0) | (component_mask[1:-1, 2:] == 0))
+                
+                # Mark edge cells as 2 in the modified map
+                modified_occupancy_map[edge_mask > 0] = 1
+                

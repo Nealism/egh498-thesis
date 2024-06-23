@@ -335,7 +335,7 @@ class Env(EnvBasePB):
         self.Both_Robots_stuck=[]
         self.turn_both=False
         # self.ob_dicts=[]
-        actions=[[0,-1.5]]
+        # actions=[[0,-1.5]]
 
         # self.obstacles=[]
         # self.robots_bbox=[]
@@ -507,8 +507,8 @@ class Env(EnvBasePB):
             ob,rew,done,termination, self.ob_dict=Robot.return_step(action)
             #print("action_length",action,"robot",Robot)
             if self.args.num_robots==1:
-                ob_lin=round(ob[5],4)
-                ob_ang=round(ob[6],4)
+                ob_lin=round(ob[4],4)
+                ob_ang=round(ob[5],4)
                 self.buffer_linear_obs.append(ob_lin)
                 self.buffer_angular_obs.append(ob_ang)
                 output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots"
@@ -560,6 +560,8 @@ class Env(EnvBasePB):
         # print()
         self.steps += 1
         self.get_observation()
+
+        # print("obs_multi_env",obs)
 
         return obs, rews, dones, terminations, self.ob_dict
     
@@ -630,10 +632,26 @@ class Env(EnvBasePB):
         # print("imsize",self.im_size,"occ_size",np.array(self.occupancy_maps[0]).shape,np.array(self.occupancy_maps[1]).shape)
         # print([self.args.num_robots]+self.im_size,np.array(self.occupancy_maps).shape)
         # print([self.args.num_robots]+self.im_size,np.array(self.occupancy_maps).shape)
+        # print(np.array(self.occupancy_maps).shape,np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size).shape,self.im_size)
+
+        robot1_occupancy_map = np.zeros((80, 80), dtype=int)
+        robot1_occupancy_map[30:50, 30:50] = 1  # Creating a 20x20 block of 1s in the middle
+
+        # Generate a random occupancy map for Robot 2
+        robot2_occupancy_map = np.random.randint(0, 2, (80, 80))
+
+        # Combine them into the final array
+        example_occupancy_map = np.array([
+            [robot1_occupancy_map],
+            [robot2_occupancy_map]
+        ])
+
+
 
         
 
         return np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size)
+        # return example_occupancy_map
     
     # def get_image(self):
     #     # if self.args.occupancy_map and self.steps % 2 == 0:

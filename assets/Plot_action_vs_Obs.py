@@ -2,10 +2,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the CSV files
-file1 = '/home/kom018/behaviour_rl/Results_plots/Action_plots/action_1_0/actions_data.csv'
-file2 = '/home/kom018/behaviour_rl/Results_plots/Action_plots/action_-0.5_0/actions_data.csv'
-file3 = '/home/kom018/behaviour_rl/Results_plots/Action_plots/action_0_1.5/actions_data.csv'
-file4 = '/home/kom018/behaviour_rl/Results_plots/Action_plots/action_0_-1.5/actions_data.csv'
+file1 = '/home/kom018/behaviour_rl/Results_plots/Action_plots/Gazebo/action_1_0/actions_data.csv'
+file2 = '/home/kom018/behaviour_rl/Results_plots/Action_plots/Gazebo/action_-0.5_0/actions_data.csv'
+file3 = '/home/kom018/behaviour_rl/Results_plots/Action_plots/Gazebo/action_0_1.5/actions_data.csv'
+file4 = '/home/kom018/behaviour_rl/Results_plots/Action_plots/Gazebo/action_0_-1.5/actions_data.csv'
 
 df1 = pd.read_csv(file1).round(2)
 df2 = pd.read_csv(file2).round(2)

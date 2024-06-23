@@ -8,59 +8,92 @@ import default_arguments
 from utils.plotter import Plotter
 import pandas as pd
 import copy
+from scipy.ndimage import label, generate_binary_structure
+
+import time
+import matplotlib.pyplot as plt
+import os
+import pandas as pd
 
 home = str(Path.home())
 
+args = default_arguments.get_defaults()
+
+if args.hpc:
+    path_home = "/hpc-scratch/" + home.split("/")[-1]
+elif args.home:
+    path_home = home 
+else:
+    path_home = "/scratch3/" + home.split("/")[-1]
+
+
+if args.home:
+    path_home += "/behaviour_rl/" +  args.exp + "/"
+
+else:
+    path_home += "/results/" + args.env + "/" + args.exp + "/"
+
+if args.folder == "":
+    # Get latest experiment (eg: latest model inside test folder)
+    folders = [folder.split("/")[-2] for folder in glob.glob(path_home + "*/")]
+    latest_folder = "1900_01_01_01_01_01"
+    latest_date_key = time.strptime(latest_folder, "%Y_%m_%d_%H_%M_%S")
+    for folder in folders:
+        new_date_key = time.strptime(folder, "%Y_%m_%d_%H_%M_%S")
+        if new_date_key > latest_date_key:
+            latest_date_key = new_date_key
+            latest_folder = folder
+else:
+    latest_folder = args.folder
+
+PATH = path_home + latest_folder
+
+Env, args = default_arguments.get_env(args)   
+# args.render = True
+args.render = False
+args.record_sim = False
+env = Env(PATH=PATH, args=args)
+
+pol = torch.load(PATH + "/model.pt")
+
+
 start_time=time.time()
+
+# if args.num_robots>0:
+
+r1_buffer_linear_action=[]
+r1_buffer_angular_action=[]
+
+r1_buffer_linear_obs=[]
+r1_buffer_angular_obs=[]
+
+buffer_time=[]
+
+r1_poses_x=[]
+r1_poses_y=[]
+
+if args.num_robots==2:
+    r2_buffer_linear_action=[]
+    r2_buffer_angular_action=[]
+
+    r2_buffer_linear_obs=[]
+    r2_buffer_angular_obs=[]
+
+    r2_poses_x=[]
+    r2_poses_y=[]
 
 
 def run(args): 
 
-    if args.hpc:
-        path_home = "/hpc-scratch/" + home.split("/")[-1]
-    elif args.home:
-        path_home = home 
-    else:
-        path_home = "/scratch3/" + home.split("/")[-1]
-
-
-    if args.home:
-        path_home += "/behaviour_rl/" +  args.exp + "/"
-
-    else:
-        path_home += "/results/" + args.env + "/" + args.exp + "/"
-
-    if args.folder == "":
-        # Get latest experiment (eg: latest model inside test folder)
-        folders = [folder.split("/")[-2] for folder in glob.glob(path_home + "*/")]
-        latest_folder = "1900_01_01_01_01_01"
-        latest_date_key = time.strptime(latest_folder, "%Y_%m_%d_%H_%M_%S")
-        for folder in folders:
-            new_date_key = time.strptime(folder, "%Y_%m_%d_%H_%M_%S")
-            if new_date_key > latest_date_key:
-                latest_date_key = new_date_key
-                latest_folder = folder
-    else:
-        latest_folder = args.folder
-
-    PATH = path_home + latest_folder
     
-    Env, args = default_arguments.get_env(args)   
-    args.render = True
-    # args.render = False
-    args.record_sim = False
-    env = Env(PATH=PATH, args=args)
-
-    pol = torch.load(PATH + "/model.pt")
-    # print(pol)
-    obs = env.reset()
-    # print(obs)
-
     
 
     n=0
     counting_step=0
     # print(pol)
+
+    obs = env.reset()
+    # print("ob_reset",obs[0])
     if args.use_perception:
         im = env.get_image()
 
@@ -106,7 +139,18 @@ def run(args):
             # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
             action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
         # print ("action", action)#;exit()
+        # start_time=time.time()
+        # current_time=0
+        
+        # time_saving.append(current_time)
 
+        
+        
+        obs, _, done,termination, _ = env.step(action)
+        # print(obs[0],"obs?")
+        if args.use_perception:
+                im = env.get_image()
+        counting_step+=1
         # action_saving1.append(action[0][0])
         # action_saving2.append(action[0][1])
         # accc1=pd.DataFrame(action_saving1)
@@ -114,16 +158,365 @@ def run(args):
         # accc = pd.concat([accc1, accc2], axis=1)
         # # print(accc,type(accc))
         # accc.to_csv("action_test.csv")
-        current_time = time.time() - st
-        # print(current_time)
+        # current_time = time.time() - start_time
+        current_time = env.steps*1/10
+        print(env.steps*1/10)
         st=time.time()
-        # time_saving.append(current_time)
+        buffer_time.append(current_time)
+
+        r1_buffer_linear_action.append(action[0][0])
+        r1_buffer_angular_action.append(action[0][1])
+
+        r1_buffer_linear_obs.append(obs[0][4])
+        r1_buffer_angular_obs.append(obs[0][5])
+
+        r1_poses_x.append(env.robots_pos[0][0])
+        r1_poses_y.append(env.robots_pos[0][1])
+
+        if args.num_robots==2:
+            r2_buffer_linear_action.append(action[1][0])
+            r2_buffer_angular_action.append(action[1][1])
+
+            r2_buffer_linear_obs.append(obs[1][4])
+            r2_buffer_angular_obs.append(obs[1][5])
+
+            r2_poses_x.append(env.robots_pos[1][0])
+            r2_poses_y.append(env.robots_pos[1][1])
+
+        # print("TIME",time.time()-t1,R3.buffer_time,"ac")
         
-        obs, _, done,termination, _ = env.step(action)
-        # print(done,"done?")
-        if args.use_perception:
-                im = env.get_image()
-        counting_step+=1
+        output_dir_occupancy ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/R1\'s_Occupancy.png"
+        
+        r1_occupancy_map=im[0, 0, :, :]
+
+        # Create a new array for the modified occupancy map
+        # Function to find connected components and mark edge cells
+        # Function to find connected components and mark edge cells
+        def mark_edge_cells(occupancy_map):
+            # Define a structure for connected components (8-connected neighborhood)
+            structure = generate_binary_structure(2, 1)
+            
+            # Label connected components
+            labeled_map, num_labels = label(occupancy_map, structure)
+            
+            # Find the unique labels (excluding background label 0)
+            unique_labels = np.unique(labeled_map)[1:]
+            
+            # Create a new array for the modified occupancy map
+            modified_occupancy_map = np.zeros_like(occupancy_map)
+            
+            # Iterate over each unique label (connected component)
+            for labela in unique_labels:
+                # Extract the mask for the current connected component
+                component_mask = (labeled_map == labela).astype(np.uint8)
+                
+                # Find edge cells that are adjacent to unoccupied cells (0)
+                edge_mask = np.zeros_like(component_mask)
+                edge_mask[1:-1, 1:-1] = (component_mask[1:-1, 1:-1] > 0) & \
+                                        ((component_mask[:-2, 1:-1] == 0) | (component_mask[2:, 1:-1] == 0) | \
+                                        (component_mask[1:-1, :-2] == 0) | (component_mask[1:-1, 2:] == 0))
+                
+                # Mark edge cells as 2 in the modified map
+                modified_occupancy_map[edge_mask > 0] = 1
+                
+            return modified_occupancy_map
+
+        # Get the modified occupancy map
+        r1_modified_occupancy_map = mark_edge_cells(r1_occupancy_map)
+        # print(r1_modified_occupancy_map)
+        # Plotting the modified occupancy map
+        plt.figure(figsize=(30, 30))
+        plt.imshow(r1_modified_occupancy_map, cmap='Reds', origin='upper')
+
+        # Annotating the cells with thkeir values
+        for i in range(r1_modified_occupancy_map.shape[0]):
+            for j in range(r1_modified_occupancy_map.shape[1]):
+                cell_value = int(r1_modified_occupancy_map[i, j])
+                color = 'Purple' if cell_value == 2 else 'white' if cell_value == 1 else 'black'
+                plt.text(j, i, cell_value, ha='center', va='center', color=color)
+
+        # Customizing the plot
+        plt.xticks(np.arange(r1_modified_occupancy_map.shape[1]))
+        plt.yticks(np.arange(r1_modified_occupancy_map.shape[0]))
+        plt.grid(True, which='both', color='black', linestyle='-', linewidth=0.5)
+        plt.gca().set_xticks(np.arange(-0.5, r1_modified_occupancy_map.shape[1], 1), minor=True)
+        plt.gca().set_yticks(np.arange(-0.5, r1_modified_occupancy_map.shape[0], 1), minor=True)
+        plt.gca().grid(which='minor', color='black', linestyle='-', linewidth=0.5)
+        plt.gca().tick_params(which='minor', size=0)
+
+
+
+        # Save the plot to a file
+        plt.savefig(output_dir_occupancy, bbox_inches='tight')
+
+        if args.num_robots==2:
+            r2_output_dir_occupancy ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/R2\'s_Occupancy.png"
+        
+            r2_occupancy_map=im[1, 0, :, :]
+
+            # Create a new array for the modified occupancy map
+            
+            
+            # Get the modified occupancy map
+            r2_modified_occupancy_map = mark_edge_cells(r2_occupancy_map)
+            # print(r2_modified_occupancy_map)
+            # Plotting the modified occupancy map
+            plt.figure(figsize=(30, 30))
+            plt.imshow(r2_modified_occupancy_map, cmap='Greens', origin='upper')
+
+            # Annotating the cells with thkeir values
+            for i in range(r2_modified_occupancy_map.shape[0]):
+                for j in range(r2_modified_occupancy_map.shape[1]):
+                    cell_value = int(r2_modified_occupancy_map[i, j])
+                    color = 'Purple' if cell_value == 2 else 'white' if cell_value == 1 else 'black'
+                    plt.text(j, i, cell_value, ha='center', va='center', color=color)
+
+            # Customizing the plot
+            plt.xticks(np.arange(r2_modified_occupancy_map.shape[1]))
+            plt.yticks(np.arange(r2_modified_occupancy_map.shape[0]))
+            plt.grid(True, which='both', color='black', linestyle='-', linewidth=0.5)
+            plt.gca().set_xticks(np.arange(-0.5, r2_modified_occupancy_map.shape[1], 1), minor=True)
+            plt.gca().set_yticks(np.arange(-0.5, r2_modified_occupancy_map.shape[0], 1), minor=True)
+            plt.gca().grid(which='minor', color='black', linestyle='-', linewidth=0.5)
+            plt.gca().tick_params(which='minor', size=0)
+
+            # Save the plot to a file
+            plt.savefig(r2_output_dir_occupancy, bbox_inches='tight')
+
+
+
+            r_output_dir_occupancy ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/Merged_Occupancy.png"
+            # Get the modified occupancy maps
+            modified_r1_occupancy_map = mark_edge_cells(r1_occupancy_map)
+            modified_r2_occupancy_map = mark_edge_cells(r2_occupancy_map)
+
+            # Create a figure with two subplots
+            fig, axes = plt.subplots(1, 2, figsize=(30, 15))
+
+            # Plotting the modified occupancy map for Robot 1
+            axes[0].imshow(modified_r1_occupancy_map, cmap='Reds', origin='upper')
+            axes[0].set_title("Robot 1 Occupancy Map")
+
+            for i in range(modified_r1_occupancy_map.shape[0]):
+                for j in range(modified_r1_occupancy_map.shape[1]):
+                    cell_value = int(modified_r1_occupancy_map[i, j])
+                    color = 'blue' if cell_value == 2 else 'red' if cell_value == 1 else 'black'
+                    axes[0].text(j, i, cell_value, ha='center', va='center', color=color)
+
+            # Customizing the subplot for Robot 1
+            axes[0].set_xticks(np.arange(modified_r1_occupancy_map.shape[1]))
+            axes[0].set_yticks(np.arange(modified_r1_occupancy_map.shape[0]))
+            axes[0].grid(True, which='both', color='black', linestyle='-', linewidth=0.5)
+            axes[0].set_xticks(np.arange(-0.5, modified_r1_occupancy_map.shape[1], 1), minor=True)
+            axes[0].set_yticks(np.arange(-0.5, modified_r1_occupancy_map.shape[0], 1), minor=True)
+            axes[0].grid(which='minor', color='black', linestyle='-', linewidth=0.5)
+            axes[0].tick_params(which='minor', size=0)
+
+            # Plotting the modified occupancy map for Robot 2
+            axes[1].imshow(modified_r2_occupancy_map, cmap='Greens', origin='upper')
+            axes[1].set_title("Robot 2 Occupancy Map")
+
+            for i in range(modified_r2_occupancy_map.shape[0]):
+                for j in range(modified_r2_occupancy_map.shape[1]):
+                    cell_value = int(modified_r2_occupancy_map[i, j])
+                    color = 'blue' if cell_value == 2 else 'red' if cell_value == 1 else 'black'
+                    axes[1].text(j, i, cell_value, ha='center', va='center', color=color)
+
+            # Customizing the subplot for Robot 2
+            axes[1].set_xticks(np.arange(modified_r2_occupancy_map.shape[1]))
+            axes[1].set_yticks(np.arange(modified_r2_occupancy_map.shape[0]))
+            axes[1].grid(True, which='both', color='black', linestyle='-', linewidth=0.5)
+            axes[1].set_xticks(np.arange(-0.5, modified_r2_occupancy_map.shape[1], 1), minor=True)
+            axes[1].set_yticks(np.arange(-0.5, modified_r2_occupancy_map.shape[0], 1), minor=True)
+            axes[1].grid(which='minor', color='black', linestyle='-', linewidth=0.5)
+            axes[1].tick_params(which='minor', size=0)
+
+            plt.savefig(r_output_dir_occupancy, bbox_inches='tight')
+        # plt.savefig(os.path.join(output_dir, 'R1\'s_Occupancy.png'))
+        # output_dir ="/refarm/src/multi_robot_rl/scripts"
+
+        # if np.array(R3.buffer_time).shape != np.array(R3.buffer_linear_obs).shape:
+        #     R3.buffer_linear_obs = np.zeros_like(R3.buffer_time)
+
+        # output_dir ="/refarm/src/multi_robot_rl/scripts"
+        # print("R3.buffer_linear_obs",R3.buffer_linear_obs,R3.buffer_time)
+
+        output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet"
+        plt.figure()
+        plt.plot(buffer_time, r1_buffer_linear_obs, label='Robot1\'s Linear Velocity')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Robot1\'s Linear Velocity')
+        plt.title('Robot1\'s Linear Velocity over Time')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(output_dir, 'R1\'s_Linear_Velocity_plot.png'))
+
+        # Plot the angular velocity actions over time
+        plt.figure()
+        plt.plot(buffer_time, r1_buffer_angular_obs, label='Robot1\'s Angular Velocity')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Robot1\'s Angular Velocity')
+        plt.title('Robot1\'s Angular Velocity over Time')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(output_dir, 'R1\'s_Angular_Velocity_plot.png'))
+
+        plt.figure()
+        plt.plot(buffer_time, r1_buffer_linear_action, label='Command Linear Velocity')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Command Linear Velocity')
+        plt.title('Robot1\'s Command Linear Velocity over Time')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(output_dir, 'R1_Command_Linear_Velocity_plot.png'))
+
+        # Plot the angular velocity actions over time
+        plt.figure()
+        plt.plot(buffer_time, r1_buffer_angular_action, label='Command Angular Velocity')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Command Angular Velocity')
+        plt.title('Robot1\'s Command Angular Velocity over Time')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(output_dir, 'R1_Command_angular_velocity_plot.png'))
+
+
+
+        # Plot the trajectory
+        plt.figure(figsize=(10, 6))
+        plt.plot(r1_poses_x, r1_poses_y, label='Trajectory', marker='o', markersize=5, linestyle='-')
+
+        # Annotate with time points
+        for i in range(0, len(buffer_time), 10):  # Annotate every 10th current_time step
+            plt.annotate(f't={buffer_time[i]:.1f}', (r1_poses_x[i], r1_poses_y[i]), textcoords="offset points", xytext=(10,-10), ha='center')
+
+        # Labels and title
+        plt.xlabel('X position')
+        plt.ylabel('Y position')
+        plt.title('Robot Trajectory Over current_time')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(output_dir, 'R1_trajectory.png'))
+
+
+        # # Save plot to a file
+        # output_directory = 'plots'
+        # os.makedirs(output_directory, exist_ok=True)
+        # file_path = os.path.join(output_directory, 'robot_trajectory.png')
+        # plt.savefig(file_path)
+
+        data = {
+        "Time": buffer_time,
+        "Command Linear Velocity": r1_buffer_linear_action,
+        "Command Angular Velocity": r1_buffer_angular_action,
+        "Robot's Linear Velocity": r1_buffer_linear_obs,
+        "Robot's Angular Velocity": r1_buffer_angular_obs
+        }
+        df = pd.DataFrame(data)
+        csv_path = os.path.join(output_dir, 'r1_actions_data.csv')
+        df.to_csv(csv_path, index=False)
+        df = pd.DataFrame(r1_modified_occupancy_map)
+        csv_path = os.path.join(output_dir, 'r1_occu.csv')
+        df.to_csv(csv_path, index=False)
+
+        if args.num_robots==2:
+            plt.figure()
+            plt.plot(buffer_time, r2_buffer_linear_obs, label='Robot2\'s Linear Velocity')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Robot2\'s Linear Velocity')
+            plt.title('Robot2\'s Linear Velocity over Time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'R2\'s_Linear_Velocity_plot.png'))
+
+            # Plot the angular velocity actions over time
+            plt.figure()
+            plt.plot(buffer_time, r2_buffer_angular_obs, label='Robot2\'s Angular Velocity')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Robot2\'s Angular Velocity')
+            plt.title('Robot2\'s Angular Velocity over Time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'R2\'s_Angular_Velocity_plot.png'))
+
+            plt.figure()
+            plt.plot(buffer_time, r2_buffer_linear_action, label='Command Linear Velocity')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Command Linear Velocity')
+            plt.title('Robot2\'s Command Linear Velocity over Time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'R2_Command_Linear_Velocity_plot.png'))
+
+            # Plot the angular velocity actions over time
+            plt.figure()
+            plt.plot(buffer_time, r2_buffer_angular_action, label='Command Angular Velocity')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Command Angular Velocity')
+            plt.title('Robot2\'s Command Angular Velocity over Time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'R2_Command_angular_velocity_plot.png'))
+
+
+            # Plot the trajectory
+            plt.figure(figsize=(10, 6))
+            plt.plot(r2_poses_x, r2_poses_y, label='Trajectory', marker='o', markersize=5, linestyle='-')
+
+            # Annotate with time points
+            for i in range(0, len(buffer_time), 10):  # Annotate every 10th current_time step
+                plt.annotate(f't={buffer_time[i]:.1f}', (r2_poses_x[i], r2_poses_y[i]), textcoords="offset points", xytext=(10,-10), ha='center')
+
+            # Labels and title
+            plt.xlabel('X position')
+            plt.ylabel('Y position')
+            plt.title('Robot Trajectory Over current_time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'R2_trajectory.png'))
+
+
+            #PLOT BOTH ROBOT TRAJECTORY IN ONE PLOT
+            # Plot the first trajectory
+            plt.plot(r1_poses_x, r1_poses_y, label='Robot 1 Trajectory', marker='o', markersize=5, linestyle='-', color='blue')
+            # Annotate the first trajectory with time points
+            for i in range(0, len(buffer_time), 10):  # Annotate every 10th buffer_time step
+                plt.annotate(f't={buffer_time[i]:.1f}', (r1_poses_x[i], r1_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='blue')
+
+            # Plot the second trajectory
+            plt.plot(r2_poses_x, r2_poses_y, label='Robot 2 Trajectory', marker='o', markersize=5, linestyle='-', color='red')
+            # Annotate the second trajectory with buffer_time points
+            for i in range(0, len(buffer_time), 10):  # Annotate every 10th buffer_time step
+                plt.annotate(f't={buffer_time[i]:.1f}', (r2_poses_x[i], r2_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='red')
+
+            # Labels and title
+            plt.xlabel('X position')
+            plt.ylabel('Y position')
+            plt.title('Two Robot Trajectories Over Time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'Merged_trajectory.png'))
+
+
+            data = {
+            "Time": buffer_time,
+            "Command Linear Velocity": r2_buffer_linear_action,
+            "Command Angular Velocity": r2_buffer_angular_action,
+            "Robot's Linear Velocity": r2_buffer_linear_obs,
+            "Robot's Angular Velocity": r2_buffer_angular_obs
+            }
+            df = pd.DataFrame(data)
+            csv_path = os.path.join(output_dir, 'r2_actions_data.csv')
+            df.to_csv(csv_path, index=False)
+            
+        
+        
+        # print("overal",time.time()-R3.t1)
+        if current_time>10:
+            print("THAM");exit()
+
+    
+        
         
         # print(counting_step*1/10)
             
@@ -145,5 +538,12 @@ def run(args):
             #print(obs)
 
 if __name__== "__main__":
-    args = default_arguments.get_defaults() 
+    
+    # print(pol)
+    
+    
+
+    # start_time=time.time()
+    
     run(args)
+    # current_time=0
