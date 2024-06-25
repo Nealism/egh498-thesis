@@ -14,6 +14,7 @@ import time
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+from scipy.ndimage import label, generate_binary_structure
 
 
 
@@ -208,7 +209,7 @@ class Env(EnvBasePB):
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         elif self.args.num_robots ==2:
 
-            self.robot_goal_synchroniser=np.random.choice([-2,2])  #This synchroniser ensire robots and goals are crossing to each other even when external robot position are swapping
+            self.robot_goal_synchroniser=np.random.choice([-2,2]) #change value to increase gap between robots #This synchroniser ensire robots and goals are crossing to each other even when external robot position are swapping
             if self.args.collision_likelihood_curr:
                 self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*-2.5),(self.robots[1],self.robot_goal_synchroniser*2.5)]
             elif not self.args.collision_likelihood_curr:
@@ -335,7 +336,7 @@ class Env(EnvBasePB):
         self.Both_Robots_stuck=[]
         self.turn_both=False
         # self.ob_dicts=[]
-        # actions=[[0,-1.5]]
+        actions=[[0,1.5]]
 
         # self.obstacles=[]
         # self.robots_bbox=[]
@@ -375,7 +376,7 @@ class Env(EnvBasePB):
         #         self.turn_both=True
         #         # print("turn_both",self.turn_both)
         # print(actions[0],"a")
-        if self.args.num_robots==1:
+        if self.args.figure:
             clipped_linear_vel_command=round(np.clip(actions[0][0], -0.5, 1),2)
             clipped_angular_vel_command=round(np.clip(actions[0][1], -1.5, 1.5),2)
 
@@ -506,7 +507,7 @@ class Env(EnvBasePB):
                 
             ob,rew,done,termination, self.ob_dict=Robot.return_step(action)
             #print("action_length",action,"robot",Robot)
-            if self.args.num_robots==1:
+            if self.args.figure:
                 ob_lin=round(ob[4],4)
                 ob_ang=round(ob[5],4)
                 self.buffer_linear_obs.append(ob_lin)
@@ -543,7 +544,7 @@ class Env(EnvBasePB):
                 csv_path = os.path.join(output_dir, 'actions_data.csv')
                 df.to_csv(csv_path, index=False)
                 print(ttg)
-                if self.steps*self.timeStep_10Hz>10:
+                if self.steps*self.timeStep_10Hz>20:
                     print("THAM");exit()
 
                 
@@ -587,29 +588,38 @@ class Env(EnvBasePB):
 
 
             for robot_pos,robot_orn in zip(self.robots_pos,self.robots_orn):
-
+                # print(robot_pos)
                 local_heightmap, local_heightmap_position = self.get_heightmap(robot_pos,robot_orn)
+                local_heightmaps.append(local_heightmap)
+                local_heightmap_positions.append(local_heightmap_position)
+                turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
+                
                 # array_shape = (65,75)
                 # local_heightmap = np.zeros(array_shape)
                 
                 # print("in_function",local_heightmap.shape)
                 # print("in_function_pos",local_heightmap_position)
+            self.Occupancy_map=self.visualize_maps(self.global_map_list, local_heightmaps,local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos,self.gap_walls1_centre,self.gap_walls2_centre,self.side_walls1_centre,self.side_walls2_centre)
+            # self.occupancy_maps=deepcopy(local_heightmaps)
+            
 
-                local_heightmaps.append(local_heightmap)
-                local_heightmap_positions.append(local_heightmap_position)
-                turtlebot_data.append((local_heightmap, local_heightmap_position, robot_pos))
+                
 
             # print("self.local_heightmaps",np.array(local_heightmaps).shape)
             # print("self.global_Map",np.array(self.global_map_list).shape)
-            M=self.visualize_maps(self.global_map_list, local_heightmaps,local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos,self.gap_walls1_centre,self.gap_walls2_centre,self.side_walls1_centre,self.side_walls2_centre)
             #N=self.visualize_maps(self.global_map2, self.local_heightmaps,self.local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos)
+            # print(np.array(self.global_map_list).shape,self.im_size)
+            # gm=np.array(self.global_map_list).reshape([self.args.num_robots]+[1,1000,1000])
+
+            
+            
             # self.h1=np.savetxt('occupancy_map1.txt', self.local_heightmaps[0])
             # self.h2=np.savetxt('occupancy_map2.txt', self.local_heightmaps[1])
             # current_time = time.time()
             # print("current",current_time-self.start_time)
             # print("local_hmap",np.array(self.local_heightmaps).shape)
             # print("reshape",[self.args.num_robots]+self.im_size)
-            self.occupancy_maps=deepcopy(local_heightmaps)
+            
             # self.occupancy_maps_reshaped=np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size)
 
             # if current_time-self.start_time==0.2:
@@ -634,23 +644,26 @@ class Env(EnvBasePB):
         # print([self.args.num_robots]+self.im_size,np.array(self.occupancy_maps).shape)
         # print(np.array(self.occupancy_maps).shape,np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size).shape,self.im_size)
 
-        robot1_occupancy_map = np.zeros((80, 80), dtype=int)
-        robot1_occupancy_map[30:50, 30:50] = 1  # Creating a 20x20 block of 1s in the middle
+        # robot1_occupancy_map = np.zeros((80, 80), dtype=int)
+        # robot1_occupancy_map[30:50, 30:50] = 1  # Creating a 20x20 block of 1s in the middle
 
-        # Generate a random occupancy map for Robot 2
-        robot2_occupancy_map = np.random.randint(0, 2, (80, 80))
+        # # Generate a random occupancy map for Robot 2
+        # robot2_occupancy_map = np.random.randint(0, 2, (80, 80))
 
-        # Combine them into the final array
-        example_occupancy_map = np.array([
-            [robot1_occupancy_map],
-            [robot2_occupancy_map]
-        ])
+        # # Combine them into the final array
+        # example_occupancy_map = np.array([
+        #     [robot1_occupancy_map],
+        #     [robot2_occupancy_map]
+        # ])
 
+        
 
 
         
 
-        return np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size)
+        # return np.array(self.occupancy_maps).reshape([self.args.num_robots]+self.im_size)
+        return self.Occupancy_map
+        # return np.array(self.global_map_list).reshape([self.args.num_robots]+self.im_size)
         # return example_occupancy_map
     
     # def get_image(self):
@@ -834,6 +847,7 @@ class Env(EnvBasePB):
 
         # robot_position=(50,50)
         robot_position=list(robot_position)
+        # print(robot_position,"list")
         if robot_position[0] > 40:
             robot_position[0]=40
         elif robot_position[0] < -40:
@@ -879,7 +893,7 @@ class Env(EnvBasePB):
             local_heightmap_y_max = local_y_max
 
             # Rotate the local heightmap based on the robot's orientation
-            local_heightmap = np.rot90(local_heightmap, k=int(math.degrees(robot_orientation) / 90))
+            # local_heightmap = np.rot90(local_heightmap, k=int(math.degrees(robot_orientation) / 90))
 
         #     # Pad heightmaps if their shape is less than (80, 80)
         #     # Calculate padding
@@ -893,6 +907,7 @@ class Env(EnvBasePB):
         #     local_heightmap_x_max += pad_height * self.global_resolution
         #     local_heightmap_y_max += pad_width * self.global_resolution
         # # print("after_hm",local_heightmap_final.shape)
+        # print((local_heightmap_x_min, local_heightmap_x_max, local_heightmap_y_min, local_heightmap_y_max),self)
 
         return local_heightmap, (local_heightmap_x_min, local_heightmap_x_max, local_heightmap_y_min, local_heightmap_y_max)
 
@@ -972,7 +987,7 @@ class Env(EnvBasePB):
             scaled_heightmap = scaled_heightmap.astype(np.uint8)
             heightmap_image = cv2.cvtColor(scaled_heightmap, cv2.COLOR_GRAY2BGR)
             heightmap_image[:, :, 1] = 155  # Green channel to 255 for local heightmap (green color)
-            # print("HP",heightmap_image)
+            
             # Calculate the position of the local heightmap within the global map
             local_map_x_min = local_heightmap_position[0]
             local_map_x_max = local_heightmap_position[1]
@@ -1014,7 +1029,23 @@ class Env(EnvBasePB):
             
 
             globalmap_images.append(global_map_image)
+
+            local_region = global_map[local_map_x_min_index:local_map_x_max_index, local_map_y_min_index:local_map_y_max_index]
+
+            # Overlay the obstacles on the local heightmap
+            obstacle_indices = np.where(local_region == 1.0)
+            for f, g in zip(obstacle_indices[0], obstacle_indices[1]):
+                heightmap_image[f, g] = (0, 0, 255)  # Red color for obstacles
+
+            
             heightmap_images.append(heightmap_image)
+         
+        # # HM=list(heightmap_images)
+        # print(type(heightmap_image),"tuple?")
+        # print(np.array(heightmap_images),"HM",type(heightmap_images))
+        # print("HP",np.array(heightmap_images).shape)
+
+        
         #print("aa",heightmap_images)
         # print(len(global_map_image),len(globalmap_images[0]))
         for global_map_image in globalmap_images:
@@ -1092,6 +1123,8 @@ class Env(EnvBasePB):
                 # print(len(global_map_image),len(self.robots_pos[0:1]),len(self.robots_pos))
         #print(i)
         # Find obstacle cells and mark them as red
+
+        
         if self.args.obstacle_avoidance:
             for global_map in global_map_list:
                 for i in range(len(self.Obstacles_pos)):
@@ -1162,12 +1195,17 @@ class Env(EnvBasePB):
                         for q in range(side_wall2_y_center - sides_half_width_cells, side_wall2_y_center + sides_half_width_cells + 1):
                             if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
                                 global_map[p, q] = 1.0
+
+        
         for index,(global_map,global_map_image) in enumerate(zip(global_map_list,globalmap_images)):
-            for i in range(len(self.robots_pos)):
+            for i in range(self.args.num_robots):
                 global_map_image = cv2.circle(global_map_image, (turtlebots_y_index[i], turtlebots_x_index[i]), 5, (255, 0, 0), -1)
                 global_map_image = cv2.circle(global_map_image, (Goals_y_index[i], Goals_x_index[i]), 5, (0, 255, 0), -1)
                 # print(self.global_resolution)
                 # print("index",index,"i",i)
+                # if index!=i or index==i:
+                # for index_hm,local_heightmap in enumerate(local_heightmaps):
+                #     print("ind",index,i,index_hm)
                 if index!=i:
                 #     print("True")
                     # Calculate robot-length and robot-width in grid cells
@@ -1181,6 +1219,22 @@ class Env(EnvBasePB):
                         for l in range(y_index - robot_width, y_index + robot_width + 1):
                             if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
                                 global_map[k, l] = 1.0  # Mark the obstacle as occupied with a value of 1
+
+                # if index==i:
+                # #     print("True")
+                #     # Calculate robot-length and robot-width in grid cells
+                #     robot_length = int(1.4 / (2 * self.global_resolution))
+                #     robot_width = int(0.7 / (2 * self.global_resolution))
+                #     x_index=turtlebots_x_index[i]
+                #     y_index=turtlebots_y_index[i]
+                    
+                #     # Set the obstacle region in the global map to a higher value for visualization
+                #     for k in range(x_index - robot_length, x_index + robot_length + 1):
+                #         for l in range(y_index - robot_width, y_index + robot_width + 1):
+                #             if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
+                #                 global_map[k, l] = 1.0  # Mark the obstacle as occupied with a value of 1
+                
+              
                 # elif index==i:
                 #     print("True")
                 #     # Calculate robot-length and robot-width in grid cells
@@ -1194,6 +1248,9 @@ class Env(EnvBasePB):
                 #         for l in range(y_index - robot_width, y_index + robot_width + 1):
                 #             if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
                 #                 global_map[k, l] = 0.0
+                
+
+
 
         for (global_map_image,global_map) in zip(globalmap_images,global_map_list):
             obstacle_indices = np.where(global_map == 1.0)
@@ -1211,8 +1268,35 @@ class Env(EnvBasePB):
             # robot_indices = np.where(global_map == 2.0)
             # for m, n in zip(robot_indices[0], robot_indices[1]):
             #     global_map_image[m, n] = (150, 0, 150)  # Blue color
+        for local_heightmap, local_heightmap_position, global_map in zip(local_heightmaps, local_heightmap_positions, global_map_list):
+            # Scale the local heightmap for visualization
+            scaled_heightmap = (local_heightmap - np.min(local_heightmap)) * 200
+            scaled_heightmap = scaled_heightmap.astype(np.uint8)
 
-            
+            # Convert to a color image with green channel
+            heightmap_image = cv2.cvtColor(scaled_heightmap, cv2.COLOR_GRAY2BGR)
+            heightmap_image[:, :, 1] = 255  # Green channel to 255 for local heightmap
+
+            # Extract the local region from the global map
+            local_map_x_min = local_heightmap_position[0]
+            local_map_x_max = local_heightmap_position[1]
+            local_map_y_min = local_heightmap_position[2]
+            local_map_y_max = local_heightmap_position[3]
+
+            local_map_x_min_index = int((local_map_x_min + self.global_map_size_x / 2) / self.global_resolution)
+            local_map_x_max_index = int((local_map_x_max + self.global_map_size_x / 2) / self.global_resolution)
+            local_map_y_min_index = int((local_map_y_min + self.global_map_size_y / 2) / self.global_resolution)
+            local_map_y_max_index = int((local_map_y_max + self.global_map_size_y / 2) / self.global_resolution)
+
+            local_region = global_map[local_map_x_min_index:local_map_x_max_index, local_map_y_min_index:local_map_y_max_index]
+
+            # Overlay the obstacles on the local heightmap
+            obstacle_indices = np.where(local_region == 1.0)
+            for f, g in zip(obstacle_indices[0], obstacle_indices[1]):
+                heightmap_image[f, g] = (0, 0, 255)  # Red color for obstacles
+
+            heightmap_images.append(heightmap_image)
+        
         if self.args.map_show:
 
             # # Create separate OpenCV windows for each global map
@@ -1223,6 +1307,14 @@ class Env(EnvBasePB):
                 window_name = "Global Map with Local Heightmaps" + str(index)
                 cv2.imshow(window_name, global_map_image)
 
+            # Display the local heightmaps using OpenCV
+            for index, heightmap_image in enumerate(heightmap_images[-2:]):
+                window_name = "Local Heightmap " + str(index)
+                # print("HHHHMM",np.array(heightmap_images))
+                unique_values = np.unique(heightmap_image)
+                print(f"Unique values in heightmap_image {index}: {unique_values}")
+                cv2.imshow(window_name, heightmap_image)
+
             # cv2.imshow("Global Map with Local Heightmaps1", globalmap_images[0])
             # cv2.imshow("Global Map with Local Heightmaps2", globalmap_images[1])
             # Wait for a short delay to ensure the first window is initialized
@@ -1230,6 +1322,139 @@ class Env(EnvBasePB):
             #cv2.imshow("Global Map with Local Heightmaps2", globalmap_images[1])
             cv2.waitKey(10)
                 #cv2.destroyAllWindows()
+
+        # Step 1: Select the last two images
+        last_two_images = heightmap_images[-self.args.num_robots:]
+
+        def convert_heightmap_images(heightmap_images):
+            # Result array with shape (2, 1, 80, 80)
+            converted_images = np.zeros((self.args.num_robots, 1, 80, 80), dtype=np.uint8)
+            
+            # Only process the last two heightmaps
+            for index in range(self.args.num_robots):
+                heightmap_image = heightmap_images[index + self.args.num_robots]
+                
+                # Convert RGB to grayscale by isolating the red channel
+                red_channel = heightmap_image[:, :, 2]
+                
+                # Create a binary image where red obstacles are marked as 1, all others as 0
+                binary_image = (red_channel == 255).astype(np.uint8)
+                
+                # Place the binary image in the converted_images array
+                converted_images[index, 0] = binary_image
+            
+            return converted_images
+
+        # Convert heightmap images
+        occupancy_map_locals = convert_heightmap_images(heightmap_images)
+
+        def mark_edge_cells(occupancy_map):
+            # Define a structure for connected components (8-connected neighborhood)
+            structure = generate_binary_structure(2, 1)
+            
+            # Label connected components
+            labeled_map, num_labels = label(occupancy_map, structure)
+            
+            # Find the unique labels (excluding background label 0)
+            unique_labels = np.unique(labeled_map)[1:]
+            
+            # Create a new array for the modified occupancy map
+            modified_occupancy_map = np.zeros_like(occupancy_map)
+            
+            # Iterate over each unique label (connected component)
+            for labela in unique_labels:
+                # Extract the mask for the current connected component
+                component_mask = (labeled_map == labela).astype(np.uint8)
+                
+                # Find edge cells that are adjacent to unoccupied cells (0)
+                edge_mask = np.zeros_like(component_mask)
+                edge_mask[1:-1, 1:-1] = (component_mask[1:-1, 1:-1] > 0) & \
+                                        ((component_mask[:-2, 1:-1] == 0) | (component_mask[2:, 1:-1] == 0) | \
+                                        (component_mask[1:-1, :-2] == 0) | (component_mask[1:-1, 2:] == 0))
+                
+                # Mark edge cells as 1 in the modified map
+                modified_occupancy_map[edge_mask > 0] = 1
+                
+            return modified_occupancy_map
+
+        # Iterate over the converted heightmap images and mark edge cells
+        Hollowed_Occupancy_maps=[]
+        for index in range(self.args.num_robots):
+            occupancy_map_local = occupancy_map_locals[index, 0]
+            modified_occupancy_map = mark_edge_cells(occupancy_map_local)
+            Hollowed_Occupancy_maps.append(modified_occupancy_map)
+        # # Step 2: Convert RGB images to grayscale
+        # last_two_images_gray = np.array([cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) for image in last_two_images])
+        # print("HMM",np.array(Hollowed_Occupancy_maps).shape)
+        # listing=np.array(listing).reshape(self.args.num_robots,self.im_size)
+        Hollowed_Occupancy_maps=np.array(Hollowed_Occupancy_maps).reshape([self.args.num_robots]+self.im_size)
+
+        # # # Step 3: Reshape the images to (2, 1, 80, 80)
+        # # reshaped_images = np.array(occupancy_map_local).reshape(2, 1, 80, 80)
+        # # hm=np.array(heightmap_images).reshape([self.args.num_robots]+self.im_size)
+        # r1_occupancy_map = occupancy_map_local[0,0,:, :]
+        # r2_occupancy_map = occupancy_map_local[1,0,:, :]
+
+        # # r1_occupancy_map = next_im[0, :, :]
+        # # r2_occupancy_map = next_im[1, :, :]
+
+        # # r1_occupancy_map=next_im[0, 0, :, :]
+        # # # r2_occupancy_map=next_im[1, 0, :, :]
+
+        # r1_occupancy_map_array = np.array(r1_occupancy_map)
+        # # print("r1_occupancy_map_array.shape",r1_occupancy_map_array.shape)
+        # # Determine the dimensions of the occupancy map
+        # rows, cols = r1_occupancy_map_array.shape
+        
+        # # Create an empty image with the same dimensions as the occupancy map
+        # image_r1 = np.zeros((rows, cols, 3), dtype=np.uint8)
+        
+        # # Assign grey color where occupancy_map is 0
+        # image_r1[r1_occupancy_map_array == 0] = (128, 128, 128)  # Grey
+        
+        # # Assign red color where occupancy_map is 1
+        # image_r1[r1_occupancy_map_array == 1] = (0, 0, 255)  # Red
+
+        # image_r1 = image_r1 #occupancy_map_to_image(im_ocupancy)
+
+
+        # # # Create a window with the specified name
+        # cv2.namedWindow("R1 Occupancy Map", cv2.WINDOW_NORMAL)
+
+        # # Resize the window to a desired size
+        # cv2.resizeWindow("R1 Occupancy Map", 800, 600)
+        # # Display the image
+        # cv2.imshow("R1 Occupancy Map", image_r1)
+
+        # r2_occupancy_map_array = np.array(r2_occupancy_map)
+        # # print("r2_occupancy_map_array.shape",r2_occupancy_map_array.shape)
+        # # Determine the dimensions of the occupancy map
+        # rows_r2, cols_r2 = r2_occupancy_map_array.shape
+        
+        # # Create an empty image with the same dimensions as the occupancy map
+        # image_r2 = np.zeros((rows_r2, cols_r2, 3), dtype=np.uint8)
+        
+        # # Assign grey color where occupancy_map is 0
+        # image_r2[r2_occupancy_map_array == 0] = (128, 128, 128)  # Grey
+        
+        # # Assign red color where occupancy_map is 1
+        # image_r2[r2_occupancy_map_array == 1] = (0, 0, 255)  # Red
+
+        # image_r2 = image_r2 #occupancy_map_to_image(im_ocupancy)
+
+
+        # # # Create a window with the specified name
+        # cv2.namedWindow("R2 Occupancy Map", cv2.WINDOW_NORMAL)
+
+        # # Resize the window to a desired size
+        # cv2.resizeWindow("R2 Occupancy Map", 800, 600)
+        # # Display the image
+        # cv2.imshow("R2 Occupancy Map", image_r2)
+        
+
+        # cv2.waitKey(1)  
+        return Hollowed_Occupancy_maps     
+        # return np.array(listing)     
 
 
     def gap_generator(self,width, depth,height,pos,wall_length,goal_pos,lineId,lineIdgap,lineIdA,lineIdB):
