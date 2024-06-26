@@ -336,7 +336,7 @@ class Env(EnvBasePB):
         self.Both_Robots_stuck=[]
         self.turn_both=False
         # self.ob_dicts=[]
-        # actions=[[1,0]]
+        actions=[[0,1.5]]
 
         # self.obstacles=[]
         # self.robots_bbox=[]
@@ -508,6 +508,7 @@ class Env(EnvBasePB):
             ob,rew,done,termination, self.ob_dict=Robot.return_step(action)
             #print("action_length",action,"robot",Robot)
             if self.args.figure:
+                # print(ob)
                 ob_lin=round(ob[4],4)
                 ob_ang=round(ob[5],4)
                 self.buffer_linear_obs.append(ob_lin)

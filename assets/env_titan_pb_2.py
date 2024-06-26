@@ -253,8 +253,8 @@ class Env(EnvBasePB):
             self.contact_list = ['pumpkin_chassis', 'pumpkin_lower_chassis']
         else:
             #state_object= [random.uniform(-4,4),random.uniform(4,1),0.00]
-            robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
-            # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/turtlebot.urdf")
+            # robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
+            robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/turtlebot.urdf")
             
             self.contact_list = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
             if self.args.static_robots > 1 and self.args.insert_robot2:
@@ -990,8 +990,8 @@ class Env(EnvBasePB):
         radius = 0.14
         width = 0.78/2
         # print(actions)
-        lin_vel = actions[0]#*0.50
-        ang_vel = actions[1] *0.6#*2.5/2
+        lin_vel = actions[0]*3.9#*0.50
+        ang_vel = actions[1] *0.48#*2.5/2
         # ang_vel = actions[1] #*3/2
         w_r = (lin_vel + ang_vel*width)/radius
         w_l = (lin_vel - ang_vel*width)/radius
