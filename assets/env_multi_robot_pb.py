@@ -336,7 +336,7 @@ class Env(EnvBasePB):
         self.Both_Robots_stuck=[]
         self.turn_both=False
         # self.ob_dicts=[]
-        actions=[[0,1.5]]
+        # actions=[[1,0]]
 
         # self.obstacles=[]
         # self.robots_bbox=[]
