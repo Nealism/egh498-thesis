@@ -310,6 +310,7 @@ class Env(EnvBasePB):
             # Given orientation (orn)
             orn_wallright = Robot.gap_orn
             perpendicular_orn = p.getQuaternionFromEuler((0, 0, p.getEulerFromQuaternion(Robot.gap_orn)[2] + (math.pi / 2)))
+            # perpendicular_orn = p.getQuaternionFromEuler((0, 0, np.random.randint(1,3)))
             
 
 
@@ -336,7 +337,7 @@ class Env(EnvBasePB):
         self.Both_Robots_stuck=[]
         self.turn_both=False
         # self.ob_dicts=[]
-        actions=[[0,1.5]]
+        # actions=[[0,1.5]]
 
         # self.obstacles=[]
         # self.robots_bbox=[]
@@ -376,7 +377,7 @@ class Env(EnvBasePB):
         #         self.turn_both=True
         #         # print("turn_both",self.turn_both)
         # print(actions[0],"a")
-        if self.args.figure:
+        if self.args.train_figure:
             clipped_linear_vel_command=round(np.clip(actions[0][0], -0.5, 1),2)
             clipped_angular_vel_command=round(np.clip(actions[0][1], -1.5, 1.5),2)
 
@@ -507,8 +508,8 @@ class Env(EnvBasePB):
                 
             ob,rew,done,termination, self.ob_dict=Robot.return_step(action)
             #print("action_length",action,"robot",Robot)
-            if self.args.figure:
-                # print(ob)
+            if self.args.train_figure:
+                print(ob)
                 ob_lin=round(ob[4],4)
                 ob_ang=round(ob[5],4)
                 self.buffer_linear_obs.append(ob_lin)
@@ -545,7 +546,7 @@ class Env(EnvBasePB):
                 csv_path = os.path.join(output_dir, 'actions_data.csv')
                 df.to_csv(csv_path, index=False)
                 print(ttg)
-                if self.steps*self.timeStep_10Hz>20:
+                if self.steps*self.timeStep_10Hz>10:
                     print("THAM");exit()
 
                 

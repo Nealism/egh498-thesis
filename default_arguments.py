@@ -93,7 +93,10 @@ def get_defaults():
     parser.add_argument('--gausian_clip', default=False, action="store_true")
     parser.add_argument('--single_done', default=False, action="store_true")
     parser.add_argument('--figure', default=False, action="store_true")
+    parser.add_argument('--train_figure', default=False, action="store_true")
+    parser.add_argument('--jit_model', default=False, action="store_true")
     parser.add_argument('--randomness', type=int, default=1)
+
 
 
     # ========================================================================

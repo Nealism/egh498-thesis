@@ -55,7 +55,14 @@ if args.figure:
 args.record_sim = False
 env = Env(PATH=PATH, args=args)
 
-pol = torch.load(PATH + "/model.pt")
+
+if args.jit_model:
+    model_mu=torch.load("Saved_models/JIT_models/mu_net.jit")
+    model_z=torch.load("Saved_models/JIT_models/z_net.jit")
+    
+else:
+
+    pol = torch.load(PATH + "/model.pt")
 
 
 start_time=time.time()
@@ -64,6 +71,12 @@ start_time=time.time()
 
 r1_buffer_linear_action=[]
 r1_buffer_angular_action=[]
+
+r1_buffer_ego_pos_x_obs=[]
+r1_buffer_ego_pos_y_obs=[]
+
+r1_buffer_roll_obs=[]
+r1_buffer_pitch_obs=[]
 
 r1_buffer_linear_obs=[]
 r1_buffer_angular_obs=[]
@@ -76,6 +89,12 @@ r1_poses_y=[]
 if args.num_robots==2:
     r2_buffer_linear_action=[]
     r2_buffer_angular_action=[]
+
+    r2_buffer_ego_pos_x_obs=[]
+    r2_buffer_ego_pos_y_obs=[]
+
+    r2_buffer_roll_obs=[]
+    r2_buffer_pitch_obs=[]
 
     r2_buffer_linear_obs=[]
     r2_buffer_angular_obs=[]
@@ -97,6 +116,7 @@ def run(args):
     # print("ob_reset",obs[0])
     if args.use_perception:
         im = env.get_image()
+        print(im,type(im))
 
 
 
@@ -106,13 +126,13 @@ def run(args):
     action_saving1=[]
     action_saving2=[]
 
-    model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
-    traced_script_module1 = torch.jit.script(model1)
-    traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net.jit")
+    # model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
+    # traced_script_module1 = torch.jit.script(model1)
+    # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
 
-    model2 = copy.deepcopy(pol.pi.z_net).to('cpu')
-    traced_script_module2 = torch.jit.script(model2)
-    traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net.jit")
+    # model2 = copy.deepcopy(pol.pi.z_net).to('cpu')
+    # traced_script_module2 = torch.jit.script(model2)
+    # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
 
 
     # print("traced_script_module1",traced_script_module1)
@@ -122,23 +142,47 @@ def run(args):
     action_saving2=[]
 
     while True:
-
-        if args.use_perception:
+        
+        if args.use_perception and not args.jit_model:
             # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
             action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
-
+        
+        elif args.use_perception and args.jit_model:
+            a_r1=torch.as_tensor(np.array(obs), dtype=torch.float32).unsqueeze(dim=0)
+            b_r1=model_z(torch.as_tensor(im, dtype=torch.float32))
+            print(a_r1[0],"br1",b_r1)
+            print(np.array(a_r1[0].detach().numpy()).shape,np.array(b_r1.detach().numpy()).shape)
+            concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
+            action = model_mu(concatenate_part_r1)
         else:
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
         # print ("action_before", action,type(action))
-        if not args.unclipped_vel:
+        if not args.unclipped_vel and args.jit_model:
+            r1_clipped_linear_vel_command=np.clip(action[0][0].detach().numpy(), -0.5, 1)
+            r1_clipped_angular_vel_command=np.clip(action[0][1].detach().numpy(), -1.5, 1.5)
+            action=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
+
+            if args.num_robots==2:
+                r2_clipped_linear_vel_command=np.clip(action[1][0].detach().numpy(), -0.5, 1)
+                r2_clipped_angular_vel_command=np.clip(action[1][1].detach().numpy(), -1.5, 1.5)
+
+                # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
+                # action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+                action=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+        
+        elif not args.unclipped_vel and not args.jit_model:
             r1_clipped_linear_vel_command=np.clip(action[0][0], -0.5, 1)
             r1_clipped_angular_vel_command=np.clip(action[0][1], -1.5, 1.5)
+            action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
 
-            r2_clipped_linear_vel_command=np.clip(action[1][0], -0.5, 1)
-            r2_clipped_angular_vel_command=np.clip(action[1][1], -1.5, 1.5)
+            if args.num_robots==2:
 
-            # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
-            action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+                r2_clipped_linear_vel_command=np.clip(action[1][0], -0.5, 1)
+                r2_clipped_angular_vel_command=np.clip(action[1][1], -1.5, 1.5)
+
+                # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
+                action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+        
         # print ("action", action)#;exit()
         # start_time=time.time()
         # current_time=0
@@ -160,30 +204,44 @@ def run(args):
         # # print(accc,type(accc))
         # accc.to_csv("action_test.csv")
         # current_time = time.time() - start_time
-        if args.figure:
-            current_time = env.steps*1/10
-            print(env.steps*1/10)
-            st=time.time()
-            buffer_time.append(current_time)
+        current_time = env.steps*1/10
+        print(env.steps*1/10)
+        st=time.time()
+        buffer_time.append(current_time)
 
-            r1_buffer_linear_action.append(action[0][0])
-            r1_buffer_angular_action.append(action[0][1])
+        r1_buffer_linear_action.append(action[0][0])
+        r1_buffer_angular_action.append(action[0][1])
 
-            r1_buffer_linear_obs.append(obs[0][4])
-            r1_buffer_angular_obs.append(obs[0][5])
+        r1_buffer_ego_pos_x_obs.append(obs[0][0])
+        r1_buffer_ego_pos_y_obs.append(obs[0][1])
 
-            r1_poses_x.append(env.robots_pos[0][0])
-            r1_poses_y.append(env.robots_pos[0][1])
+        r1_buffer_roll_obs.append(obs[0][2])
+        r1_buffer_pitch_obs.append(obs[0][3])
 
-            if args.num_robots==2:
-                r2_buffer_linear_action.append(action[1][0])
-                r2_buffer_angular_action.append(action[1][1])
+        r1_buffer_linear_obs.append(obs[0][4])
+        r1_buffer_angular_obs.append(obs[0][5])
 
-                r2_buffer_linear_obs.append(obs[1][4])
-                r2_buffer_angular_obs.append(obs[1][5])
+        r1_poses_x.append(env.robots_pos[0][0])
+        r1_poses_y.append(env.robots_pos[0][1])
 
-                r2_poses_x.append(env.robots_pos[1][0])
-                r2_poses_y.append(env.robots_pos[1][1])
+        if args.num_robots==2:
+            r2_buffer_linear_action.append(action[1][0])
+            r2_buffer_angular_action.append(action[1][1])
+
+            r2_buffer_ego_pos_x_obs.append(obs[1][0])
+            r2_buffer_ego_pos_y_obs.append(obs[1][1])
+
+            r2_buffer_roll_obs.append(obs[1][2])
+            r2_buffer_pitch_obs.append(obs[1][3])
+
+            r2_buffer_linear_obs.append(obs[1][4])
+            r2_buffer_angular_obs.append(obs[1][5])
+
+            r2_poses_x.append(env.robots_pos[1][0])
+            r2_poses_y.append(env.robots_pos[1][1])
+        if args.figure and current_time>10:
+            
+            
 
             # print("TIME",time.time()-t1,R3.buffer_time,"ac")
             
@@ -344,6 +402,46 @@ def run(args):
             # print("R3.buffer_linear_obs",R3.buffer_linear_obs,R3.buffer_time)
 
             output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet"
+
+            plt.figure()
+            plt.plot(buffer_time, r1_buffer_ego_pos_x_obs, label='Robot1\'s Ego Pos X')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Robot1\'s Ego Pos X')
+            plt.title('Robot1\'s Ego Pos X over Time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'Robot1\'s_Ego_Pos_X_plot.png'))
+
+            plt.figure()
+            plt.plot(buffer_time, r1_buffer_ego_pos_y_obs, label='Robot1\'s Ego Pos Y')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Robot1\'s Ego Pos Y')
+            plt.title('Robot1\'s Ego Pos Y over Time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'Robot1\'s_Ego_Pos_Y_plot.png'))
+
+
+            plt.figure()
+            plt.plot(buffer_time, r1_buffer_roll_obs, label='Robot1\'s Roll')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Robot1\'s Roll')
+            plt.title('Robot1\'s Roll over Time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'Robot1\'s_Roll_plot.png'))
+
+
+            plt.figure()
+            plt.plot(buffer_time, r1_buffer_pitch_obs, label='Robot1\'s Pitch')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Robot1\'s Pitch')
+            plt.title('Robot1\'s Pitch over Time')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig(os.path.join(output_dir, 'Robot1\'s_Pitch_plot.png'))
+
+
             plt.figure()
             plt.plot(buffer_time, r1_buffer_linear_obs, label='Robot1\'s Linear Velocity')
             plt.xlabel('Time (s)')
@@ -395,7 +493,7 @@ def run(args):
             # Labels and title
             plt.xlabel('X position')
             plt.ylabel('Y position')
-            plt.title('Robot Trajectory Over current_time')
+            plt.title('Robot1 Trajectory Over current_time')
             plt.legend()
             plt.grid(True)
             plt.savefig(os.path.join(output_dir, 'R1_trajectory.png'))
@@ -422,6 +520,47 @@ def run(args):
             df.to_csv(csv_path, index=False)
 
             if args.num_robots==2:
+
+
+                plt.figure()
+                plt.plot(buffer_time, r2_buffer_ego_pos_x_obs, label='Robot2\'s Ego Pos X')
+                plt.xlabel('Time (s)')
+                plt.ylabel('Robot2\'s Ego Pos X')
+                plt.title('Robot2\'s Ego Pos X over Time')
+                plt.legend()
+                plt.grid(True)
+                plt.savefig(os.path.join(output_dir, 'Robot2\'s_Ego_Pos_X_plot.png'))
+
+                plt.figure()
+                plt.plot(buffer_time, r2_buffer_ego_pos_y_obs, label='Robot2\'s Ego Pos Y')
+                plt.xlabel('Time (s)')
+                plt.ylabel('Robot2\'s Ego Pos Y')
+                plt.title('Robot2\'s Ego Pos Y over Time')
+                plt.legend()
+                plt.grid(True)
+                plt.savefig(os.path.join(output_dir, 'Robot2\'s_Ego_Pos_Y_plot.png'))
+
+
+                plt.figure()
+                plt.plot(buffer_time, r2_buffer_roll_obs, label='Robot2\'s Roll')
+                plt.xlabel('Time (s)')
+                plt.ylabel('Robot2\'s Roll')
+                plt.title('Robot2\'s Roll over Time')
+                plt.legend()
+                plt.grid(True)
+                plt.savefig(os.path.join(output_dir, 'Robot2\'s_Roll_plot.png'))
+
+
+                plt.figure()
+                plt.plot(buffer_time, r2_buffer_pitch_obs, label='Robot2\'s Pitch')
+                plt.xlabel('Time (s)')
+                plt.ylabel('Robot2\'s Pitch')
+                plt.title('Robot2\'s Pitch over Time')
+                plt.legend()
+                plt.grid(True)
+                plt.savefig(os.path.join(output_dir, 'Robot2\'s_Pitch_plot.png'))
+
+                
                 plt.figure()
                 plt.plot(buffer_time, r2_buffer_linear_obs, label='Robot2\'s Linear Velocity')
                 plt.xlabel('Time (s)')
@@ -472,7 +611,7 @@ def run(args):
                 # Labels and title
                 plt.xlabel('X position')
                 plt.ylabel('Y position')
-                plt.title('Robot Trajectory Over current_time')
+                plt.title('Robot2 Trajectory Over current_time')
                 plt.legend()
                 plt.grid(True)
                 plt.savefig(os.path.join(output_dir, 'R2_trajectory.png'))
@@ -510,10 +649,13 @@ def run(args):
                 df = pd.DataFrame(data)
                 csv_path = os.path.join(output_dir, 'r2_actions_data.csv')
                 df.to_csv(csv_path, index=False)
+                df = pd.DataFrame(r2_modified_occupancy_map)
+                csv_path = os.path.join(output_dir, 'r2_occu.csv')
+                df.to_csv(csv_path, index=False)
                 
             
             
-            # print("overal",time.time()-R3.t1)
+            # # print("overal",time.time()-R3.t1)
             if current_time>10:
                 print("THAM");exit()
 

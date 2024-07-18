@@ -253,8 +253,10 @@ class Env(EnvBasePB):
             self.contact_list = ['pumpkin_chassis', 'pumpkin_lower_chassis']
         else:
             #state_object= [random.uniform(-4,4),random.uniform(4,1),0.00]
-            # robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
-            robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/turtlebot.urdf")
+            robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
+            # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/turtlebot.urdf")
+            # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/r2d2.urdf")
+            # robot1=self.load_urdf_robot("/home/kom018/behaviour_rl/assets/turtlebot_titan2.urdf")
             
             self.contact_list = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
             if self.args.static_robots > 1 and self.args.insert_robot2:
@@ -985,13 +987,27 @@ class Env(EnvBasePB):
             
 
         
+    # # FOR TURTLEBOT
+    # def twist_to_tracks(self, actions): 
+    #     radius = 0.14
+    #     width = 0.78/2
+    #     # print(actions)
+    #     lin_vel = actions[0]*3.9#*0.50
+    #     ang_vel = actions[1] *0.48#*2.5/2
+    #     # ang_vel = actions[1] #*3/2
+    #     w_r = (lin_vel + ang_vel*width)/radius
+    #     w_l = (lin_vel - ang_vel*width)/radius
+    #     # print("action",actions,"wl",w_l,"w_r",w_r,self)
+    #     return [w_l, w_r]
+    
 
+    #FOR TITAN
     def twist_to_tracks(self, actions):
         radius = 0.14
         width = 0.78/2
         # print(actions)
-        lin_vel = actions[0]*3.9#*0.50
-        ang_vel = actions[1] *0.48#*2.5/2
+        lin_vel = actions[0]#*3.9#*0.50
+        ang_vel = actions[1] *0.6#*2.5/2
         # ang_vel = actions[1] #*3/2
         w_r = (lin_vel + ang_vel*width)/radius
         w_l = (lin_vel - ang_vel*width)/radius
@@ -1187,7 +1203,7 @@ class Env(EnvBasePB):
             
             
             self.exp_actions[1] = 1.5*np.clip(self.heading_error_gapwp1, -1, 1)
-            self.exp_actions[0] = 0.01
+            self.exp_actions[0] = 0.05
             
             for robot_bbox in self.robots_bbox:
             #print("k",robot_bbox,"whole",self.robots_bbox)
@@ -1230,7 +1246,7 @@ class Env(EnvBasePB):
         
             if self.gapwp1_reach:
                 self.exp_actions[1] = 2.5*np.clip(self.heading_error_gapwp2, -1.5, 1.5)
-                self.exp_actions[0] = 0.035
+                self.exp_actions[0] = 0.025
                 
                 for robot_bbox in self.robots_bbox:
             #print("k",robot_bbox,"whole",self.robots_bbox)
@@ -1250,8 +1266,8 @@ class Env(EnvBasePB):
                         if any(self.int_check_lines_vs_rbbox):
                             self.robot1_near_robot2=True
                             # print("self.robot1_near_robot2",self.robot1_near_robot2,self)
-                            self.exp_actions[0] = -0.01
-                            self.exp_actions[1] = -0.01
+                            self.exp_actions[0] = -0.03
+                            self.exp_actions[1] = -0.02
                             # if self.turn_both and self==self.All_Robot_ID[0]:
                             #     self.exp_actions[0] = 0.0
                             #     self.exp_actions[1] = 0.5
@@ -1453,7 +1469,7 @@ class Env(EnvBasePB):
             self.exp_actions=self.exp_actions*np.array([10,16])
             
         else:
-            self.exp_actions=self.exp_actions*np.array([25,40])
+            self.exp_actions=self.exp_actions*np.array([35,70])
         # print("self.exp_actions_afer",self.exp_actions)
 
         if self.args.just_expert or (self.args.cur or self.args.expert_curr) and self.goal_moved==False:
