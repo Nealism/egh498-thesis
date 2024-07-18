@@ -254,7 +254,9 @@ class Env(EnvBasePB):
         else:
             #state_object= [random.uniform(-4,4),random.uniform(4,1),0.00]
             robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
+            # robot1=self.load_urdf_robot("./assets/urdfs/turtlebot_boxy.urdf")
             # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/turtlebot.urdf")
+            # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/turtlebot_boxy.urdf")
             # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/r2d2.urdf")
             # robot1=self.load_urdf_robot("/home/kom018/behaviour_rl/assets/turtlebot_titan2.urdf")
             
@@ -459,7 +461,8 @@ class Env(EnvBasePB):
         initial_x, initial_y = np.random.uniform(0,4), np.random.uniform(0, 4) 
         #initial_x, initial_y = -2, -2 
         # self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
-        self.initial_yaw = 0.0#np.random.uniform(-np.pi, np.pi) 
+        # self.initial_yaw = 0.0#np.random.uniform(-np.pi, np.pi) 
+        self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
         # print("self.initial_yaw",self.initial_yaw)
         self.initial_orn = p.getQuaternionFromEuler([0,0,self.initial_yaw])
         # print("self.initial_orn",self.initial_orn)
@@ -648,8 +651,10 @@ class Env(EnvBasePB):
             self.external_robots_states.append(r_position)
 
         self.mid_point_of_goals=self.calculate_midpoint(self.external_goals_states[0],self.external_goals_states[-1])
+        self.mid_point_of_goals= (self.mid_point_of_goals[0],self.mid_point_of_goals[1])
 
         self.mid_point_of_robots=self.calculate_midpoint(self.external_robots_states[0],self.external_robots_states[-1])
+        self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-3,3))
 
         # Function to move the goal and the static robot
         
@@ -772,6 +777,8 @@ class Env(EnvBasePB):
             # print("All",self.All_Robot_ID,"self",self)
             # print(self.max_gap_among_all_robots_individual_gap_width)
             side_wall_moving_rate=self.max_gap_among_all_robots_individual_gap_width-17
+            # print("self.All_Robot_ID[0].mid_point_of_goals",self.All_Robot_ID[0].mid_point_of_goals)
+            # self.gap=self.gap_generator(width=self.max_gap_among_all_robots_individual_gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = self.wall_length,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
             self.gap=self.gap_generator(width=self.max_gap_among_all_robots_individual_gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = self.wall_length,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
             self.sidewalls=self.gap_generator(width=side_wall_moving_rate, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = 25,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
             # self.sidewall_left=self.gap_generator(width=0.1, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = 15,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
@@ -870,6 +877,7 @@ class Env(EnvBasePB):
             
             state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, robottogoal_angle)
             #print(self.robottogoal_angle);exit()
+            # print("goal_pos",state_object)
             dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
             #print(dist)
             # print(self.initial_goal_dist)

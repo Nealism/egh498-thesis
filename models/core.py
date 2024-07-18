@@ -166,6 +166,7 @@ class MLPActorCriticPerception(nn.Module):
 
 
     def step(self, obs, im, stochastic=True):
+        # print("stepobs",obs.shape)
         pi = self.pi._distribution(obs, im)
         # pi = self.pi._distribution_clipped(obs, im)
         
@@ -177,13 +178,6 @@ class MLPActorCriticPerception(nn.Module):
             # print(a)
         else:
             a = self.pi.mu
-        # print(type(a),a,type(a[0]),"check")
-        # r1_clipped_linear_vel_command=torch.tensor(np.clip(a[0][0].detach().numpy(), -0.5, 1))
-        # r1_clipped_angular_vel_command=torch.tensor(np.clip(a[0][1].detach().numpy(), -1.5, 1.5))
-
-        # r2_clipped_linear_vel_command=torch.tensor(np.clip(a[1][0].detach().numpy(), -0.5, 1))
-        # r2_clipped_angular_vel_command=torch.tensor(np.clip(a[1][1].detach().numpy(), -1.5, 1.5))
-
         if args.gausian_clip:
             r1_clipped_linear_vel_command=np.clip(a[0][0].detach().numpy(), -0.5, 1)
             r1_clipped_angular_vel_command=np.clip(a[0][1].detach().numpy(), -1.5, 1.5)

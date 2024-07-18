@@ -213,6 +213,7 @@ class Env(EnvBasePB):
             if self.args.collision_likelihood_curr:
                 self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*-2.5),(self.robots[1],self.robot_goal_synchroniser*2.5)]
             elif not self.args.collision_likelihood_curr:
+                # self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*7.5),(self.robots[1],self.robot_goal_synchroniser*-7.5)]
                 self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*7.5),(self.robots[1],self.robot_goal_synchroniser*-7.5)]
 
 
@@ -232,9 +233,13 @@ class Env(EnvBasePB):
         else:
             self.robottogoal_angles=[(self.robots[0],0)]
             self.external_robots_pos=[(self.robots[0],list(random_0_10))]
+            # print("self.external_robots_pos",self.external_robots_pos)
             #self.external_robots_pos=[(self.robots[0],[0,1,self.z_position])]
+            
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
-                self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+                # self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+                # print("robot_pos[1]",robot_pos[1])
+                self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, np.random.uniform(25,-25))
                 self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
 
