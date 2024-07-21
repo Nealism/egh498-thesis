@@ -95,6 +95,7 @@ def get_defaults():
     parser.add_argument('--figure', default=False, action="store_true")
     parser.add_argument('--train_figure', default=False, action="store_true")
     parser.add_argument('--jit_model', default=False, action="store_true")
+    parser.add_argument('--turtle_titan', default=False, action="store_true")
     parser.add_argument('--randomness', type=int, default=1)
 
 
@@ -245,13 +246,13 @@ def get_env(args):
     elif args.env == "anymal_is":
         from assets.env_anymal_is import Env   
         args.control_type = "position"
-    elif args.env in ["titan_pb", "pumpkin_pb"]:
+    elif args.env in ["titan_pb", "pumpkin_pb","turtle_titan"]:
         from assets.env_titan_pb import Env
         args.control_type = "velocity"
-    elif args.env in ["titan_pb_1", "pumpkin_pb"]:
+    elif args.env in ["titan_pb_1", "pumpkin_pb","turtle_titan"]:
         from assets.env_titan_pb_1 import Env
         args.control_type = "velocity"
-    elif args.env in ["titan_pb_2", "pumpkin_pb"]:
+    elif args.env in ["titan_pb_2", "pumpkin_pb","turtle_titan"]:
         from assets.env_titan_pb_2 import Env
         args.control_type = "velocity"
     elif args.env in ["titan_pb_3", "pumpkin_pb"]:

@@ -251,14 +251,18 @@ class Env(EnvBasePB):
         if "pumpkin" in self.args.env:
             self.load_urdf_robot("./assets/urdfs/pumpkin.urdf")
             self.contact_list = ['pumpkin_chassis', 'pumpkin_lower_chassis']
+        
         else:
-            #state_object= [random.uniform(-4,4),random.uniform(4,1),0.00]
-            robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
-            # robot1=self.load_urdf_robot("./assets/urdfs/turtlebot_boxy.urdf")
-            # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/turtlebot.urdf")
-            # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/turtlebot_boxy.urdf")
-            # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/r2d2.urdf")
-            # robot1=self.load_urdf_robot("/home/kom018/behaviour_rl/assets/turtlebot_titan2.urdf")
+            if self.args.turtle_titan:
+                robot1=self.load_urdf_robot("./assets/urdfs/turtlebot_boxy.urdf")
+            else:
+                #state_object= [random.uniform(-4,4),random.uniform(4,1),0.00]
+                robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
+                # robot1=self.load_urdf_robot("./assets/urdfs/turtlebot_boxy.urdf")
+                # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/turtlebot.urdf")
+                # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/turtlebot_boxy.urdf")
+                # robot1=self.load_urdf_robot("/home/kom018/pybullet_robots/data/r2d2.urdf")
+                # robot1=self.load_urdf_robot("/home/kom018/behaviour_rl/assets/turtlebot_titan2.urdf")
             
             self.contact_list = ['titan_chassis', 'left_11_wheel', 'right_11_wheel','left_1_wheel', 'right_1_wheel']
             if self.args.static_robots > 1 and self.args.insert_robot2:
@@ -461,8 +465,8 @@ class Env(EnvBasePB):
         initial_x, initial_y = np.random.uniform(0,4), np.random.uniform(0, 4) 
         #initial_x, initial_y = -2, -2 
         # self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
-        # self.initial_yaw = 0.0#np.random.uniform(-np.pi, np.pi) 
-        self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
+        self.initial_yaw = 0.0#np.random.uniform(-np.pi, np.pi) 
+        # self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
         # print("self.initial_yaw",self.initial_yaw)
         self.initial_orn = p.getQuaternionFromEuler([0,0,self.initial_yaw])
         # print("self.initial_orn",self.initial_orn)
@@ -481,12 +485,12 @@ class Env(EnvBasePB):
         
         
 
-        
         if (self.args.cur or self.args.expert_curr) and self.Kp > 0 and self.check_for_success():
             self.Kp = 0.75*self.Kp
             if self.Kp < 5:
                 self.Kp = 0
-            self.cur_success = deque([0.0], maxlen=5)
+            self.cur_success = deque([0.0], maxlen=5) 
+        
             # print(self.Kp)
 
         
@@ -537,6 +541,7 @@ class Env(EnvBasePB):
             
             # if self.args.num_robots>1 and self.check_both_for_success():
             if self.args.num_robots>1 and self.check_for_success():
+                # print("BUJH",self.max_gap_width,self.decrease_gap_width,self.final_gap_width)
                 if self.max_gap_width-self.decrease_gap_width > self.final_gap_width :         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
                     #self.decrease_gap_width = self.max_gap_width-self.final_gap_width
                     #self.decrease_gap_width = 0
@@ -571,7 +576,7 @@ class Env(EnvBasePB):
                     
                 #     self.cur_success = deque([0.0], maxlen=5)
         
-                
+               
         #Tunnel_CUrriculum: Increasing the Tunnel/Gap length Gradually
         if self.args.gap_avoidance and (self.args.cur or self.args.tunnel_curr) and self.check_for_success():
             if self.max_tunnel_depth-self.increase_tunnel_depth == 0:         # at each episode, step size will increase but when the static robot position is in the line, then step size will not change.
@@ -582,6 +587,8 @@ class Env(EnvBasePB):
                 self.increase_tunnel_depth += 0.2			
                 
                 self.cur_success = deque([0.0], maxlen=5)
+
+        
                 
         
     
@@ -651,10 +658,10 @@ class Env(EnvBasePB):
             self.external_robots_states.append(r_position)
 
         self.mid_point_of_goals=self.calculate_midpoint(self.external_goals_states[0],self.external_goals_states[-1])
-        self.mid_point_of_goals= (self.mid_point_of_goals[0],self.mid_point_of_goals[1])
+        # self.mid_point_of_goals= (self.mid_point_of_goals[0],self.mid_point_of_goals[1])
 
         self.mid_point_of_robots=self.calculate_midpoint(self.external_robots_states[0],self.external_robots_states[-1])
-        self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-3,3))
+        # self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-3,3))
 
         # Function to move the goal and the static robot
         
@@ -738,7 +745,7 @@ class Env(EnvBasePB):
         self.scale_f_linear=[]
         self.scale_f_angular=[]
 
-        self.wall_length=3.7
+        self.wall_length=1.7
 
         self.k=0
 
@@ -776,7 +783,10 @@ class Env(EnvBasePB):
             #print("self.robots_bbox",self.robots_bbox)
             # print("All",self.All_Robot_ID,"self",self)
             # print(self.max_gap_among_all_robots_individual_gap_width)
-            side_wall_moving_rate=self.max_gap_among_all_robots_individual_gap_width-17
+            # side_wall_moving_rate=self.max_gap_among_all_robots_individual_gap_width-17
+            # print("self.max_gap_among_all_robots_individual_gap_width,",self.max_gap_among_all_robots_individual_gap_width)
+            # side_wall_moving_rate=self.max_gap_among_all_robots_individual_gap_width-21
+            side_wall_moving_rate=-np.random.choice([20,21])
             # print("self.All_Robot_ID[0].mid_point_of_goals",self.All_Robot_ID[0].mid_point_of_goals)
             # self.gap=self.gap_generator(width=self.max_gap_among_all_robots_individual_gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = self.wall_length,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
             self.gap=self.gap_generator(width=self.max_gap_among_all_robots_individual_gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = self.wall_length,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
@@ -994,33 +1004,47 @@ class Env(EnvBasePB):
         
             
 
-        
-    # # FOR TURTLEBOT
-    # def twist_to_tracks(self, actions): 
+    
+    # FOR TURTLEBOT
+    def twist_to_tracks(self, actions):
+
+        if self.args.turtle_titan: 
+            radius = 0.14
+            width = 0.78/2
+            # print(actions)
+            lin_vel = actions[0]*3.9#*0.50
+            ang_vel = actions[1] *0.48#*2.5/2
+            # ang_vel = actions[1] #*3/2
+            w_r = (lin_vel + ang_vel*width)/radius
+            w_l = (lin_vel - ang_vel*width)/radius
+            # print("action",actions,"wl",w_l,"w_r",w_r,self)
+        else:
+            radius = 0.14
+            width = 0.78/2
+            # print(actions)
+            lin_vel = actions[0]#*3.9#*0.50
+            ang_vel = actions[1] *0.6#*2.5/2
+            # ang_vel = actions[1] #*3/2
+            w_r = (lin_vel + ang_vel*width)/radius
+            w_l = (lin_vel - ang_vel*width)/radius
+            # print("action",actions,"wl",w_l,"w_r",w_r,self)
+            return [w_l, w_r]
+
+        return [w_l, w_r]
+    
+
+    # #FOR TITAN
+    # def twist_to_tracks(self, actions):
     #     radius = 0.14
     #     width = 0.78/2
     #     # print(actions)
-    #     lin_vel = actions[0]*3.9#*0.50
-    #     ang_vel = actions[1] *0.48#*2.5/2
+    #     lin_vel = actions[0]#*3.9#*0.50
+    #     ang_vel = actions[1] *0.6#*2.5/2
     #     # ang_vel = actions[1] #*3/2
     #     w_r = (lin_vel + ang_vel*width)/radius
     #     w_l = (lin_vel - ang_vel*width)/radius
     #     # print("action",actions,"wl",w_l,"w_r",w_r,self)
     #     return [w_l, w_r]
-    
-
-    #FOR TITAN
-    def twist_to_tracks(self, actions):
-        radius = 0.14
-        width = 0.78/2
-        # print(actions)
-        lin_vel = actions[0]#*3.9#*0.50
-        ang_vel = actions[1] *0.6#*2.5/2
-        # ang_vel = actions[1] #*3/2
-        w_r = (lin_vel + ang_vel*width)/radius
-        w_l = (lin_vel - ang_vel*width)/radius
-        # print("action",actions,"wl",w_l,"w_r",w_r,self)
-        return [w_l, w_r]
     
     #def step(self, actions):
         #print("AAA",actions)
@@ -1033,7 +1057,7 @@ class Env(EnvBasePB):
         # ===========================
     def motor_action(self,actions):
         # print("titanaction",actions)
-        # actions=[0.0,1.0]
+        # actions=[0.0,1.5]
         # actions=np.array([0,1.5])
         # print("motor action",actions,self)
         self.exp_actions = [0.0]*2
@@ -1254,7 +1278,8 @@ class Env(EnvBasePB):
         
             if self.gapwp1_reach:
                 self.exp_actions[1] = 2.5*np.clip(self.heading_error_gapwp2, -1.5, 1.5)
-                self.exp_actions[0] = 0.025
+                # self.exp_actions[0] = 0.025
+                self.exp_actions[0] = 0.05
                 
                 for robot_bbox in self.robots_bbox:
             #print("k",robot_bbox,"whole",self.robots_bbox)
@@ -1288,7 +1313,8 @@ class Env(EnvBasePB):
                 if self.gapwp2_reach:
                     self.exp_actions[1] = 2.5*np.clip(self.heading_error, -1, 1)
 
-                    self.exp_actions[0] = 1000
+                    # self.exp_actions[0] = 1000
+                    self.exp_actions[0] = 0.15
                     for robot_bbox in self.robots_bbox:
             #print("k",robot_bbox,"whole",self.robots_bbox)
                 # if str(robot_bbox[0])==str(self):
@@ -1567,7 +1593,7 @@ class Env(EnvBasePB):
         # p.stepSimulation()
 
     def return_step(self,action):
-        # action=[0.5,1.0]
+        # action=[0.0,1.5]
         self.actions_policy=action
         if self.args.render:
             time.sleep(self.args.sleep)

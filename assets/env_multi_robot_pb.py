@@ -165,12 +165,14 @@ class Env(EnvBasePB):
 
         self.random_robot_init=np.random.choice([6,8,9,10])
         
-        self.wall_length=3.7
+        # self.wall_length=3.7
+        self.wall_length=1.7
         
 
         bodies_to_remove = [self.rectangle_id1, self.rectangle_id2]
         
         random_0_10=random.uniform(0,10),random.uniform(0,10),self.z_position
+        # print("random_0_10",random_0_10)
 
         for Robot in self.robots:
             self.initial_goal_distances.append(Robot.initial_goal_dist)
@@ -208,8 +210,8 @@ class Env(EnvBasePB):
                 self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         elif self.args.num_robots ==2:
-
-            self.robot_goal_synchroniser=np.random.choice([-2,2]) #change value to increase gap between robots #This synchroniser ensire robots and goals are crossing to each other even when external robot position are swapping
+            synchoniser_value=np.random.choice([1,2,3])
+            self.robot_goal_synchroniser=np.random.choice([-synchoniser_value,synchoniser_value]) #change value to increase gap between robots #This synchroniser ensire robots and goals are crossing to each other even when external robot position are swapping
             if self.args.collision_likelihood_curr:
                 self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*-2.5),(self.robots[1],self.robot_goal_synchroniser*2.5)]
             elif not self.args.collision_likelihood_curr:
@@ -220,7 +222,8 @@ class Env(EnvBasePB):
             if self.args.randomness==0:
                 self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+2,self.z_position])]
             elif self.args.randomness==1:
-                self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
+                # self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
+                self.external_robots_pos=[(self.robots[0],list((random_0_10))),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
             elif self.args.randomness==2:
                 self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.choice([-1,0,-0,1]),list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
             # self.external_robots_pos=[(self.robots[0],[0,0,self.z_position]),(self.robots[1],[-2,-1.5,self.z_position])]
@@ -237,15 +240,15 @@ class Env(EnvBasePB):
             #self.external_robots_pos=[(self.robots[0],[0,1,self.z_position])]
             
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
-                # self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+                self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
                 # print("robot_pos[1]",robot_pos[1])
-                self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, np.random.uniform(25,-25))
+                # self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, np.random.uniform(5,-5))
                 self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
 
         # self.mid_point_of_goals=self.calculate_midpoint(self.external_goals_states[0],self.external_goals_states[-1])
         #print("self.mid_point_of_goals",self.mid_point_of_goals)
-
+        # print("rob_poses",self.external_robots_pos)
         
             
         
@@ -304,8 +307,8 @@ class Env(EnvBasePB):
             #print(wall1_corners,wall2_corners)
 
             
-            self.rectangle_id1=self.create_rectangle(ID=1,corners=Robot.gap[0],wall_length=self.wall_length,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
-            self.rectangle_id2=self.create_rectangle(ID=2,corners=Robot.gap[1],wall_length=self.wall_length,wall_width=Robot.tunnel_depth,wall_height=2,orientation=Robot.gap_orn)
+            self.rectangle_id1=self.create_rectangle(ID=1,corners=Robot.gap[0],wall_length=self.wall_length,wall_width=Robot.tunnel_depth,wall_height=1,orientation=Robot.gap_orn)
+            self.rectangle_id2=self.create_rectangle(ID=2,corners=Robot.gap[1],wall_length=self.wall_length,wall_width=Robot.tunnel_depth,wall_height=1,orientation=Robot.gap_orn)
 
 
             perpendicular_direction = [Robot.gap_orn[1], -Robot.gap_orn[0], 0]
@@ -342,7 +345,7 @@ class Env(EnvBasePB):
         self.Both_Robots_stuck=[]
         self.turn_both=False
         # self.ob_dicts=[]
-        # actions=[[0,1.5]]
+        # actions=[[-0.5,0]]
 
         # self.obstacles=[]
         # self.robots_bbox=[]
@@ -394,7 +397,7 @@ class Env(EnvBasePB):
             self.buffer_time.append(ttg)
 
 
-            output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots"
+            output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/train_plots"
 
             plt.figure()
             plt.plot(self.buffer_time, self.buffer_linear_action, label='Command Linear Velocity')
@@ -514,12 +517,12 @@ class Env(EnvBasePB):
             ob,rew,done,termination, self.ob_dict=Robot.return_step(action)
             #print("action_length",action,"robot",Robot)
             if self.args.train_figure:
-                print(ob)
+                # print(ob)
                 ob_lin=round(ob[4],4)
                 ob_ang=round(ob[5],4)
                 self.buffer_linear_obs.append(ob_lin)
                 self.buffer_angular_obs.append(ob_ang)
-                output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots"
+                output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/train_plots"
 
                 plt.figure()
                 plt.plot(self.buffer_time, self.buffer_linear_obs, label='Robot\'s Linear Velocity')

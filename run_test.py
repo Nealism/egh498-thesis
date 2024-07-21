@@ -57,8 +57,10 @@ env = Env(PATH=PATH, args=args)
 
 
 if args.jit_model:
-    model_mu=torch.load("Saved_models/JIT_models/mu_net.jit")
-    model_z=torch.load("Saved_models/JIT_models/z_net.jit")
+    # model_mu=torch.load("Saved_models/JIT_models/mu_net.jit")
+    # model_z=torch.load("Saved_models/JIT_models/z_net.jit")
+    model_mu=torch.load("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/FC/mu_net.jit")
+    model_z=torch.load("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/FC/z_net.jit")
     
 else:
 
@@ -113,11 +115,15 @@ def run(args):
     # print(pol)
 
     obs = env.reset()
-    # print("ob_reset",obs[0])
+
+    print("ob_reset",obs)
     if args.use_perception:
         im = env.get_image()
-        print(im,type(im))
-
+        # print(im,type(im))
+    # obs=[[obs[0],obs[0]]]
+    # im=[im[0],im[0]]
+    # obs=obs[0][0]
+    im=im[0]
     # print("im",im,im[0],im.shape)
     # print("OBS",obs,np.array(obs).shape)
 
@@ -156,14 +162,14 @@ def run(args):
             concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
             action_r1 = model_mu(concatenate_part_r1)
 
-
-            a_r2=torch.as_tensor(np.array([obs[1]]), dtype=torch.float32).unsqueeze(dim=0)
-            b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
-            # print(a_r2[0],"br2",b_r2)
-            # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
-            concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
-            action_r2 = model_mu(concatenate_part_r2)
-            # print("ar1",action_r1,"ar2",action_r2)
+            if args.num_robots==2:
+                a_r2=torch.as_tensor(np.array([obs[1]]), dtype=torch.float32).unsqueeze(dim=0)
+                b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
+                # print(a_r2[0],"br2",b_r2)
+                # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
+                concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
+                action_r2 = model_mu(concatenate_part_r2)
+                # print("ar1",action_r1,"ar2",action_r2)
         else:
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
         # print ("action_before", action,type(action))
