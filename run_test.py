@@ -50,8 +50,8 @@ PATH = path_home + latest_folder
 
 Env, args = default_arguments.get_env(args)   
 args.render = True
-if args.figure:
-    args.render = False
+# if args.figure:
+#     args.render = False
 args.record_sim = False
 env = Env(PATH=PATH, args=args)
 
@@ -123,7 +123,7 @@ def run(args):
     # obs=[[obs[0],obs[0]]]
     # im=[im[0],im[0]]
     # obs=obs[0][0]
-    im=im[0]
+    # im=im[0]
     # print("im",im,im[0],im.shape)
     # print("OBS",obs,np.array(obs).shape)
 
@@ -133,13 +133,15 @@ def run(args):
     action_saving1=[]
     action_saving2=[]
 
-    # model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
-    # traced_script_module1 = torch.jit.script(model1)
+    model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
+    traced_script_module1 = torch.jit.script(model1)
     # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
+    traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/titan/L3r39G1E1/2024_07_23_02_22_51/mu_net_s.jit")
 
-    # model2 = copy.deepcopy(pol.pi.z_net).to('cpu')
-    # traced_script_module2 = torch.jit.script(model2)
+    model2 = copy.deepcopy(pol.pi.z_net).to('cpu')
+    traced_script_module2 = torch.jit.script(model2)
     # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
+    traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/titan/L3r39G1E1/2024_07_23_02_22_51/z_net_s.jit")
 
 
     # print("traced_script_module1",traced_script_module1)
@@ -262,7 +264,7 @@ def run(args):
 
             # print("TIME",time.time()-t1,R3.buffer_time,"ac")
             
-            output_dir_occupancy ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/R1\'s_Occupancy.png"
+            output_dir_occupancy ="/home/kom018/behaviour_rl/Saved_models/titan/L3r39G1E1/2024_07_23_02_22_51/R1\'s_Occupancy.png"
             
             r1_occupancy_map=im[0, 0, :, :]
 
@@ -327,7 +329,7 @@ def run(args):
             plt.savefig(output_dir_occupancy, bbox_inches='tight')
 
             if args.num_robots==2:
-                r2_output_dir_occupancy ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/R2\'s_Occupancy.png"
+                r2_output_dir_occupancy ="/home/kom018/behaviour_rl/Saved_models/titan/L3r39G1E1/2024_07_23_02_22_51/R2\'s_Occupancy.png"
             
                 r2_occupancy_map=im[1, 0, :, :]
 
@@ -362,7 +364,7 @@ def run(args):
 
 
 
-                r_output_dir_occupancy ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/Merged_Occupancy.png"
+                r_output_dir_occupancy ="/home/kom018/behaviour_rl/Saved_models/titan/L3r39G1E1/2024_07_23_02_22_51/Merged_Occupancy.png"
                 # Get the modified occupancy maps
                 modified_r1_occupancy_map = mark_edge_cells(r1_occupancy_map)
                 modified_r2_occupancy_map = mark_edge_cells(r2_occupancy_map)
@@ -418,7 +420,7 @@ def run(args):
             # output_dir ="/refarm/src/multi_robot_rl/scripts"
             # print("R3.buffer_linear_obs",R3.buffer_linear_obs,R3.buffer_time)
 
-            output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet"
+            output_dir ="/home/kom018/behaviour_rl/Saved_models/titan/L3r39G1E1/2024_07_23_02_22_51"
 
             plt.figure()
             plt.plot(buffer_time, r1_buffer_ego_pos_x_obs, label='Robot1\'s Ego Pos X')

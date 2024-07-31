@@ -1013,7 +1013,8 @@ class Env(EnvBasePB):
             width = 0.78/2
             # print(actions)
             lin_vel = actions[0]*3.9#*0.50
-            ang_vel = actions[1] *0.48#*2.5/2
+            ang_vel = np.clip(actions[1], -0.75, 0.75) #*0.48#*2.5/2
+            # print(lin_vel,np.clip(ang_vel, -0.65, 0.65))
             # ang_vel = actions[1] #*3/2
             w_r = (lin_vel + ang_vel*width)/radius
             w_l = (lin_vel - ang_vel*width)/radius
@@ -1023,7 +1024,8 @@ class Env(EnvBasePB):
             width = 0.78/2
             # print(actions)
             lin_vel = actions[0]#*3.9#*0.50
-            ang_vel = actions[1] *0.6#*2.5/2
+            ang_vel = np.clip(actions[1], -1, 1)#*2.5/2
+            # ang_vel = actions[1] *0.6#*2.5/2
             # ang_vel = actions[1] #*3/2
             w_r = (lin_vel + ang_vel*width)/radius
             w_l = (lin_vel - ang_vel*width)/radius

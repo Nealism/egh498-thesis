@@ -345,7 +345,7 @@ class Env(EnvBasePB):
         self.Both_Robots_stuck=[]
         self.turn_both=False
         # self.ob_dicts=[]
-        # actions=[[-0.5,0]]
+        # actions=[[0.0,1.5]]
 
         # self.obstacles=[]
         # self.robots_bbox=[]
@@ -1306,6 +1306,12 @@ class Env(EnvBasePB):
                 heightmap_image[f, g] = (0, 0, 255)  # Red color for obstacles
 
             heightmap_images.append(heightmap_image)
+
+        from scipy.ndimage import gaussian_filter
+
+        def add_partial_detection(image, blur_sigma=1):
+            blurred_image = gaussian_filter(image, sigma=blur_sigma)
+            return blurred_image
         
         if self.args.map_show:
 
@@ -1313,9 +1319,12 @@ class Env(EnvBasePB):
             # cv2.namedWindow("Global Map with Local Heightmaps1", cv2.WINDOW_NORMAL)
             # cv2.namedWindow("Global Map with Local Heightmaps2", cv2.WINDOW_NORMAL)
             for index,global_map_image in enumerate(globalmap_images):
+                print(type(global_map_image),global_map_image.shape)
+                image_with_partial_detection = add_partial_detection(global_map_image, blur_sigma=1)
                 #cv2.imshow("Global Map with Local Heightmaps"+str(index), globalmap_images)
                 window_name = "Global Map with Local Heightmaps" + str(index)
-                cv2.imshow(window_name, global_map_image)
+                # cv2.imshow(window_name, global_map_image)
+                cv2.imshow(window_name, image_with_partial_detection)
 
             # Display the local heightmaps using OpenCV
             for index, heightmap_image in enumerate(heightmap_images[-2:]):
@@ -1335,6 +1344,8 @@ class Env(EnvBasePB):
 
         # Step 1: Select the last two images
         last_two_images = heightmap_images[-self.args.num_robots:]
+
+        
 
         def convert_heightmap_images(heightmap_images):
             # Result array with shape (2, 1, 80, 80)
