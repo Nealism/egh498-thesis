@@ -1313,34 +1313,37 @@ class Env(EnvBasePB):
             blurred_image = gaussian_filter(image, sigma=blur_sigma)
             return blurred_image
         
-        if self.args.map_show:
+        def add_intermittent_visibility(image, drop_prob=0.1):
+            mask = np.random.rand(*image.shape[:2]) > drop_prob
+            noisy_image = image.copy()
+            noisy_image[~mask] = 0  # Set pixels to black
+            return noisy_image
 
-            # # Create separate OpenCV windows for each global map
-            # cv2.namedWindow("Global Map with Local Heightmaps1", cv2.WINDOW_NORMAL)
-            # cv2.namedWindow("Global Map with Local Heightmaps2", cv2.WINDOW_NORMAL)
-            for index,global_map_image in enumerate(globalmap_images):
-                print(type(global_map_image),global_map_image.shape)
-                image_with_partial_detection = add_partial_detection(global_map_image, blur_sigma=1)
-                #cv2.imshow("Global Map with Local Heightmaps"+str(index), globalmap_images)
-                window_name = "Global Map with Local Heightmaps" + str(index)
-                # cv2.imshow(window_name, global_map_image)
-                cv2.imshow(window_name, image_with_partial_detection)
+        def add_sparse_representation(image, sparsity=0.2):
+            mask = np.random.rand(*image.shape[:2]) > sparsity
+            noisy_image = image.copy()
+            noisy_image[~mask] = 0  # Set pixels to black
+            return noisy_image
 
-            # Display the local heightmaps using OpenCV
-            for index, heightmap_image in enumerate(heightmap_images[-2:]):
-                window_name = "Local Heightmap " + str(index)
-                # print("HHHHMM",np.array(heightmap_images))
-                unique_values = np.unique(heightmap_image)
-                print(f"Unique values in heightmap_image {index}: {unique_values}")
-                cv2.imshow(window_name, heightmap_image)
+        def add_trailing_effect(image, trail_length=5):
+            height, width = image.shape[:2]
+            trail_image = image.copy()
+            for _ in range(trail_length):
+                shift_x = np.random.randint(-2, 3)  # Random horizontal shift
+                shift_y = np.random.randint(-2, 3)  # Random vertical shift
+                shifted_image = np.roll(image, (shift_y, shift_x), axis=(0, 1))
+                trail_image = np.maximum(trail_image, shifted_image)
+            return trail_image
+        
+        def add_all_noises(image, drop_prob=0.1, blur_sigma=1, sparsity=0.2, trail_length=5):
+            noisy_image = add_intermittent_visibility(image, drop_prob=drop_prob)
+            noisy_image = add_partial_detection(noisy_image, blur_sigma=blur_sigma)
+            noisy_image = add_sparse_representation(noisy_image, sparsity=sparsity)
+            noisy_image = add_trailing_effect(noisy_image, trail_length=trail_length)
+            return noisy_image
 
-            # cv2.imshow("Global Map with Local Heightmaps1", globalmap_images[0])
-            # cv2.imshow("Global Map with Local Heightmaps2", globalmap_images[1])
-            # Wait for a short delay to ensure the first window is initialized
-            #cv2.waitKey(100)    
-            #cv2.imshow("Global Map with Local Heightmaps2", globalmap_images[1])
-            cv2.waitKey(10)
-                #cv2.destroyAllWindows()
+        
+        #HEREHRHEHHRHOASHDJSDHJ
 
         # Step 1: Select the last two images
         last_two_images = heightmap_images[-self.args.num_robots:]
@@ -1404,12 +1407,87 @@ class Env(EnvBasePB):
             occupancy_map_local = occupancy_map_locals[index, 0]
             modified_occupancy_map = mark_edge_cells(occupancy_map_local)
             Hollowed_Occupancy_maps.append(modified_occupancy_map)
+
+
+        hollow_images = np.array(Hollowed_Occupancy_maps).reshape(2, 80, 80, 1).repeat(3, axis=3)
         # # Step 2: Convert RGB images to grayscale
         # last_two_images_gray = np.array([cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) for image in last_two_images])
         # print("HMM",np.array(Hollowed_Occupancy_maps).shape)
         # listing=np.array(listing).reshape(self.args.num_robots,self.im_size)
-        Hollowed_Occupancy_maps=np.array(Hollowed_Occupancy_maps).reshape([self.args.num_robots]+self.im_size)
+        print("Hollowed_Occupancy_maps[-2:]",type(Hollowed_Occupancy_maps[-2:]),np.array(Hollowed_Occupancy_maps).shape)
+        if self.args.map_show:
 
+            # Create separate OpenCV windows for each global map
+            cv2.namedWindow("Global Map with Local Heightmaps1", cv2.WINDOW_NORMAL)
+            cv2.namedWindow("Global Map with Local Heightmaps2", cv2.WINDOW_NORMAL)\
+
+
+
+            for index,global_map_image in enumerate(globalmap_images):
+                # print(type(global_map_image),global_map_image.shape)
+                
+                image_with_intermittent_visibility = add_intermittent_visibility(global_map_image, drop_prob=0.1)
+                image_with_partial_detection = add_partial_detection(global_map_image, blur_sigma=1)
+                image_with_sparse_representation = add_sparse_representation(global_map_image, sparsity=0.2)
+                image_with_trailing_effect = add_trailing_effect(global_map_image, trail_length=5)
+
+                # Apply all noises
+                noisy_global_map_image = add_all_noises(
+                    global_map_image,
+                    drop_prob=0.3,
+                    blur_sigma=0,
+                    sparsity=0.0,
+                    trail_length=0
+                )
+                #cv2.imshow("Global Map with Local Heightmaps"+str(index), globalmap_images)
+                window_name = "Global Map with Local Heightmaps" + str(index)
+                # cv2.imshow(window_name, global_map_image)
+                cv2.imshow(window_name, global_map_image)
+            # print("local_heightmaps[-2:]",type(local_heightmaps[-2:]),np.array(local_heightmaps)[-2:].shape)
+            # Display the local heightmaps using OpenCV
+            for index, heightmap_image in enumerate(Hollowed_Occupancy_maps):
+                window_name = "Local Heightmap " + str(index)
+                image_with_intermittent_visibility = add_intermittent_visibility(heightmap_image, drop_prob=0.1)
+                image_with_partial_detection = add_partial_detection(heightmap_image, blur_sigma=1)
+                image_with_sparse_representation = add_sparse_representation(heightmap_image, sparsity=0.2)
+                image_with_trailing_effect = add_trailing_effect(heightmap_image, trail_length=5)
+                # print("HHHHMM",np.array(heightmap_images))
+
+                # Apply all noises
+                noisy_local_map_image = add_all_noises(
+                    heightmap_image,
+                    drop_prob=0.0,
+                    blur_sigma=0.0,
+                    sparsity=0.3,
+                    trail_length=0
+                )
+                # unique_values = np.unique(heightmap_image)
+
+                occupancy_map_array = np.array(noisy_local_map_image)
+                # print("occupancy_map_array.shape",occupancy_map_array.shape)
+                # Determine the dimensions of the occupancy map
+                rows, cols = occupancy_map_array.shape
+                
+                # Create an empty image with the same dimensions as the occupancy map
+                image = np.zeros((rows, cols, 3), dtype=np.uint8)
+                # Assign grey color where occupancy_map is 0
+                image[occupancy_map_array == 0] = (128, 128, 128)  # Grey
+                
+                # Assign red color where occupancy_map is 1
+                image[occupancy_map_array == 1] = (0, 0, 255)  # Red
+                # print(f"Unique values in heightmap_image {index}: {unique_values}")
+                # cv2.imshow(window_name, heightmap_image)
+                resized_image = cv2.resize(image, (800, 600))
+                cv2.imshow(window_name, resized_image)
+
+            # cv2.imshow("Global Map with Local Heightmaps1", globalmap_images[0])
+            # cv2.imshow("Global Map with Local Heightmaps2", globalmap_images[1])
+            # Wait for a short delay to ensure the first window is initialized
+            #cv2.waitKey(100)    
+            #cv2.imshow("Global Map with Local Heightmaps2", globalmap_images[1])
+            cv2.waitKey(10)
+                #cv2.destroyAllWindows()
+        Hollowed_Occupancy_maps=np.array(Hollowed_Occupancy_maps).reshape([self.args.num_robots]+self.im_size)
         # # # Step 3: Reshape the images to (2, 1, 80, 80)
         # # reshaped_images = np.array(occupancy_map_local).reshape(2, 1, 80, 80)
         # # hm=np.array(heightmap_images).reshape([self.args.num_robots]+self.im_size)

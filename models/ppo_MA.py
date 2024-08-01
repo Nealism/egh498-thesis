@@ -691,6 +691,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             if use_perception:
                 # if time.time() - st1 == 0.2:
                 next_im = env.get_image()
+                # print("next_im",len(next_im),next_im.shape)
                 
 
                 # r1_occupancy_map = next_im[0, 0, :, :]
