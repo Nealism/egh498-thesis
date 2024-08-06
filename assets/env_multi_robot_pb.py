@@ -33,6 +33,7 @@ class Env(EnvBasePB):
         self.rectangle_id3=0
         self.rectangle_id4=0
         self.start_time=time.time()
+
         
         super().__init__(PATH)
 
@@ -77,6 +78,7 @@ class Env(EnvBasePB):
         self.steps = -1
 
         self.load_simulator()
+        
         
         objects = p.loadMJCF("./assets/xmls/ground.xml")
         self.worldId = objects[0]
@@ -130,6 +132,7 @@ class Env(EnvBasePB):
             # print("Im",self.im_size,"local",self.local_map.shape);exit()
     def reset(self):
         res = []
+        self.noise=np.random.choice([0.0,0.3])
         self.obstacles=[]
         self.robots_bbox=[]
         self.robots_pos=[]
@@ -210,13 +213,17 @@ class Env(EnvBasePB):
                 self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         elif self.args.num_robots ==2:
-            synchoniser_value=np.random.choice([1,2,3])
+            synchoniser_value=np.random.uniform(1, 3)
+            goal_offset_cross=np.random.uniform(2.0, 7.5)
+            goal_offset_front=np.random.uniform(0.5, 2.0)
+            goal_offset=np.random.choice([goal_offset_cross,goal_offset_front])
             self.robot_goal_synchroniser=np.random.choice([-synchoniser_value,synchoniser_value]) #change value to increase gap between robots #This synchroniser ensire robots and goals are crossing to each other even when external robot position are swapping
             if self.args.collision_likelihood_curr:
                 self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*-2.5),(self.robots[1],self.robot_goal_synchroniser*2.5)]
             elif not self.args.collision_likelihood_curr:
                 # self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*7.5),(self.robots[1],self.robot_goal_synchroniser*-7.5)]
-                self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*7.5),(self.robots[1],self.robot_goal_synchroniser*-7.5)]
+                # self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*7.5),(self.robots[1],self.robot_goal_synchroniser*-7.5)]
+                self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*goal_offset),(self.robots[1],self.robot_goal_synchroniser*-goal_offset)]
 
 
             if self.args.randomness==0:
@@ -1389,17 +1396,42 @@ class Env(EnvBasePB):
             for labela in unique_labels:
                 # Extract the mask for the current connected component
                 component_mask = (labeled_map == labela).astype(np.uint8)
+                # component_mask = add_sparse_representation(component_mask, sparsity=0.3)
+                #Apply all noises
                 
+                # print("labela",unique_labels.shape,type(unique_labels))
                 # Find edge cells that are adjacent to unoccupied cells (0)
                 edge_mask = np.zeros_like(component_mask)
+
+                
+                # # print("component_mask",component_mask,type(component_mask),component_mask.shape)
+                # edge_mask[1:-1, 1:-1] = (component_mask[1:-1, 1:-1] > 0) & \
+                #                         ((component_mask[:-2, 1:-1] == 0) | (component_mask[2:, 1:-1] == 0) | \
+                #                         (component_mask[1:-1, :-2] == 0) | (component_mask[1:-1, 2:] == 0))
+                
                 edge_mask[1:-1, 1:-1] = (component_mask[1:-1, 1:-1] > 0) & \
                                         ((component_mask[:-2, 1:-1] == 0) | (component_mask[2:, 1:-1] == 0) | \
                                         (component_mask[1:-1, :-2] == 0) | (component_mask[1:-1, 2:] == 0))
+
+                edge_mask = add_all_noises(
+                    edge_mask,
+                    drop_prob=self.noise,
+                    blur_sigma=0,
+                    sparsity=0.0,
+                    trail_length=0)
                 
                 # Mark edge cells as 1 in the modified map
+
+                # print("EDGEMASK",edge_mask,type(edge_mask),edge_mask.shape)
+                # edge_mask = add_sparse_representation(edge_mask, sparsity=0.2)
+
                 modified_occupancy_map[edge_mask > 0] = 1
+                # modified_occupancy_map[image_with_sparse_representation > 0] = 1
+                # print("modified_occupancy_map",modified_occupancy_map,type(modified_occupancy_map),modified_occupancy_map.shape)
+
                 
             return modified_occupancy_map
+            # return component_mask
 
         # Iterate over the converted heightmap images and mark edge cells
         Hollowed_Occupancy_maps=[]
@@ -1409,44 +1441,46 @@ class Env(EnvBasePB):
             Hollowed_Occupancy_maps.append(modified_occupancy_map)
 
 
-        hollow_images = np.array(Hollowed_Occupancy_maps).reshape(2, 80, 80, 1).repeat(3, axis=3)
+        # hollow_images = np.array(Hollowed_Occupancy_maps).reshape(2, 80, 80, 1).repeat(3, axis=3)
         # # Step 2: Convert RGB images to grayscale
         # last_two_images_gray = np.array([cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) for image in last_two_images])
         # print("HMM",np.array(Hollowed_Occupancy_maps).shape)
         # listing=np.array(listing).reshape(self.args.num_robots,self.im_size)
-        print("Hollowed_Occupancy_maps[-2:]",type(Hollowed_Occupancy_maps[-2:]),np.array(Hollowed_Occupancy_maps).shape)
+        # print("Hollowed_Occupancy_maps[-2:]",type(Hollowed_Occupancy_maps[-2:]),np.array(Hollowed_Occupancy_maps).shape)
         if self.args.map_show:
 
-            # Create separate OpenCV windows for each global map
-            cv2.namedWindow("Global Map with Local Heightmaps1", cv2.WINDOW_NORMAL)
-            cv2.namedWindow("Global Map with Local Heightmaps2", cv2.WINDOW_NORMAL)\
+            # # Create separate OpenCV windows for each global map
+            # cv2.namedWindow("Global Map with Local Heightmaps1", cv2.WINDOW_NORMAL)
+            # cv2.namedWindow("Global Map with Local Heightmaps2", cv2.WINDOW_NORMAL)\
 
 
 
-            for index,global_map_image in enumerate(globalmap_images):
-                # print(type(global_map_image),global_map_image.shape)
+            # for index,global_map_image in enumerate(globalmap_images):
+            #     # print(type(global_map_image),global_map_image.shape)
                 
-                image_with_intermittent_visibility = add_intermittent_visibility(global_map_image, drop_prob=0.1)
-                image_with_partial_detection = add_partial_detection(global_map_image, blur_sigma=1)
-                image_with_sparse_representation = add_sparse_representation(global_map_image, sparsity=0.2)
-                image_with_trailing_effect = add_trailing_effect(global_map_image, trail_length=5)
+            #     image_with_intermittent_visibility = add_intermittent_visibility(global_map_image, drop_prob=0.1)
+            #     image_with_partial_detection = add_partial_detection(global_map_image, blur_sigma=1)
+            #     image_with_sparse_representation = add_sparse_representation(global_map_image, sparsity=0.2)
+            #     image_with_trailing_effect = add_trailing_effect(global_map_image, trail_length=5)
 
-                # Apply all noises
-                noisy_global_map_image = add_all_noises(
-                    global_map_image,
-                    drop_prob=0.3,
-                    blur_sigma=0,
-                    sparsity=0.0,
-                    trail_length=0
-                )
-                #cv2.imshow("Global Map with Local Heightmaps"+str(index), globalmap_images)
-                window_name = "Global Map with Local Heightmaps" + str(index)
-                # cv2.imshow(window_name, global_map_image)
-                cv2.imshow(window_name, global_map_image)
-            # print("local_heightmaps[-2:]",type(local_heightmaps[-2:]),np.array(local_heightmaps)[-2:].shape)
-            # Display the local heightmaps using OpenCV
+            #     # Apply all noises
+            #     noisy_global_map_image = add_all_noises(
+            #         global_map_image,
+            #         drop_prob=0.3,
+            #         blur_sigma=0,
+            #         sparsity=0.0,
+            #         trail_length=0
+            #     )
+            #     #cv2.imshow("Global Map with Local Heightmaps"+str(index), globalmap_images)
+            #     window_name = "Global Map with Local Heightmaps" + str(index)
+            #     # cv2.imshow(window_name, global_map_image)
+            #     cv2.imshow(window_name, global_map_image)
+            # # print("local_heightmaps[-2:]",type(local_heightmaps[-2:]),np.array(local_heightmaps)[-2:].shape)
+            # # print("OWOWHollowed",np.array(Hollowed_Occupancy_maps).shape)
+            # # Display the local heightmaps using OpenCV
             for index, heightmap_image in enumerate(Hollowed_Occupancy_maps):
                 window_name = "Local Heightmap " + str(index)
+                # print("heightmap_image",heightmap_image.shape)
                 image_with_intermittent_visibility = add_intermittent_visibility(heightmap_image, drop_prob=0.1)
                 image_with_partial_detection = add_partial_detection(heightmap_image, blur_sigma=1)
                 image_with_sparse_representation = add_sparse_representation(heightmap_image, sparsity=0.2)
@@ -1463,7 +1497,7 @@ class Env(EnvBasePB):
                 )
                 # unique_values = np.unique(heightmap_image)
 
-                occupancy_map_array = np.array(noisy_local_map_image)
+                occupancy_map_array = np.array(heightmap_image)
                 # print("occupancy_map_array.shape",occupancy_map_array.shape)
                 # Determine the dimensions of the occupancy map
                 rows, cols = occupancy_map_array.shape
