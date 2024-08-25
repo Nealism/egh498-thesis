@@ -658,6 +658,8 @@ class Env(EnvBasePB):
             self.external_robots_states.append(r_position)
 
         self.mid_point_of_goals=self.calculate_midpoint(self.external_goals_states[0],self.external_goals_states[-1])
+        self.mid_point_of_goals=(self.mid_point_of_goals[0],self.mid_point_of_goals[1],self.mid_point_of_goals[2])
+        # print(self.mid_point_of_goals)
         # self.mid_point_of_goals= (self.mid_point_of_goals[0],self.mid_point_of_goals[1])
 
         self.mid_point_of_robots=self.calculate_midpoint(self.external_robots_states[0],self.external_robots_states[-1])

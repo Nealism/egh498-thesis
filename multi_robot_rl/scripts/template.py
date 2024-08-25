@@ -5,6 +5,7 @@ import numpy as np
 import scipy
 import time
 import cv2
+import numpy
 
 
 
@@ -23,10 +24,11 @@ import pybullet as p
 
 class RLRobot():
     def __init__(self, cmd_topic, topic1_robotpos, topic2_other_robotpos, topic3_robotvel, topic4_other_robotvel,topic5_goalpos, occupancy_topic, model_mu,model_z):
+    # def __init__(self, cmd_topic, topic1_robotpos, topic3_robotvel, topic5_goalpos, occupancy_topic, model_mu,model_z):
         self.action_pub = rospy.Publisher(cmd_topic, TwistStamped)
         # self.state_topic = state_topic1,state_topic2
         self.robot_topic=topic1_robotpos
-        self.other_robot_topic=topic2_other_robotpos
+        # self.other_robot_topic=topic2_other_robotpos
         self.goal_pos=topic5_goalpos
         self.model_mu=model_mu
         self.model_z=model_z
@@ -79,34 +81,34 @@ class RLRobot():
         map_data = np.flipud(map_data)
 
 
-        # this part needed if use 70X70 map
-        # Calculate the indices for the central 70x70 region
-        start_row = (height - 70) // 2
-        end_row = start_row + 70
-        start_col = (width - 70) // 2
-        end_col = start_col + 70
+        # # this part needed if use 70X70 map
+        # # Calculate the indices for the central 70x70 region
+        # start_row = (height - 70) // 2
+        # end_row = start_row + 70
+        # start_col = (width - 70) // 2
+        # end_col = start_col + 70
 
-        # Extract the central 70x70 region
-        central_region = map_data[start_row:end_row, start_col:end_col]
+        # # Extract the central 70x70 region
+        # central_region = map_data[start_row:end_row, start_col:end_col]
 
-        # Create an empty 80x80 array
-        resized_map = np.zeros((80, 80))
+        # # Create an empty 80x80 array
+        # resized_map = np.zeros((80, 80))
 
-        # Calculate the indices for inserting the central region into the resized map
-        resized_start_row = (80 - 70) // 2
-        resized_end_row = resized_start_row + 70
-        resized_start_col = (80 - 70) // 2
-        resized_end_col = resized_start_col + 70
+        # # Calculate the indices for inserting the central region into the resized map
+        # resized_start_row = (80 - 70) // 2
+        # resized_end_row = resized_start_row + 70
+        # resized_start_col = (80 - 70) // 2
+        # resized_end_col = resized_start_col + 70
 
-        # Insert the central region into the resized map
-        resized_map[resized_start_row:resized_end_row, resized_start_col:resized_end_col] = central_region
-
-        # Convert values greater than 0 to 1
-        self.scaled_map = np.where(resized_map > 0, 1, 0)
-
+        # # Insert the central region into the resized map
+        # resized_map[resized_start_row:resized_end_row, resized_start_col:resized_end_col] = central_region
 
         # # Convert values greater than 0 to 1
-        # self.scaled_map = np.where(map_data > 0, 1, 0)
+        # self.scaled_map = np.where(resized_map > 0, 1, 0)
+
+
+        # Convert values greater than 0 to 1
+        self.scaled_map = np.where(map_data > 0, 1, 0)
 
         # Create a new OccupancyGrid message for the modified map
         modified_msg = OccupancyGrid()
@@ -286,9 +288,15 @@ class RLRobot():
 
             
             self.actions = self.model_mu(concatenate_part_r1)
-            # print("action",action[0][0])
-            msg.twist.linear.x = self.actions[0][0] *0.1    
-            msg.twist.angular.z = self.actions[0][1] *0.1#np.pi /2
+            
+            clipped_linear_vel_command=np.clip(self.actions[0][0].detach().numpy(), -0.5, 1)
+            clipped_angular_vel_command=np.clip(self.actions[0][1].detach().numpy(), -1.5, 1.5)
+
+            self.actions[0]=torch.tensor([clipped_linear_vel_command,clipped_angular_vel_command])
+
+            print("action",self.actions[0][0])
+            msg.twist.linear.x = self.actions[0][0] #*0.1    
+            msg.twist.angular.z = self.actions[0][1] #*0.1#np.pi /2
             # print("linear_actions_r1",self.actions[0][0] )
 
         # Action = self.model(state)
@@ -349,12 +357,18 @@ class RLRobot():
             self.actions_r3 = self.model_mu(concatenate_part)
 
 
+            clipped_linear_vel_command=np.clip(self.actions_r3[0][0].detach().numpy(), -0.5, 1)
+            clipped_angular_vel_command=np.clip(self.actions_r3[0][1].detach().numpy(), -1.5, 1.5)
+
+            self.actions_r3[0]=torch.tensor([clipped_linear_vel_command,clipped_angular_vel_command])
+
+
             #self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
             # self.actions = self.model_mu(torch.concat((torch.as_tensor(np.array(self.observations), dtype=torch.float32), self.model_z(torch.as_tensor(self.im_ocupancy, dtype=torch.float32))), -1))
             # print("linear_actions_r3",self.actions_r3[0][0] )
-            # print("action",self.action[0][0])
-            msg.twist.linear.x = self.actions_r3[0][0] *0.1   
-            msg.twist.angular.z = self.actions_r3[0][1]*0.1#np.pi /2
+            print("action",self.actions_r3[0][0])
+            msg.twist.linear.x = self.actions_r3[0][0] #*0.1   
+            msg.twist.angular.z = self.actions_r3[0][1]#*0.1#np.pi /2
         # Action = self.model(state)
         # Assemble the msg using the acction
         # self.action_pub.publish(msg)
@@ -384,13 +398,13 @@ if __name__ == "__main__":
 
     #model = RL(warever to load it)
     # pol = torch.load("/data/r21TG1.3N_FINAL_MA_MODEL_ME67_2/2024_03_10_05_35_53/model.pt")
-    mu_net = torch.load("/refarm/src/multi_robot_rl/scripts/JIT_models/mu_net.jit")
-    z_net = torch.load("/refarm/src/multi_robot_rl/scripts/JIT_models/z_net.jit")
+    mu_net = torch.load("/refarm/src/multi_robot_rl/scripts/JIT_models/Final/mu_net.jit")
+    z_net = torch.load("/refarm/src/multi_robot_rl/scripts/JIT_models/Final/z_net.jit")
 
     
     # print(pol)
-    goal_R1=(28,-0.5)
-    goal_R2=(28,0.5)
+    goal_R1=(28,0.7)
+    goal_R2=(28,-0.7)
 
     # R1 = RLRobot("/r1/cmd_vel_stamped","/r1/slam/odom/high/pose","/r3/slam/odom/high/pose","/r1/slam/odom/high/velocity","/r3/slam/odom/high/velocity",goal_R1, "/r1/costmap_local/occupancy_grid", mu_net,z_net)
     # R3 = RLRobot("/r3/cmd_vel_stamped","/r3/slam/odom/high/pose","/r1/slam/odom/high/pose","/r3/slam/odom/high/velocity","/r1/slam/odom/high/velocity",goal_R2, "/r3/costmap_local/occupancy_grid", mu_net,z_net)
@@ -398,6 +412,10 @@ if __name__ == "__main__":
     R1 = RLRobot("/r1/cmd_vel_stamped","/r1/slam/odom/high/pose","/r3/slam/odom/high/pose","/r1/slam/odom/high/velocity","/r3/slam/odom/high/velocity",goal_R1, "/r1/costmap_local/occupancy_grid", mu_net,z_net)
     R3 = RLRobot("/r3/cmd_vel_stamped","/r3/slam/odom/high/pose","/r1/slam/odom/high/pose","/r3/slam/odom/high/velocity","/r1/slam/odom/high/velocity",goal_R2, "/r3/costmap_local/occupancy_grid", mu_net,z_net)
 
+
+    # R1 = RLRobot("/r1/cmd_vel_stamped","/r1/slam/odom/high/pose","/r1/slam/odom/high/velocity",goal_R1, "/r1/costmap_local/occupancy_grid", mu_net,z_net)
+    # R3 = RLRobot("/r3/cmd_vel_stamped","/r3/slam/odom/high/pose","/r3/slam/odom/high/velocity",goal_R2, "/r3/costmap_local/occupancy_grid", mu_net,z_net)
+    
     # print(R1)
 
     control_rate = rospy.Rate(10) # 10 Hz

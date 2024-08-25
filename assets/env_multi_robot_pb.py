@@ -133,6 +133,7 @@ class Env(EnvBasePB):
     def reset(self):
         res = []
         self.noise=np.random.choice([0.0,0.3])
+        # self.noise=0.0
         self.obstacles=[]
         self.robots_bbox=[]
         self.robots_pos=[]
@@ -170,6 +171,9 @@ class Env(EnvBasePB):
         
         # self.wall_length=3.7
         self.wall_length=1.7
+        # self.gap_offset=np.random.uniform(-0.5,0.5)
+        self.gap_offset=0
+        # self.gap_offset=-1.5
         
 
         bodies_to_remove = [self.rectangle_id1, self.rectangle_id2]
@@ -314,8 +318,8 @@ class Env(EnvBasePB):
             #print(wall1_corners,wall2_corners)
 
             
-            self.rectangle_id1=self.create_rectangle(ID=1,corners=Robot.gap[0],wall_length=self.wall_length,wall_width=Robot.tunnel_depth,wall_height=1,orientation=Robot.gap_orn)
-            self.rectangle_id2=self.create_rectangle(ID=2,corners=Robot.gap[1],wall_length=self.wall_length,wall_width=Robot.tunnel_depth,wall_height=1,orientation=Robot.gap_orn)
+            self.rectangle_id1=self.create_rectangle(ID=1,corners=Robot.gap[0],wall_length=self.wall_length+self.gap_offset,wall_width=Robot.tunnel_depth,wall_height=1,orientation=Robot.gap_orn)
+            self.rectangle_id2=self.create_rectangle(ID=2,corners=Robot.gap[1],wall_length=self.wall_length-self.gap_offset,wall_width=Robot.tunnel_depth,wall_height=1,orientation=Robot.gap_orn)
 
 
             perpendicular_direction = [Robot.gap_orn[1], -Robot.gap_orn[0], 0]
@@ -1168,6 +1172,7 @@ class Env(EnvBasePB):
                     # Calculate half-length and half-width in grid cells
                     half_length_cells = int(self.gap_walls_thickness[0] / (2 * self.global_resolution))
                     half_width_cells = int(self.wall_length / (2 * self.global_resolution))
+                    half_gapoffset_cells = int(self.gap_offset / (2 * self.global_resolution))
                     #half_width_cells = int(self.gap_walls_length[0] / (2 * self.global_resolution))
                     
                     #side walls
@@ -1189,25 +1194,25 @@ class Env(EnvBasePB):
                     side_wall2_y_center=side_wall2s_y_index[i]
 
 
-                    # Set the obstacle region in the global map to a higher value for visualization
+                    # Wall 1 Set the obstacle region in the global map to a higher value for visualization
                     for p in range(wall1_x_center - half_length_cells, wall1_x_center + half_length_cells + 1):
-                        for q in range(wall1_y_center - half_width_cells, wall1_y_center + half_width_cells + 1):
+                        for q in range(wall1_y_center - (half_width_cells+half_gapoffset_cells), wall1_y_center + (half_width_cells+half_gapoffset_cells) + 1):
                             if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
                                 global_map[p, q] = 1.0
 
-                    # Set the obstacle region in the global map to a higher value for visualization
+                    # Wall 2 Set the obstacle region in the global map to a higher value for visualization
                     for p in range(wall2_x_center - half_length_cells, wall2_x_center + half_length_cells + 1):
-                        for q in range(wall2_y_center - half_width_cells, wall2_y_center + half_width_cells + 1):
+                        for q in range(wall2_y_center - (half_width_cells-half_gapoffset_cells), wall2_y_center + (half_width_cells-half_gapoffset_cells) + 1):
                             if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
                                 global_map[p, q] = 1.0
 
-                    # Set the obstacle region in the global map to a higher value for visualization
+                    # Side Wall 1Set the obstacle region in the global map to a higher value for visualization
                     for p in range(side_wall1_x_center - sides_half_length_cells, side_wall1_x_center + sides_half_length_cells + 1):
                         for q in range(side_wall1_y_center - sides_half_width_cells, side_wall1_y_center + sides_half_width_cells + 1):
                             if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
                                 global_map[p, q] = 1.0
 
-                    # Set the obstacle region in the global map to a higher value for visualization
+                    # Side Wall 2 Set the obstacle region in the global map to a higher value for visualization
                     for p in range(side_wall2_x_center - sides_half_length_cells, side_wall2_x_center + sides_half_length_cells + 1):
                         for q in range(side_wall2_y_center - sides_half_width_cells, side_wall2_y_center + sides_half_width_cells + 1):
                             if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
@@ -1731,6 +1736,10 @@ class Env(EnvBasePB):
         #half_extents = [(corners[2][i] - corners[0][i])/2 for i in range(3)]
         
         center = [(corners[0][i] + corners[2][i]) / 2 for i in range(3)]
+        # print("c",center)
+        # center=[center[0],center[1]+1,center[2]]
+        # print("ac",center)
+
         half_extents=[((wall_length/2)), wall_width, wall_height/2]
 
         
