@@ -788,7 +788,8 @@ class Env(EnvBasePB):
             # side_wall_moving_rate=self.max_gap_among_all_robots_individual_gap_width-17
             # print("self.max_gap_among_all_robots_individual_gap_width,",self.max_gap_among_all_robots_individual_gap_width)
             # side_wall_moving_rate=self.max_gap_among_all_robots_individual_gap_width-21
-            side_wall_moving_rate=-np.random.choice([20,21])
+            # side_wall_moving_rate=-np.random.choice([20,21])
+            side_wall_moving_rate=-21
             # print("self.All_Robot_ID[0].mid_point_of_goals",self.All_Robot_ID[0].mid_point_of_goals)
             # self.gap=self.gap_generator(width=self.max_gap_among_all_robots_individual_gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = self.wall_length,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
             self.gap=self.gap_generator(width=self.max_gap_among_all_robots_individual_gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = self.wall_length,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
