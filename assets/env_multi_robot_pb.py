@@ -131,9 +131,9 @@ class Env(EnvBasePB):
             self.im_size = [1,self.local_map.shape[0],self.local_map.shape[1]]
             # print("Im",self.im_size,"local",self.local_map.shape);exit()
     def reset(self):
-        res = []
-        self.noise=np.random.choice([0.0,0.3])
-        # self.noise=0.0
+        #res = []
+        # self.noise=np.random.choice([0.0,0.3])
+        self.noise=0.0
         self.obstacles=[]
         self.robots_bbox=[]
         self.robots_pos=[]
