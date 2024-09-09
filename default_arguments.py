@@ -97,6 +97,10 @@ def get_defaults():
     parser.add_argument('--jit_model', default=False, action="store_true")
     parser.add_argument('--turtle_titan', default=False, action="store_true")
     parser.add_argument('--randomness', type=int, default=1)
+    parser.add_argument('--map_noise', default=False, action="store_true")
+    parser.add_argument('--gap_offset', default=False, action="store_true")
+    parser.add_argument('--generalise', default=False, action="store_true")
+
 
 
 
