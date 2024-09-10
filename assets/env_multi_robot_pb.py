@@ -133,7 +133,7 @@ class Env(EnvBasePB):
     def reset(self):
         res = []
         if self.args.map_noise:
-            self.noise=np.random.choice([0.0,0.3])
+            self.noise=0.3#np.random.choice([0.0,0.3])
         else:
             self.noise=0.0
         self.obstacles=[]
@@ -222,11 +222,13 @@ class Env(EnvBasePB):
                 self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         elif self.args.num_robots ==2:
-            synchoniser_value=np.random.uniform(1.5, 3)
+            synchoniser_value=np.random.uniform(1.5, 2.5)
             if self.args.generalise:
-                goal_offset_cross=np.random.uniform(6.0, 7.5)
-                goal_offset_front=np.random.uniform(0.5, 2.0)
+                goal_offset_cross=np.random.uniform(7.0, 8.0)
+                
+                goal_offset_front=np.random.uniform(-0.5,0.5)
                 goal_offset=np.random.choice([goal_offset_cross,goal_offset_front])
+                
             else:
                 goal_offset=7.5
             self.robot_goal_synchroniser=np.random.choice([-synchoniser_value,synchoniser_value]) #change value to increase gap between robots #This synchroniser ensire robots and goals are crossing to each other even when external robot position are swapping

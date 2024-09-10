@@ -1282,7 +1282,7 @@ class Env(EnvBasePB):
 
         
             if self.gapwp1_reach:
-                self.exp_actions[1] = 2.5*np.clip(self.heading_error_gapwp2, -1.5, 1.5)
+                self.exp_actions[1] = 1.5*np.clip(self.heading_error_gapwp2, -1.5, 1.5)
                 # self.exp_actions[0] = 0.025
                 self.exp_actions[0] = 0.05
                 
@@ -1316,7 +1316,7 @@ class Env(EnvBasePB):
 
             
                 if self.gapwp2_reach:
-                    self.exp_actions[1] = 2.5*np.clip(self.heading_error, -1, 1)
+                    self.exp_actions[1] = 1.5*np.clip(self.heading_error, -1, 1)
 
                     # self.exp_actions[0] = 1000
                     self.exp_actions[0] = 0.15
