@@ -1,0 +1,472 @@
+argv[0]=
+startThreads creating 1 threads.
+starting thread 0
+started thread 0 
+argc=3
+argv[0] = --unused
+argv[1] = 
+argv[2] = --start_demo_name=Physics Server
+ExampleBrowserThreadFunc started
+X11 functions dynamically loaded using dlopen/dlsym OK!
+X11 functions dynamically loaded using dlopen/dlsym OK!
+Creating context
+Created GL 3.3 context
+Direct GLX rendering context obtained
+Making context current
+GL_VENDOR=Intel
+GL_RENDERER=Mesa Intel(R) UHD Graphics (TGL GT1)
+GL_VERSION=4.6 (Core Profile) Mesa 23.2.1-1ubuntu3.1~22.04.2
+GL_SHADING_LANGUAGE_VERSION=4.60
+pthread_getconcurrency()=0
+Version = 4.6 (Core Profile) Mesa 23.2.1-1ubuntu3.1~22.04.2
+Vendor = Intel
+Renderer = Mesa Intel(R) UHD Graphics (TGL GT1)
+b3Printf: Selected demo: Physics Server
+startThreads creating 1 threads.
+starting thread 0
+started thread 0 
+MotionThreadFunc thread started
+ven = Intel
+Workaround for some crash in the Intel OpenGL driver on Linux/Ubuntu
+ven = Intel
+Workaround for some crash in the Intel OpenGL driver on Linux/Ubuntu
+b3Printf: b3Warning[examples/SharedMemory/PhysicsClientSharedMemory.cpp,1343]:
+
+b3Printf: Removing body failed
+b3Printf: b3Warning[examples/SharedMemory/PhysicsClientSharedMemory.cpp,1343]:
+
+b3Printf: Removing body failed
+b3Printf: b3Warning[examples/SharedMemory/PhysicsClientSharedMemory.cpp,1343]:
+
+b3Printf: Removing body failed
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 1
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.8 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 2
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 3
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 4
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.8 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 5
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 6
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.8 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 7
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 7.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 8
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 9
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 10
+Time_to_goal 7.300000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.3 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 11
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.700000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 12
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 7.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 13
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 14
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 7.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 15
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 16
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 17
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 18
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 19
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 20
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 7.800000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 21
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.8 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 22
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 23
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 24
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 25
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 26
+Time_to_goal 7.5 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.6 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 27
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 28
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 29
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 30
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 31
+Time_to_goal 7.300000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.200000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 32
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 33
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 34
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 35
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 36
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 37
+Time_to_goal 9.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 38
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 39
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.8 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 40
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 41
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 42
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 7.800000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 43
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 44
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 45
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 46
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 47
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 48
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 49
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 50
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 51
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 7.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 52
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 53
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 7.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 54
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 55
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 56
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 57
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 58
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 59
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 60
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 61
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 62
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 63
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 64
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.8 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 65
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 66
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 67
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 7.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 68
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 69
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 70
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 71
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 72
+Time_to_goal 7.300000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 73
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 74
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 75
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.200000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 76
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 77
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 78
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 79
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 80
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 81
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 82
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 83
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 84
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 85
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 86
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 87
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 88
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 7.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 89
+Time_to_goal 7.300000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 90
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 91
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 92
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 93
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 7.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 94
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 95
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 96
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 97
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 7.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 98
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.8 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 99
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 100
+100 Iteration Done
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 101
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 102
+Time_to_goal 7.300000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 103
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 104
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 105
+Time_to_goal 7.300000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.200000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 106
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 7.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 107
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 108
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 109
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 110
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 111
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 112
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 7.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 113
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 114
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.200000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 115
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 116
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 117
+Time_to_goal 7.300000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.200000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 118
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 119
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 120
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 9.8 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 121
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 122
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 123
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.200000000000001 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 124
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.8 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 125
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 126
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 127
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.8 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 128
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 129
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 130
+Time_to_goal 7.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 131
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 132
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 133
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 134
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 135
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 136
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.1 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 137
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 138
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 139
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 9.9 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 140
+Time_to_goal 7.1000000000000005 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Time_to_goal 10.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Trial_no 141
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 142
+Time_to_goal 7.2 <assets.env_titan_pb_2.Env object at 0x7f27641fa760>
+Time_to_goal 8.0 <assets.env_titan_pb_2.Env object at 0x7f27641fa670>
+Trial_no 143
+numActiveThreads = 0
+stopping threads
+Thread with taskId 0 exiting
+Thread TERMINATED
+destroy semaphore
+semaphore destroyed
+destroy main semaphore
+main semaphore destroyed
+finished
+numActiveThreads = 0
+btShutDownExampleBrowser stopping threads
+Thread with taskId 0 exiting
+Thread TERMINATED
+destroy semaphore
+semaphore destroyed
+destroy main semaphore
+main semaphore destroyed

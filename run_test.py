@@ -50,6 +50,7 @@ PATH = path_home + latest_folder
 
 Env, args = default_arguments.get_env(args)   
 args.render = True
+# args.render = False
 # if args.figure:
 #     args.render = False
 args.record_sim = False
@@ -117,7 +118,7 @@ def run(args):
 
     obs = env.reset()
 
-    print("ob_reset",obs)
+    # print("ob_reset",obs)
     if args.use_perception:
         im = env.get_image()
         # print(im,type(im))
@@ -137,12 +138,12 @@ def run(args):
     model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
     traced_script_module1 = torch.jit.script(model1)
     # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
-    # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan3/mu_net.jit")
+    traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net.jit")
 
     model2 = copy.deepcopy(pol.pi.z_net).to('cpu')
     traced_script_module2 = torch.jit.script(model2)
     # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
-    # traced_script_module2.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan3/z_net.jit")
+    traced_script_module2.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/z_net.jit")
 
 
     # print("traced_script_module1",traced_script_module1)
@@ -152,30 +153,53 @@ def run(args):
     action_saving2=[]
 
     while True:
-        
-        if args.use_perception and not args.jit_model:
-            # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
-            action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
-        
-        elif args.use_perception and args.jit_model:
-            a_r1=torch.as_tensor(np.array([obs[0]]), dtype=torch.float32).unsqueeze(dim=0)
-            b_r1=model_z(torch.as_tensor(im[0], dtype=torch.float32))
-            # print(a_r1[0],"br1",b_r1)
-            # print(np.array(a_r1[0].detach().numpy()).shape,np.array(b_r1.detach().numpy()).shape)
-            concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
-            action_r1 = model_mu(concatenate_part_r1)
+        current_time = env.steps*1/10
+        # Initialize random stop durations for each robot
+        robot1_stop_duration = np.random.uniform(1, 3)  # Random time between 1-3 seconds for robot 1
+        robot2_stop_duration = np.random.uniform(1, 3)  # Random time between 1-3 seconds for robot 2
 
-            if args.num_robots==2:
-                a_r2=torch.as_tensor(np.array([obs[1]]), dtype=torch.float32).unsqueeze(dim=0)
-                b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
-                # print(a_r2[0],"br2",b_r2)
-                # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
-                concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
-                action_r2 = model_mu(concatenate_part_r2)
-                # print("ar1",action_r1,"ar2",action_r2)
+        # print(env)
+        if current_time < 2:
+            action=[[-1,0],[-1,0]]
+        # Second condition: Stop robots individually for a random time after 2 seconds
+        elif current_time < 2 + robot1_stop_duration or current_time < 2 + robot2_stop_duration:
+            action = [[0, 0], [0, 0]]  # Default both robots to stop
+
+            # Check if robot 1 should stop or continue moving
+            if current_time < 2 + robot1_stop_duration:
+                action[0] = [0, 0]  # Robot 1 stops
+            else:
+                action[0] = [1, 0]  # Robot 1 resumes movement
+
+            # Check if robot 2 should stop or continue moving
+            if current_time < 2 + robot2_stop_duration:
+                action[1] = [0, 0]  # Robot 2 stops
+            else:
+                action[1] = [1, 0]  # Robot 2 resumes movement
         else:
-            action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
-        # print ("action_before", action,type(action))
+            if args.use_perception and not args.jit_model:
+                # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
+                action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            
+            elif args.use_perception and args.jit_model:
+                a_r1=torch.as_tensor(np.array([obs[0]]), dtype=torch.float32).unsqueeze(dim=0)
+                b_r1=model_z(torch.as_tensor(im[0], dtype=torch.float32))
+                # print(a_r1[0],"br1",b_r1)
+                # print(np.array(a_r1[0].detach().numpy()).shape,np.array(b_r1.detach().numpy()).shape)
+                concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
+                action_r1 = model_mu(concatenate_part_r1)
+
+                if args.num_robots==2:
+                    a_r2=torch.as_tensor(np.array([obs[1]]), dtype=torch.float32).unsqueeze(dim=0)
+                    b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
+                    # print(a_r2[0],"br2",b_r2)
+                    # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
+                    concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
+                    action_r2 = model_mu(concatenate_part_r2)
+                    # print("ar1",action_r1,"ar2",action_r2)
+            else:
+                action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
+            # print ("action_before", action,type(action))
         if not args.unclipped_vel and args.jit_model:
             r1_clipped_linear_vel_command=np.clip(action_r1[0][0].detach().numpy(), -0.5, 1)
             r1_clipped_angular_vel_command=np.clip(action_r1[0][1].detach().numpy(), -1.5, 1.5)
@@ -224,8 +248,13 @@ def run(args):
         # # print(accc,type(accc))
         # accc.to_csv("action_test.csv")
         # current_time = time.time() - start_time
-        current_time = env.steps*1/10
-        print(env.steps*1/10)
+        
+
+
+
+
+
+        # print(env.steps*1/10)
         st=time.time()
         buffer_time.append(current_time)
 
@@ -676,7 +705,7 @@ def run(args):
             
             
             # # print("overal",time.time()-R3.t1)
-            if current_time>10:
+            if current_time>15:
                 print("THAM");exit()
 
     

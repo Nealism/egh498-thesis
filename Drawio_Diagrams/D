@@ -1,0 +1,28 @@
+<mxfile host="app.diagrams.net" modified="2024-02-02T03:51:14.958Z" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0" etag="XajY7HlYXzr5hFqEhkdT" version="23.1.1" type="device">
+  <diagram name="Page-1" id="4R_aljaSbxc3F7psXQ8W">
+    <mxGraphModel dx="1314" dy="804" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="aVkVSrMfaNzNdBvR3Zrs-1" value="action space = [-10000, -10000],[10000,10000]" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="90" y="60" width="150" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="aVkVSrMfaNzNdBvR3Zrs-2" value="core.MLP_ActorCritic" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="90" y="280" width="150" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="aVkVSrMfaNzNdBvR3Zrs-3" value="Init:&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;self.pi=MLPGaussianActorCritic" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="90" y="480" width="150" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="aVkVSrMfaNzNdBvR3Zrs-4" value="Step:&lt;br&gt;&lt;br&gt;&lt;br&gt;action= action_space.sample (which is a random sample)&lt;br&gt;&lt;br&gt;or action = self.pi.mu" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="90" y="660" width="150" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="aVkVSrMfaNzNdBvR3Zrs-5" value="final action =&amp;nbsp;core.mlpactorcritic.step&lt;br&gt;&lt;br&gt;(Which is angular and heading velocity? Or heading and angular Velocity?)" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="370" y="70" width="150" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="aVkVSrMfaNzNdBvR3Zrs-6" value="next observation is based on this action&lt;br&gt;&amp;amp; this action is twisted to left and track" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="370" y="280" width="150" height="150" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

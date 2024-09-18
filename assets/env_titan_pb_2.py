@@ -663,7 +663,7 @@ class Env(EnvBasePB):
         # self.mid_point_of_goals= (self.mid_point_of_goals[0],self.mid_point_of_goals[1])
 
         self.mid_point_of_robots=self.calculate_midpoint(self.external_robots_states[0],self.external_robots_states[-1])
-        # self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-3,3))
+        self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-1,1))
 
         # Function to move the goal and the static robot
         
@@ -6735,12 +6735,13 @@ class Env(EnvBasePB):
 
         if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
             # MA_colision= -2*step_counter
+            # print("Multi-Robot Collision")
             done=True
 
 
         if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
             collision= -0.2*step_counter
-            #print("HIT_WALL")
+            # print("HIT Contact")
             # done=True
 
         
@@ -7932,7 +7933,8 @@ class Env(EnvBasePB):
             #print(self.pos2,"LL",self.mid_point_of_goals,"MM",self.Goals_pos);exit()
             # self.gap=self.gap_generator(width=self.gap_width, depth=self.tunnel_depth,height=0.015,pos=self.pos2,wall_length = 20,goal_pos=self.mid_point_of_goals,lineId=self.lineIdWall,lineIdgap=self.lineIdgap,lineIdA=self.lineIdA,lineIdB=self.lineIdB)
             #self.gap_point1,self.gap_point2=self.gap[2],self.gap[3]
-            lineIdgap_F=p.addUserDebugLine(self.gap_point1, self.gap_point2, lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.lineId_wp1_wp2)
+            
+            # lineIdgap_F=p.addUserDebugLine(self.gap_point1, self.gap_point2, lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=0.3, replaceItemUniqueId=self.lineId_wp1_wp2)
             
             
 
