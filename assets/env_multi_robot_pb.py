@@ -140,6 +140,7 @@ class Env(EnvBasePB):
         else:
             self.noise=0.0
         self.obstacles=[]
+        self.Obstacles_pos=[]
         self.robots_bbox=[]
         self.robots_pos=[]
         self.robots_pos_with_IDx=[]
@@ -273,10 +274,10 @@ class Env(EnvBasePB):
             #self.external_robots_pos=[(self.robots[0],[0,1,self.z_position])]
             
             for robot_pos,initial_goal_dist,robotgoal_angle in zip(self.external_robots_pos,self.initial_goal_distances,self.robottogoal_angles):
-                # self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
+                self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
                 # print("robot_pos[1]",robot_pos[1])
                 # self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, 10)
-                self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, np.random.uniform(10,-10))
+                # self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, np.random.uniform(10,-10))
                 self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
 
@@ -352,8 +353,12 @@ class Env(EnvBasePB):
 
             # Given orientation (orn)
             orn_wallright = Robot.gap_orn
+
+
+            obstacle_orn=np.random.uniform(-1,1)
+            self.obstacle_box_orientations=[obstacle_orn]*self.args.num_robots
             perpendicular_orn = p.getQuaternionFromEuler((0, 0, p.getEulerFromQuaternion(Robot.gap_orn)[2] + (math.pi / 2)))
-            perpendicular_box = p.getQuaternionFromEuler((0, 0, np.random.uniform(-1,1)+ (math.pi / 2)))
+            perpendicular_box = p.getQuaternionFromEuler((0, 0, obstacle_orn + (math.pi / 2)))
             # perpendicular_orn = p.getQuaternionFromEuler((0, 0, np.random.randint(1,3)))
             # print(self.external_robots_pos[0][1][0])
 
@@ -368,8 +373,11 @@ class Env(EnvBasePB):
             elif self.args.num_robots==1:
                 random_x = random.uniform(Robot.external_robots_pos[0][1][0] + 1, Robot.external_robots_pos[0][1][0] + 4)  # In front of the robot on the x-axis
                 random_y = random.uniform(Robot.external_robots_pos[0][1][1] - 1.5, Robot.external_robots_pos[0][1][1] + 1.5)  # Within a 3m range on the y-axis
-            raondom_pos = [random_x,random_y]
-            self.rectangle_id5=self.create_obstacle(ID=5,pos=raondom_pos,wall_length=1.4,wall_width=0.78,wall_height=0.4,orientation=perpendicular_box)
+            self.raondom_pos = [random_x,random_y]
+
+            self.Obstacles_pos=[self.raondom_pos]*self.args.num_robots
+            # print("self.Obstacles_pos",self.Obstacles_pos)
+            self.rectangle_id5=self.create_obstacle(ID=5,pos=self.raondom_pos,wall_length=1.4,wall_width=0.78,wall_height=0.4,orientation=perpendicular_box)
 
             
 
@@ -656,6 +664,7 @@ class Env(EnvBasePB):
                 
                 # print("in_function",local_heightmap.shape)
                 # print("in_function_pos",local_heightmap_position)
+            # print("G",self.Goals_pos,"O",self.raondom_pos, "OBS", self.Obstacles_pos)
             self.Occupancy_map=self.visualize_maps(self.global_map_list, local_heightmaps,local_heightmap_positions,self.robots_pos,self.Goals_pos,self.Obstacles_pos,self.gap_walls1_centre,self.gap_walls2_centre,self.side_walls1_centre,self.side_walls2_centre)
             # self.occupancy_maps=deepcopy(local_heightmaps)
             
@@ -771,7 +780,7 @@ class Env(EnvBasePB):
         self.robots_orn=[]
         
         self.Goals_pos=[]
-        self.Obstacles_pos=[]
+        self.Obstacles_pos=[self.raondom_pos]*self.args.num_robots
         self.robots_pos_with_IDx=[]
         self.wall1_corners=[]
         self.wall2_corners=[]
@@ -818,7 +827,7 @@ class Env(EnvBasePB):
             self.robots_pos.append(Robot.pos)
             self.robots_orn.append(Robot.yaw)
             self.Goals_pos.append(Robot.state_goal)
-            self.Obstacles_pos.append(Robot.pos2)
+            # self.Obstacles_pos.append(self.raondom_pos)
             # self.wall1_corners.append(Robot.gap[0])
             # self.wall2_corners.append(Robot.gap[1])
         #print(self.robots_pos_with_IDx)
@@ -1063,7 +1072,7 @@ class Env(EnvBasePB):
             
             Goal_x_index = int((goal_position[0] + self.global_map_size_x / 2) / self.global_resolution)
             Goal_y_index = int((goal_position[1] + self.global_map_size_y / 2) / self.global_resolution)
-            
+            # print("p",obstalce_position)
             obstacle_x_index = int((obstalce_position[0] + self.global_map_size_x / 2) / self.global_resolution)
             obstacle_y_index = int((obstalce_position[1] + self.global_map_size_y / 2) / self.global_resolution)
 
@@ -1200,6 +1209,110 @@ class Env(EnvBasePB):
                         for q in range(grid_y_center - half_width_cells, grid_y_center + half_width_cells + 1):
                             if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
                                 global_map[p, q] = 1.0
+
+        # #Setting Obstacle before Gap
+        # if self.args.gap_avoidance:
+        #     for global_map in global_map_list:
+        #         for i in range(len(self.Obstacles_pos)):
+        #             robot_length = int(1.4 / (2 * self.global_resolution))
+        #             robot_width = int(0.7 / (2 * self.global_resolution))
+        #             x_index=obstacles_x_index[i]
+        #             y_index=obstacles_y_index[i]
+                    
+        #             # Set the obstacle region in the global map to a higher value for visualization
+        #             for k in range(x_index - robot_length, x_index + robot_length + 1):
+        #                 for l in range(y_index - robot_width, y_index + robot_width + 1):
+        #                     if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
+        #                         global_map[k, l] = 1.0
+
+
+        obstacles_orientation=self.obstacle_box_orientations
+
+        if self.args.gap_avoidance:
+            for global_map in global_map_list:
+                for i in range(len(self.Obstacles_pos)):
+                    robot_length = int(1.4 / (2 * self.global_resolution))
+                    robot_width = int(0.7 / (2 * self.global_resolution))
+                    x_index = obstacles_x_index[i]
+                    y_index = obstacles_y_index[i]
+                    orientation = obstacles_orientation[i]  # Assuming you have obstacle orientation in radians
+
+                    # Define the center of the obstacle
+                    center = np.array([x_index, y_index])
+
+                    # Define the half-length and half-width in terms of the number of grid cells
+                    half_length = robot_length
+                    half_width = robot_width
+
+                    # Define the corners of the rectangle before rotation (relative to center)
+                    corners = np.array([
+                        [-half_length, -half_width],
+                        [-half_length, half_width],
+                        [half_length, half_width],
+                        [half_length, -half_width]
+                    ])
+
+                    # Create a rotation matrix using the obstacle orientation
+                    rotation_matrix = np.array([
+                        [np.cos(orientation), -np.sin(orientation)],
+                        [np.sin(orientation), np.cos(orientation)]
+                    ])
+
+                    # Rotate each corner and map it back to the occupancy grid
+                    rotated_corners = np.dot(corners, rotation_matrix) + center
+
+                    # Connect corners with straight lines
+                    num_corners = len(rotated_corners)
+                    for j in range(num_corners):
+                        start_corner = rotated_corners[j % num_corners].astype(int)
+                        end_corner = rotated_corners[(j + 1) % num_corners].astype(int)
+                        
+                        # Simple line connection between two points
+                        x_coords, y_coords = np.linspace(start_corner[0], end_corner[0], num=100, dtype=int), np.linspace(start_corner[1], end_corner[1], num=100, dtype=int)
+                        global_map[x_coords, y_coords] = 1.0  # Fill in the line on the map
+
+
+        # if self.args.gap_avoidance:
+        #     for global_map in global_map_list:
+        #         for i in range(len(self.Obstacles_pos)):
+        #             robot_length = int(1.4 / (2 * self.global_resolution))
+        #             robot_width = int(0.7 / (2 * self.global_resolution))
+        #             x_index = obstacles_x_index[i]
+        #             y_index = obstacles_y_index[i]
+        #             orientation = obstacles_orientation[i]  # Assuming you have obstacle orientation in radians
+
+        #             # Define the center of the obstacle
+        #             center = np.array([x_index, y_index])
+
+        #             # Define the half-length and half-width in terms of the number of grid cells
+        #             half_length = robot_length
+        #             half_width = robot_width
+
+        #             # Define the corners of the rectangle before rotation (relative to center)
+        #             corners = np.array([
+        #                 [-half_length, -half_width],
+        #                 [-half_length, half_width],
+        #                 [half_length, half_width],
+        #                 [half_length, -half_width]
+        #             ])
+
+        #             # Create a rotation matrix using the obstacle orientation
+        #             rotation_matrix = np.array([
+        #                 [np.cos(orientation), -np.sin(orientation)],
+        #                 [np.sin(orientation), np.cos(orientation)]
+        #             ])
+
+        #             # Rotate each corner and map it back to the occupancy grid
+        #             rotated_corners = np.dot(corners, rotation_matrix) + center
+        #             # print("rotated_corners",rotated_corners)
+        #             # Use the rotated corners to update the global map (draw a rotated rectangle)
+        #             for corner in rotated_corners:
+        #                 x_rot, y_rot = corner
+        #                 x_rot = int(np.clip(x_rot, 0, self.global_num_rows - 1))
+        #                 y_rot = int(np.clip(y_rot, 0, self.global_num_cols - 1))
+
+        #                 global_map[x_rot, y_rot] = 1.0  # Mark the rotated obstacle position on the map
+
         
         if self.args.gap_avoidance:
             for global_map in global_map_list:
@@ -1254,59 +1367,59 @@ class Env(EnvBasePB):
                             if 0 <= p < self.global_num_rows and 0 <= q < self.global_num_cols:
                                 global_map[p, q] = 1.0
 
-        # #Other Robot appearning in occupancy map
-        # for index,(global_map,global_map_image) in enumerate(zip(global_map_list,globalmap_images)):
-        #     for i in range(self.args.num_robots):
-        #         global_map_image = cv2.circle(global_map_image, (turtlebots_y_index[i], turtlebots_x_index[i]), 5, (255, 0, 0), -1)
-        #         global_map_image = cv2.circle(global_map_image, (Goals_y_index[i], Goals_x_index[i]), 5, (0, 255, 0), -1)
-        #         # print(self.global_resolution)
-        #         # print("index",index,"i",i)
-        #         # if index!=i or index==i:
-        #         # for index_hm,local_heightmap in enumerate(local_heightmaps):
-        #         #     print("ind",index,i,index_hm)
-        #         if index!=i:
-        #         # if index==i:
-        #         #     print("True")
-        #             # Calculate robot-length and robot-width in grid cells
-        #             robot_length = int(1.4 / (2 * self.global_resolution))
-        #             robot_width = int(0.7 / (2 * self.global_resolution))
-        #             x_index=turtlebots_x_index[i]
-        #             y_index=turtlebots_y_index[i]
+        #Other Robot appearning in occupancy map
+        for index,(global_map,global_map_image) in enumerate(zip(global_map_list,globalmap_images)):
+            for i in range(self.args.num_robots):
+                global_map_image = cv2.circle(global_map_image, (turtlebots_y_index[i], turtlebots_x_index[i]), 5, (255, 0, 0), -1)
+                global_map_image = cv2.circle(global_map_image, (Goals_y_index[i], Goals_x_index[i]), 5, (0, 255, 0), -1)
+                # print(self.global_resolution)
+                # print("index",index,"i",i)
+                # if index!=i or index==i:
+                # for index_hm,local_heightmap in enumerate(local_heightmaps):
+                #     print("ind",index,i,index_hm)
+                if index!=i:
+                # if index==i:
+                #     print("True")
+                    # Calculate robot-length and robot-width in grid cells
+                    robot_length = int(1.4 / (2 * self.global_resolution))
+                    robot_width = int(0.7 / (2 * self.global_resolution))
+                    x_index=turtlebots_x_index[i]
+                    y_index=turtlebots_y_index[i]
                     
-        #             # Set the obstacle region in the global map to a higher value for visualization
-        #             for k in range(x_index - robot_length, x_index + robot_length + 1):
-        #                 for l in range(y_index - robot_width, y_index + robot_width + 1):
-        #                     if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
-        #                         global_map[k, l] = 1.0  # Mark the obstacle as occupied with a value of 1
+                    # Set the obstacle region in the global map to a higher value for visualization
+                    for k in range(x_index - robot_length, x_index + robot_length + 1):
+                        for l in range(y_index - robot_width, y_index + robot_width + 1):
+                            if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
+                                global_map[k, l] = 1.0  # Mark the obstacle as occupied with a value of 1
 
-        #         # if index==i:
-        #         # #     print("True")
-        #         #     # Calculate robot-length and robot-width in grid cells
-        #         #     robot_length = int(1.4 / (2 * self.global_resolution))
-        #         #     robot_width = int(0.7 / (2 * self.global_resolution))
-        #         #     x_index=turtlebots_x_index[i]
-        #         #     y_index=turtlebots_y_index[i]
+                # if index==i:
+                # #     print("True")
+                #     # Calculate robot-length and robot-width in grid cells
+                #     robot_length = int(1.4 / (2 * self.global_resolution))
+                #     robot_width = int(0.7 / (2 * self.global_resolution))
+                #     x_index=turtlebots_x_index[i]
+                #     y_index=turtlebots_y_index[i]
                     
-        #         #     # Set the obstacle region in the global map to a higher value for visualization
-        #         #     for k in range(x_index - robot_length, x_index + robot_length + 1):
-        #         #         for l in range(y_index - robot_width, y_index + robot_width + 1):
-        #         #             if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
-        #         #                 global_map[k, l] = 1.0  # Mark the obstacle as occupied with a value of 1
+                #     # Set the obstacle region in the global map to a higher value for visualization
+                #     for k in range(x_index - robot_length, x_index + robot_length + 1):
+                #         for l in range(y_index - robot_width, y_index + robot_width + 1):
+                #             if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
+                #                 global_map[k, l] = 1.0  # Mark the obstacle as occupied with a value of 1
                 
               
-        #         # elif index==i:
-        #         #     print("True")
-        #         #     # Calculate robot-length and robot-width in grid cells
-        #         #     robot_length = int(1.4 / (2 * self.global_resolution))
-        #         #     robot_width = int(0.7 / (2 * self.global_resolution))
-        #         #     x_index=turtlebots_x_index[i]
-        #         #     y_index=turtlebots_y_index[i]
+                # elif index==i:
+                #     print("True")
+                #     # Calculate robot-length and robot-width in grid cells
+                #     robot_length = int(1.4 / (2 * self.global_resolution))
+                #     robot_width = int(0.7 / (2 * self.global_resolution))
+                #     x_index=turtlebots_x_index[i]
+                #     y_index=turtlebots_y_index[i]
                     
-        #         #     # Set the obstacle region in the global map to a higher value for visualization
-        #         #     for k in range(x_index - robot_length, x_index + robot_length + 1):
-        #         #         for l in range(y_index - robot_width, y_index + robot_width + 1):
-        #         #             if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
-        #         #                 global_map[k, l] = 0.0
+                #     # Set the obstacle region in the global map to a higher value for visualization
+                #     for k in range(x_index - robot_length, x_index + robot_length + 1):
+                #         for l in range(y_index - robot_width, y_index + robot_width + 1):
+                #             if 0 <= k < self.global_num_rows and 0 <= l < self.global_num_cols:
+                #                 global_map[k, l] = 0.0
                 
 
 

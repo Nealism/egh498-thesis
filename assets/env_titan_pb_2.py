@@ -665,7 +665,7 @@ class Env(EnvBasePB):
         # self.mid_point_of_goals= (self.mid_point_of_goals[0],self.mid_point_of_goals[1])
 
         self.mid_point_of_robots=self.calculate_midpoint(self.external_robots_states[0],self.external_robots_states[-1])
-        self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-1.2,1.2))
+        # self.mid_point_of_robots_offsetting=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-1.2,1.2))
         # self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]-1.2)
         # self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-3,3))
 
@@ -983,7 +983,8 @@ class Env(EnvBasePB):
         #initial_y2 = np.random.uniform(0, 0.5)   
         #initial_x2, initial_y2 = 0,0
         
-        self.initial_yaw2 = 0.0 # np.random.uniform(-1, 1)
+        # self.initial_yaw2 = 0.0 # np.random.uniform(-1, 1)
+        self.initial_yaw2 = -0.5 # np.random.uniform(-1, 1)
         self.initial_orn2 = p.getQuaternionFromEuler([0,0,self.initial_yaw2])
         self.z_offset = 0
         self.pos2, self.orn2 = [initial_x2, initial_y2, self.z_offset+0.31],self.initial_orn2
