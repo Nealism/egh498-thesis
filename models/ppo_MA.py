@@ -693,81 +693,83 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 next_im = env.get_image()
                 # print("next_im",len(next_im),next_im.shape)
                 
+                if env.args.map_show:
+                    r1_occupancy_map = next_im[0, 0, :, :]
+                    
 
-                # r1_occupancy_map = next_im[0, 0, :, :]
-                # r2_occupancy_map = next_im[1, 0, :, :]
+                    # r1_occupancy_map = next_im[0, :, :]
+                    # r2_occupancy_map = next_im[1, :, :]
 
-                # # r1_occupancy_map = next_im[0, :, :]
-                # # r2_occupancy_map = next_im[1, :, :]
+                    # r1_occupancy_map=next_im[0, 0, :, :]
+                    # # r2_occupancy_map=next_im[1, 0, :, :]
 
-                # # r1_occupancy_map=next_im[0, 0, :, :]
-                # # # r2_occupancy_map=next_im[1, 0, :, :]
+                    r1_occupancy_map_array = np.array(r1_occupancy_map)
+                    # print("r1_occupancy_map_array.shape",r1_occupancy_map_array.shape)
+                    # Determine the dimensions of the occupancy map
+                    rows, cols = r1_occupancy_map_array.shape
+                    
+                    # Create an empty image with the same dimensions as the occupancy map
+                    image_r1 = np.zeros((rows, cols, 3), dtype=np.uint8)
+                    
+                    # Assign grey color where occupancy_map is 0
+                    image_r1[r1_occupancy_map_array == 0] = (128, 128, 128)  # Grey
+                    
+                    # Assign red color where occupancy_map is 1
+                    image_r1[r1_occupancy_map_array == 1] = (0, 0, 255)  # Red
 
-                # r1_occupancy_map_array = np.array(r1_occupancy_map)
-                # # print("r1_occupancy_map_array.shape",r1_occupancy_map_array.shape)
-                # # Determine the dimensions of the occupancy map
-                # rows, cols = r1_occupancy_map_array.shape
-                
-                # # Create an empty image with the same dimensions as the occupancy map
-                # image_r1 = np.zeros((rows, cols, 3), dtype=np.uint8)
-                
-                # # Assign grey color where occupancy_map is 0
-                # image_r1[r1_occupancy_map_array == 0] = (128, 128, 128)  # Grey
-                
-                # # Assign red color where occupancy_map is 1
-                # image_r1[r1_occupancy_map_array == 1] = (0, 0, 255)  # Red
-
-                # image_r1 = image_r1 #occupancy_map_to_image(im_ocupancy)
-
-
-                # # # Create a window with the specified name
-                # cv2.namedWindow("R1 Occupancy Map", cv2.WINDOW_NORMAL)
-
-                # # Resize the window to a desired size
-                # cv2.resizeWindow("R1 Occupancy Map", 800, 600)
-
-                # # Define the save path directory
-                # save_dir = '/home/kom018/behaviour_rl/Results_plots/Action_plots'
-                # os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
-
-                # # Save the Robot 1 occupancy map
-                # save_path_r1 = os.path.join(save_dir, 'R1_occupancy_map.png')
-                # cv2.imwrite(save_path_r1, image_r1)
-
-                # # Display the image
-                # cv2.imshow("R1 Occupancy Map", image_r1)
-
-                # r2_occupancy_map_array = np.array(r2_occupancy_map)
-                # # print("r2_occupancy_map_array.shape",r2_occupancy_map_array.shape)
-                # # Determine the dimensions of the occupancy map
-                # rows_r2, cols_r2 = r2_occupancy_map_array.shape
-                
-                # # Create an empty image with the same dimensions as the occupancy map
-                # image_r2 = np.zeros((rows_r2, cols_r2, 3), dtype=np.uint8)
-                
-                # # Assign grey color where occupancy_map is 0
-                # image_r2[r2_occupancy_map_array == 0] = (128, 128, 128)  # Grey
-                
-                # # Assign red color where occupancy_map is 1
-                # image_r2[r2_occupancy_map_array == 1] = (0, 0, 255)  # Red
-
-                # image_r2 = image_r2 #occupancy_map_to_image(im_ocupancy)
+                    image_r1 = image_r1 #occupancy_map_to_image(im_ocupancy)
 
 
-                # # # Create a window with the specified name
-                # cv2.namedWindow("R2 Occupancy Map", cv2.WINDOW_NORMAL)
+                    # # Create a window with the specified name
+                    cv2.namedWindow("R1 Occupancy Map", cv2.WINDOW_NORMAL)
 
-                # # Resize the window to a desired size
-                # cv2.resizeWindow("R2 Occupancy Map", 800, 600)
+                    # Resize the window to a desired size
+                    cv2.resizeWindow("R1 Occupancy Map", 800, 600)
 
-                # # Save the Robot 2 occupancy map
-                # save_path_r2 = os.path.join(save_dir, 'R2_occupancy_map.png')
-                # cv2.imwrite(save_path_r2, image_r2)
-                # # Display the image
-                # cv2.imshow("R2 Occupancy Map", image_r2)
-                
+                    # Define the save path directory
+                    save_dir = '/home/kom018/behaviour_rl/Results_plots/Action_plots'
+                    os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
 
-                # cv2.waitKey(1)
+                    # Save the Robot 1 occupancy map
+                    save_path_r1 = os.path.join(save_dir, 'R1_occupancy_map.png')
+                    cv2.imwrite(save_path_r1, image_r1)
+
+                    # Display the image
+                    cv2.imshow("R1 Occupancy Map", image_r1)
+
+                    if env.args.num_robots==2:
+                        r2_occupancy_map = next_im[1, 0, :, :]
+                        r2_occupancy_map_array = np.array(r2_occupancy_map)
+                        # print("r2_occupancy_map_array.shape",r2_occupancy_map_array.shape)
+                        # Determine the dimensions of the occupancy map
+                        rows_r2, cols_r2 = r2_occupancy_map_array.shape
+                        
+                        # Create an empty image with the same dimensions as the occupancy map
+                        image_r2 = np.zeros((rows_r2, cols_r2, 3), dtype=np.uint8)
+                        
+                        # Assign grey color where occupancy_map is 0
+                        image_r2[r2_occupancy_map_array == 0] = (128, 128, 128)  # Grey
+                        
+                        # Assign red color where occupancy_map is 1
+                        image_r2[r2_occupancy_map_array == 1] = (0, 0, 255)  # Red
+
+                        image_r2 = image_r2 #occupancy_map_to_image(im_ocupancy)
+
+
+                        # # Create a window with the specified name
+                        cv2.namedWindow("R2 Occupancy Map", cv2.WINDOW_NORMAL)
+
+                        # Resize the window to a desired size
+                        cv2.resizeWindow("R2 Occupancy Map", 800, 600)
+
+                        # Save the Robot 2 occupancy map
+                        save_path_r2 = os.path.join(save_dir, 'R2_occupancy_map.png')
+                        cv2.imwrite(save_path_r2, image_r2)
+                        # Display the image
+                        cv2.imshow("R2 Occupancy Map", image_r2)
+                    
+
+                    cv2.waitKey(1)
 
                 #-------------------------------------------------------------------
 
