@@ -465,8 +465,8 @@ class Env(EnvBasePB):
         initial_x, initial_y = np.random.uniform(0,4), np.random.uniform(0, 4) 
         #initial_x, initial_y = -2, -2 
         # self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
-        # self.initial_yaw = 0.0#np.random.uniform(-np.pi, np.pi) 
-        self.initial_yaw = np.random.uniform(-0.5, 0.5) #np.random.uniform(-np.pi, np.pi) 
+        self.initial_yaw = 0.0#np.random.uniform(-np.pi, np.pi) 
+        # self.initial_yaw = np.random.uniform(-0.5, 0.5) #np.random.uniform(-np.pi, np.pi) 
         # self.initial_yaw = 0.5 #np.random.uniform(-np.pi, np.pi) 
         # self.initial_yaw = np.random.uniform(-np.pi, np.pi) 
         # print("self.initial_yaw",self.initial_yaw)
@@ -7521,7 +7521,7 @@ class Env(EnvBasePB):
         
 
         self.ep_reward_dict["Reward/goal"] += goal
-        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/neg"] += step_counter
         self.ep_reward_dict["Reward/heading"] += heading
         self.ep_reward_dict["Reward/MA_colision"] += MA_colision
         self.ep_reward_dict["Reward/collision"] += collision

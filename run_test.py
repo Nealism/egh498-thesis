@@ -156,9 +156,9 @@ def run(args):
         # print(len(im))
         current_time = env.steps*1/10
         # Initialize random stop durations for each robot
-        robot1_stop_duration = np.random.uniform(5, 6)  # Random time between 1-3 seconds for robot 1
+        robot1_stop_duration = np.random.uniform(1, 6)  # Random time between 1-3 seconds for robot 1
         # robot1_stop_duration = np.random.uniform(3.5, 4)  # Random time between 1-3 seconds for robot 2
-        robot2_stop_duration = np.random.uniform(1, 2)  # Random time between 1-3 seconds for robot 2
+        robot2_stop_duration = np.random.uniform(1, 6)  # Random time between 1-3 seconds for robot 2
 
         # print(env)
         # if  current_time < 100:
@@ -201,7 +201,7 @@ def run(args):
             action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
             # action = [[-0.2, 0], [-0.2, 0]]  # Default both robots to stop
             # action=[[-1,0],[-1,0]]
-        # ##Second condition: Stop robots individually for a random time after 2 seconds
+        # #Second condition: Stop robots individually for a random time after 2 seconds
         # elif current_time < 2 + robot1_stop_duration or current_time < 2 + robot2_stop_duration:
         #     # action = [[0, 0], [0, 0]]  # Default both robots to stop
             

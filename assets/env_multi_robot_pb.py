@@ -87,6 +87,7 @@ class Env(EnvBasePB):
 
         if self.args.multi_spots:
             self.robots=[SpotEnv(PATH=PATH, args=args, writer=writer) for n in range(args.num_robots)]
+            # self.z_position=0.4555
             self.z_position=0.4555
         elif self.args.multi_titans:
             self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer) for n in range(args.num_robots)]
@@ -424,7 +425,8 @@ class Env(EnvBasePB):
 
             self.Obstacles_pos=[self.raondom_pos]*self.args.num_robots
             # print("self.Obstacles_pos",self.Obstacles_pos)
-            self.rectangle_id5=self.create_obstacle(ID=5,pos=self.raondom_pos,wall_length=1.4,wall_width=0.78,wall_height=0.4,orientation=perpendicular_box)
+            if self.args.obstacle:
+                self.rectangle_id5=self.create_obstacle(ID=5,pos=self.raondom_pos,wall_length=1.4,wall_width=0.78,wall_height=0.4,orientation=perpendicular_box)
 
             
 
@@ -1276,7 +1278,7 @@ class Env(EnvBasePB):
         obstacles_orientation=self.obstacle_box_orientations
         # angle_error = self.wrap_to_pi(target_angle - angle)
 
-        if self.args.gap_avoidance:
+        if self.args.gap_avoidance and self.args.obstacle:
             for global_map in global_map_list:
                 for i in range(len(self.Obstacles_pos)):
                     robot_length = int(1.4 / (2 * self.global_resolution))
