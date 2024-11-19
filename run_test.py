@@ -200,6 +200,7 @@ def run(args):
         #     # action=[[-1,0],[-1,0]]
         
         ####___RULE_BASED_TEST______
+<<<<<<< HEAD
         # N=80
         # mid_x = N // 2
         # if np.any(im[0][0][:, mid_x:N] == 1):
@@ -207,6 +208,14 @@ def run(args):
         # if current_time <1:
         #     # print(im.shape)
         #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+=======
+        # if current_time <2:
+        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            # action = [[-0.2, 0], [-0.2, 0]]  # Default both robots to stop
+            # action=[[-1,0],[-1,0]]
+        # #Second condition: Stop robots individually for a random time after 2 seconds
+        # elif current_time < 2 + robot1_stop_duration or current_time < 2 + robot2_stop_duration:
+>>>>>>> origin/feature/titan_multi_agent
         #     # action = [[0, 0], [0, 0]]  # Default both robots to stop
         #     action = [[-0.2, 0], [-0.2, 0]]  # Default both robots to stop
         # #     # action=[[-1,0],[-1,0]]
@@ -278,7 +287,7 @@ def run(args):
         
         elif not args.unclipped_vel and not args.jit_model:
             # print("action",action,action[0][0],action[0][1])
-            r1_clipped_linear_vel_command=np.clip(action[0][0], -0.5, 0.8)
+            r1_clipped_linear_vel_command=np.clip(action[0][0], -0.5, 1)
             r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
             action_r=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
             

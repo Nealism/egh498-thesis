@@ -254,7 +254,7 @@ class Env(EnvBasePB):
         
         else:
             if self.args.turtle_titan:
-                robot1=self.load_urdf_robot("./assets/urdfs/turtlebot_boxy.urdf")
+                robot1=self.load_urdf_robot("./assets/urdfs/turtlebot_boxy_original.urdf")
             else:
                 #state_object= [random.uniform(-4,4),random.uniform(4,1),0.00]
                 robot1=self.load_urdf_robot("./assets/urdfs/dynamic_titan.urdf")
@@ -660,7 +660,7 @@ class Env(EnvBasePB):
             self.external_robots_states.append(r_position)
 
         self.mid_point_of_goals=self.calculate_midpoint(self.external_goals_states[0],self.external_goals_states[-1])
-        self.mid_point_of_goals=(self.mid_point_of_goals[0],self.mid_point_of_goals[1],self.mid_point_of_goals[2])
+        # self.mid_point_of_goals=(self.mid_point_of_goals[0],self.mid_point_of_goals[1],self.mid_point_of_goals[2])
         # print(self.mid_point_of_goals)
         # self.mid_point_of_goals= (self.mid_point_of_goals[0],self.mid_point_of_goals[1])
 
@@ -1656,9 +1656,12 @@ class Env(EnvBasePB):
             self.applied_actions=[0]*2
 
 
+<<<<<<< HEAD
         # clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 1)
         # clipped_angular_vel_command=np.clip(self.applied_actions[1], -1.5, 1.5)
 
+=======
+>>>>>>> origin/feature/titan_multi_agent
         clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 0.75)
         clipped_angular_vel_command=np.clip(self.applied_actions[1], -0.75, 0.75)
 

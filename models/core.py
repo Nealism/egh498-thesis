@@ -16,13 +16,56 @@ def combined_shape(length, shape=None):
 
 def mlp(sizes, activation, output_activation=nn.Identity):
     layers = []
-    #print("sizes",sizes)
+    # print("mlp_sizes",sizes,"len_size-1",len(sizes)-1)
     for j in range(len(sizes)-1):
         act = activation if j < len(sizes)-2 else output_activation
+        # print("mlp_size",range(len(sizes)-1),sizes,j)
+        # print(nn.Linear(sizes[j], sizes[j+1]), act())
         layers += [nn.Linear(sizes[j], sizes[j+1]), act()]
-        #print("j",j,sizes[j],"j+1",sizes[j+1],"act",act())
-
+    # print("layers:",*layers)
+        
+        
+        # print("j",j,sizes[j],"j+1",sizes[j+1],"act",act())
+        # print("sequencial",nn.Sequential(*layers))
+    # print("ended_loop");exit()
     return nn.Sequential(*layers)
+
+def output_layer(input, output):
+    # layers = []
+    # print(input,"sep",output)
+    layers=nn.Linear(input,output)
+    # layers_r2=nn.Linear(input_r2,output[1])
+    # print(layers_r1,"la")
+    # if output[0]==3:
+    #     return layers_r1,layers_r2
+    # elif output[0]==2:
+    #     return layers_r2,layers_r1
+
+    return layers
+
+def output_layer_r1(input_r1, output_r1):
+    # layers = []
+    layers_r1=nn.Linear(input_r1,output_r1)
+    # layers_r2=nn.Linear(input_r2,output[1])
+    # print(layers_r1,"la")
+    # if output[0]==3:
+    #     return layers_r1,layers_r2
+    # elif output[0]==2:
+    #     return layers_r2,layers_r1
+
+    return layers_r1
+
+def output_layer_r2(input_r2, output_r2):
+    # layers = []
+    layers_r2=nn.Linear(input_r2,output_r2)
+    # layers_r2=nn.Linear(input_r2,output[1])
+    # print(layers_r1,"la")
+    # if output[0]==3:
+    #     return layers_r1,layers_r2
+    # elif output[0]==2:
+    #     return layers_r2,layers_r1
+
+    return layers_r2
 
 
 # TODO: build CNN from arguments
@@ -30,6 +73,7 @@ class CNN(nn.Module):
     def __init__(self, im_dim):
         super().__init__()
         self.im_dim = list(im_dim)
+        # print("CNN_im_dim",self.im_dim)
         self.conv1 = nn.Conv2d(in_channels=1,out_channels=4,kernel_size=8,stride=4,padding='valid')
         self.conv2 = nn.Conv2d(in_channels=4,out_channels=8,kernel_size=4,stride=2,padding='valid')
         # #original
@@ -40,11 +84,16 @@ class CNN(nn.Module):
         self.fc = nn.LazyLinear(64)
 
     def forward(self, x):
+        # print("CNN_X",x,len(x),type(self.im_dim),self.im_dim,x.shape)
         x = torch.reshape(x, [-1] + self.im_dim)
+        # print("CNN_X_after",x,len(x),type(self.im_dim),self.im_dim,x.shape)
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
+        # print("CNN_Beyond",x,len(x),len(x[0]),(x.shape))
         x = torch.flatten(x, 1) 
+        # print("CNN_flatten",x,len(x),len(x[0]),(x.shape));exit()
         x = torch.tanh(self.fc(x))
+        # print("CNN_FC",x,len(x),len(x[0]),(x.shape))
         return x
 
 def count_vars(module):
@@ -83,11 +132,26 @@ class ActorPerception(nn.Module):
         # Produce action distributions for given observations, and 
         # optionally compute the log likelihood of given actions under
         # those distributions.
+        # print("checkpoint1")
         pi = self._distribution(obs, im)
+        # print("checkpoint2")
+        # pi_spot,pi_titan = self._distribution(obs, im)
+        # print(pi);exit()
+        # logp_a_spot = None
+        # logp_a_titan = None
+        # if act is not None:
+        #     logp_a_spot = self._log_prob_from_distribution(pi_spot, act)
+        #     logp_a_titan = self._log_prob_from_distribution(pi_titan, act)
+        # return pi_spot,pi_titan, logp_a_spot, logp_a_titan
         logp_a = None
+        # print("pi_check",pi,act)
         if act is not None:
             logp_a = self._log_prob_from_distribution(pi, act)
+            
         return pi, logp_a
+
+
+
 
 class MLPGaussianActorPerception(ActorPerception):
 
@@ -95,20 +159,239 @@ class MLPGaussianActorPerception(ActorPerception):
         super().__init__()
         self.obs_dim = obs_dim
         self.im_dim = im_dim
-        # log_std = -0.5 * np.ones(act_dim, dtype=np.float32)
-        log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
-        self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
-        self.z_net = CNN(im_dim)
-        # Need to do a dry run to initialise Lazy module
-        self.z_net(torch.zeros(self.im_dim))
-        self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
+        
+        # print(act_dim);exit()
+        # act_dim=[3,3]
+        # print("act_dim",act_dim)
+        # print(args.robots);exit()
+        if (act_dim==(2,3) or act_dim==(3,2)) and args.heterogeneous:
+            # print("OR NOT")
+            spot_act_dim=3
+            titan_act_dim=2
+            # log_std = -0.5 * np.ones(act_dim, dtype=np.float32)
+            # log_std_r1 = -0.0 * np.ones(act_dim[0], dtype=np.float32)
+            # log_std_r2 = -0.0 * np.ones(act_dim[1], dtype=np.float32)
+            # # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+            # self.log_std_r1 = torch.nn.Parameter(torch.as_tensor(log_std_r1))
+            # self.log_std_r2 = torch.nn.Parameter(torch.as_tensor(log_std_r2))
+
+            log_std_spot = -0.0 * np.ones(spot_act_dim, dtype=np.float32)
+            log_std_titan = -0.0 * np.ones(titan_act_dim, dtype=np.float32)
+            # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+            self.log_std_spot = torch.nn.Parameter(torch.as_tensor(log_std_spot))
+            self.log_std_titan = torch.nn.Parameter(torch.as_tensor(log_std_titan))
+            self.z_net = CNN(im_dim)
+            # Need to do a dry run to initialise Lazy module
+            self.z_net(torch.zeros(self.im_dim))
+            # self.mu_net1 = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim[0]], activation)
+            # self.mu_net2 = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim[1]], activation)
+            # self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
+            feature_shape=256
+            feature_shape_r1=256
+            feature_shape_r2=256
+            self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+            self.spot_output_layer = output_layer(feature_shape,3)
+            self.titan_output_layer = output_layer(feature_shape,2)
+            # feature_shape=256
+            # self.output_layer = output_layer(feature_shape,act_dim)
+        elif (act_dim==(2,2)) and args.IHPPO:
+            dtr_act_dim=2
+            titan_act_dim=2
+            
+
+            log_std_dtr = -0.0 * np.ones(dtr_act_dim, dtype=np.float32)
+            log_std_titan = -0.0 * np.ones(titan_act_dim, dtype=np.float32)
+            # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+            self.log_std_dtr = torch.nn.Parameter(torch.as_tensor(log_std_dtr))
+            self.log_std_titan = torch.nn.Parameter(torch.as_tensor(log_std_titan))
+            self.z_net = CNN(im_dim)
+            # Need to do a dry run to initialise Lazy module
+            self.z_net(torch.zeros(self.im_dim))
+            # self.mu_net1 = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim[0]], activation)
+            # self.mu_net2 = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim[1]], activation)
+            # self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
+            feature_shape=256
+            feature_shape_r1=256
+            feature_shape_r2=256
+            self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+            self.dtr_output_layer = output_layer(feature_shape,2)
+            self.titan_output_layer = output_layer(feature_shape,2)
+            # feature_shape=256
+            # self.output_layer = output_layer(feature_shape,act_dim)
+        elif (act_dim==(2,2) or act_dim==(3,3)):
+            act_dim=act_dim
+            # print("DID IT COME HERE",act_dim)
+            log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+            self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
+            self.z_net = CNN(im_dim)
+            # Need to do a dry run to initialise Lazy module
+            self.z_net(torch.zeros(self.im_dim))
+            self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+            feature_shape=256
+            self.output_layer = output_layer(feature_shape,act_dim)
+
+        elif len(act_dim)==1 and (args.IHPPO or args.heterogeneous):
+        
+            act_dim=act_dim[0]
+            # print("ISITCOMING")
+            # print("DID IT COME HERE",act_dim)
+            log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+            self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
+            self.z_net = CNN(im_dim)
+            # Need to do a dry run to initialise Lazy module
+            self.z_net(torch.zeros(self.im_dim))
+            self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+            feature_shape=256
+            self.output_layer = output_layer(feature_shape,act_dim)
+        else:
+            act_dim=act_dim[0]
+            # print("NextCOMING",[act_dim])
+            self.obs_dim = obs_dim
+            self.im_dim = im_dim
+            # log_std = -0.5 * np.ones(act_dim, dtype=np.float32)
+            log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+            self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
+            self.z_net = CNN(im_dim)
+            # Need to do a dry run to initialise Lazy module
+            self.z_net(torch.zeros(self.im_dim))
+            self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
+
+        # self.output_layer = output_layer(feature_shape_r1,feature_shape_r2,act_dim)
+        # self.output_layer = [output_layer_r1(feature_shape_r1,act_dim[0]),output_layer_r2(feature_shape_r2,act_dim[1])]
+        # self.output_layer_r1 = output_layer_r1(feature_shape_r1,act_dim[0])
+        # self.output_layer_r2 =output_layer_r2(feature_shape_r2,act_dim[1])
 
     def _distribution(self, obs, im):
+        # print("obs_before",obs,len(obs),im,len(im))
+        # obs=obs[0]
         obs = torch.reshape(obs, [-1, self.obs_dim])
-        z = self.z_net(im)
-        self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
-        self.std = torch.exp(self.log_std)
-        return Normal(self.mu, self.std)
+        # print("obs_after",obs,len(obs),im,len(im))
+
+        # z = self.z_net(im)
+        # print("dis_im_1",im[0],len(im[0]))
+        # z = self.z_net(im[0:1])
+        # print("dimention_match",im.shape,obs.shape,len(obs))
+        # print("dimention_match_1",im[0:1].shape,obs.shape)
+        # z2 = self.z_net(im[1])
+        # print("self.z_net(im)",self.z_net(im[0:1]),self.z_net(im[0:1]).shape)
+        t=torch.concat((obs, self.z_net(im)), -1)
+        # print("concate_shape",t,t.shape)
+
+        # model = nn.Sequential(
+        #         nn.Linear(70, 256),   # Linear layer: 70 input features, 256 output features
+        #         nn.Tanh(),            # Tanh activation
+        #         nn.Linear(256, 256),  # Linear layer: 256 input features, 256 output features
+        #         nn.Tanh(),            # Tanh activation
+        #         nn.Linear(256, 3),    # Linear layer: 256 input features, 3 output features
+        #         nn.Identity()         # Identity function (no activation for final output)
+        #     )
+        # self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
+        # print("self.feature_extraction",self.feature_extraction,self.feature_extraction.shape)
+        if len(obs)==2 and args.heterogeneous:
+            self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
+
+            self.mu_spot=self.spot_output_layer(self.feature_extraction)
+            # print("self.mu_spot",self.mu_spot,type(self.mu_spot),self.mu_spot.shape)
+            self.mu_titan=self.titan_output_layer(self.feature_extraction)
+            # print(self.feature_extraction[0:1],self.feature_extraction[0:1].shape,self.feature_extraction[1:2].shape,self.feature_extraction.shape)
+            # self.mu_spot,self.mu_titan=self.output_layer(self.feature_extraction[0:1],self.feature_extraction[1:2])
+            
+            
+            # self.mu_r1,self.mu_r2=self.output_layer_r1(self.feature_extraction[0:1]),self.output_layer_r2(self.feature_extraction[1:2])
+            
+
+
+            # # self.mu = model(torch.concat((obs, self.z_net(im)), -1))
+            # # print("mu_regular",self.mu)
+            # self.mu1 = self.mu_net1(torch.concat((obs[0:1], self.z_net(im[0:1])),-1))
+            # self.mu2 = self.mu_net2(torch.concat((obs[1:2], self.z_net(im[1:2])),-1))
+
+            # # Compare feature dimensions (second dimension)
+            # if self.mu1.shape[1] < self.mu2.shape[1]:
+            #     # Pad self.mu1 to match the feature size of self.mu2
+            #     padding_size = self.mu2.shape[1] - self.mu1.shape[1]
+            #     self.mu1_padded = F.pad(self.mu1, (0, padding_size))  # Pads self.mu1 on the right (feature dimension)
+            #     self.mu = torch.cat((self.mu1_padded, self.mu2), dim=0)  # Concatenate along the batch dimension
+            # elif self.mu2.shape[1] < self.mu1.shape[1]:
+            #     # Pad self.mu2 to match the feature size of self.mu1
+            #     padding_size = self.mu1.shape[1] - self.mu2.shape[1]
+            #     self.mu2_padded = F.pad(self.mu2, (0, padding_size))  # Pads self.mu2 on the right (feature dimension)
+            #     self.mu = torch.cat((self.mu1, self.mu2_padded), dim=0)  # Concatenate along the batch dimension
+            # else:
+            #     # If both have the same feature size, concatenate them directly
+            #     self.mu = torch.cat((self.mu1, self.mu2), dim=0)
+            # # self.mu = torch.cat((self.mu1, self.mu2), dim=0)
+            # print("mu_concate",self.mu)
+            # self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
+            # print("self.mu",self.mu,"self.mu2",self.mu2)
+            # self.std = torch.exp(self.log_std)
+            # self.std_r1 = torch.exp(self.log_std_r1)
+            # self.std_r2 = torch.exp(self.log_std_r2)
+
+            self.std_spot = torch.exp(self.log_std_spot)
+            self.std_titan = torch.exp(self.log_std_titan)
+
+            # print("NORMALDIM",self.mu.shape,self.std.shape,self.std,Normal(self.mu, self.std))
+            return Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan)
+        
+        elif len(obs)==2 and args.IHPPO:
+            self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
+
+            self.mu_dtr=self.dtr_output_layer(self.feature_extraction)
+            # print("self.mu_dtr",self.mu_dtr,type(self.mu_dtr),self.mu_dtr.shape)
+            self.mu_titan=self.titan_output_layer(self.feature_extraction)
+            # print(self.feature_extraction[0:1],self.feature_extraction[0:1].shape,self.feature_extraction[1:2].shape,self.feature_extraction.shape)
+            # self.mu_dtr,self.mu_titan=self.output_layer(self.feature_extraction[0:1],self.feature_extraction[1:2])
+            
+            
+            # self.mu_r1,self.mu_r2=self.output_layer_r1(self.feature_extraction[0:1]),self.output_layer_r2(self.feature_extraction[1:2])
+            
+
+
+            # # self.mu = model(torch.concat((obs, self.z_net(im)), -1))
+            # # print("mu_regular",self.mu)
+            # self.mu1 = self.mu_net1(torch.concat((obs[0:1], self.z_net(im[0:1])),-1))
+            # self.mu2 = self.mu_net2(torch.concat((obs[1:2], self.z_net(im[1:2])),-1))
+
+            # # Compare feature dimensions (second dimension)
+            # if self.mu1.shape[1] < self.mu2.shape[1]:
+            #     # Pad self.mu1 to match the feature size of self.mu2
+            #     padding_size = self.mu2.shape[1] - self.mu1.shape[1]
+            #     self.mu1_padded = F.pad(self.mu1, (0, padding_size))  # Pads self.mu1 on the right (feature dimension)
+            #     self.mu = torch.cat((self.mu1_padded, self.mu2), dim=0)  # Concatenate along the batch dimension
+            # elif self.mu2.shape[1] < self.mu1.shape[1]:
+            #     # Pad self.mu2 to match the feature size of self.mu1
+            #     padding_size = self.mu1.shape[1] - self.mu2.shape[1]
+            #     self.mu2_padded = F.pad(self.mu2, (0, padding_size))  # Pads self.mu2 on the right (feature dimension)
+            #     self.mu = torch.cat((self.mu1, self.mu2_padded), dim=0)  # Concatenate along the batch dimension
+            # else:
+            #     # If both have the same feature size, concatenate them directly
+            #     self.mu = torch.cat((self.mu1, self.mu2), dim=0)
+            # # self.mu = torch.cat((self.mu1, self.mu2), dim=0)
+            # print("mu_concate",self.mu)
+            # self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
+            # print("self.mu",self.mu,"self.mu2",self.mu2)
+            # self.std = torch.exp(self.log_std)
+            # self.std_r1 = torch.exp(self.log_std_r1)
+            # self.std_r2 = torch.exp(self.log_std_r2)
+
+            self.std_dtr = torch.exp(self.log_std_dtr)
+            self.std_titan = torch.exp(self.log_std_titan)
+
+            # print("NORMALDIM",self.mu.shape,self.std.shape,self.std,Normal(self.mu, self.std))
+            return Normal(self.mu_dtr, self.std_dtr),Normal(self.mu_titan, self.std_titan)
+        
+        elif len(obs)==1 and (args.IHPPO or args.heterogeneous): 
+            self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
+
+            self.mu=self.output_layer(self.feature_extraction)
+            self.std = torch.exp(self.log_std)
+            return Normal(self.mu, self.std)
+        else:
+            # print("GGCMING")
+            self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
+            self.std = torch.exp(self.log_std)
+            return Normal(self.mu, self.std)
     
     def _distribution_clipped(self, obs, im):
         obs = torch.reshape(obs, [-1, self.obs_dim])
@@ -127,6 +410,7 @@ class MLPGaussianActorPerception(ActorPerception):
 
         # Apply the tanh squashing function and scale to the desired bounds for each dimension
         bounded_action = np.zeros_like(raw_action)
+        
         for i in range(len(raw_action)):
             lower_bound, upper_bound = bounds[i]
             squashed_action = np.tanh(raw_action[i])  # Squash to [-1, 1]
@@ -136,6 +420,7 @@ class MLPGaussianActorPerception(ActorPerception):
         return bounded_action
 
     def _log_prob_from_distribution(self, pi, act):
+        # print("pi",pi)
         return pi.log_prob(act).sum(axis=-1)    # Last axis sum needed for Torch Normal distribution
 
 class MLPCriticPerception(nn.Module):
@@ -155,11 +440,26 @@ class MLPActorCriticPerception(nn.Module):
 
     def __init__(self, observation_space,  im_dim, action_space,
                  hidden_sizes=(64,64), activation=nn.Tanh):
+        
         super().__init__()
+        # action_space=[(-10000.0, 10000.0, (2,)),(-10000.0, 10000.0, (2,))]
+        # action_space=Box(-10000.0, 10000.0, (2,3))
+        # print("core",action_space.shape);exit()
         obs_dim = observation_space.shape[0]
-        # # policy builder depends on action space
+        # obs_dim=6
+        # im_dim=[1,80,80]
+        # print(obs_dim)
+        # # # # policy builder depends on action space
+        # for action_sp in action_space:
+        #     if isinstance(action_sp, Box):
+        #         print("core_shape",action_sp,action_sp.shape[0])
+        #         self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_sp.shape[0], hidden_sizes, activation)
+        # # # policy builder depends on action space
+        
         if isinstance(action_space, Box):
-            self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape[0], hidden_sizes, activation)
+            # print("core_shape",action_space,action_space.shape)
+            # self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape[0], hidden_sizes, activation)
+            self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape, hidden_sizes, activation)
         # print("self.pi",self.pi)
         # build value function
         self.v  = MLPCriticPerception(obs_dim, hidden_sizes, activation, self.pi.z_net)
@@ -167,17 +467,40 @@ class MLPActorCriticPerception(nn.Module):
 
     def step(self, obs, im, stochastic=True):
         # print("stepobs",obs.shape)
-        pi = self.pi._distribution(obs, im)
+        # print("lenlen",len(obs),len(im))
+        # obs=obs[0]
+        # pi = self.pi._distribution(obs, im)
+        if args.heterogeneous:
+            pi_spot,pi_titan = self.pi._distribution(obs, im)
+        elif args.IHPPO:
+            pi_dtr,pi_titan = self.pi._distribution(obs, im)
+        else:
+            pi = self.pi._distribution(obs, im)
         # pi = self.pi._distribution_clipped(obs, im)
         
-        # print(pi)
+        # print(pi_spot,pi_titan);exit()
 
         if stochastic:
-            a = pi.sample()
-            # a = pi.sample()
-            # print(a)
+            if args.heterogeneous:
+                a_spot = pi_spot.sample()
+                a_titan = pi_titan.sample()
+            elif args.IHPPO:
+                a_dtr = pi_dtr.sample()
+                a_titan = pi_titan.sample()
+            else:
+                a = pi.sample()
+            # print("STEPA",a);exit()
         else:
-            a = self.pi.mu
+            if args.heterogeneous:
+                a_spot = self.pi.mu_spot
+                a_titan = self.pi.mu_titan
+            elif args.IHPPO:
+                a_dtr = self.pi.mu_dtr
+                a_titan = self.pi.mu_titan
+            else:
+                a = self.pi.mu
+            
+        # print("action_core",a_spot,"titanaction",a_titan)
         if args.gausian_clip:
             r1_clipped_linear_vel_command=np.clip(a[0][0].detach().numpy(), -0.5, 1)
             r1_clipped_angular_vel_command=np.clip(a[0][1].detach().numpy(), -1.5, 1.5)
@@ -187,14 +510,52 @@ class MLPActorCriticPerception(nn.Module):
 
             a=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
         # print("policy_vel",a,type(a))
-        logp_a = self.pi._log_prob_from_distribution(pi, a)
-        v = self.v(obs, im)
+
+        if args.heterogeneous:
+            logp_a_spot = self.pi._log_prob_from_distribution(pi_spot, a_spot)
+            logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
+        elif args.IHPPO:
+            logp_a_dtr = self.pi._log_prob_from_distribution(pi_dtr, a_dtr)
+            logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
+        else:
+            logp_a = self.pi._log_prob_from_distribution(pi, a)
+        
+        # print(obs[0:1],len(obs[0:1]),len(im[0:1]),im[0:1])
+
+        if args.heterogeneous or args.IHPPO:
+            v1 = self.v(obs[0:1], im[0:1])
+            v2 = self.v(obs[1:2], im[1:2])
+            v= torch.concat((v1,v2), -1)
+        elif (args.heterogeneous or args.IHPPO) and args.combined_value:
+            v = self.v(obs, im)
+        else:
+            v = self.v(obs, im)
+        
 
         # Memory leak happens here somewhere. Copying the arrays seem to help??
         v_copy = v.cpu().detach().data.numpy().copy()
-        a_copy = a.cpu().detach().data.numpy().copy()
-        logp_a_copy = logp_a.cpu().detach().data.numpy().copy()
-        return a_copy, v_copy, logp_a_copy
+        # print("val",v_copy);exit()
+
+        if args.heterogeneous:
+            a_copy_spot = a_spot.cpu().detach().data.numpy().copy()
+            a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
+            logp_a_copy_spot = logp_a_spot.cpu().detach().data.numpy().copy()
+            logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
+        elif args.IHPPO:
+            a_copy_dtr = a_dtr.cpu().detach().data.numpy().copy()
+            a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
+            logp_a_copy_dtr = logp_a_dtr.cpu().detach().data.numpy().copy()
+            logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
+        else:
+            a_copy = a.cpu().detach().data.numpy().copy()
+            logp_a_copy = logp_a.cpu().detach().data.numpy().copy()
+        # print("val",v_copy);exit()
+        if args.heterogeneous:
+            return a_copy_spot, a_copy_titan, v_copy, logp_a_copy_spot, logp_a_copy_titan
+        elif args.IHPPO:
+            return a_copy_dtr, a_copy_titan, v_copy, logp_a_copy_dtr, logp_a_copy_titan
+        else:
+            return a_copy, v_copy, logp_a_copy
 
     def act(self, obs, im):
         return self.step(obs, im)[0]
@@ -289,6 +650,7 @@ class MLPActorCritic(nn.Module):
             a = pi.sample() ## sample from normal dist.
         else:
             a = self.pi.mu ## just take mean of dist. as the value
+        
         logp_a = self.pi._log_prob_from_distribution(pi, a)
         v = self.v(obs)
 

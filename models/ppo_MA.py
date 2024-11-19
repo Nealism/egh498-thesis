@@ -15,6 +15,7 @@ import psutil
 import pandas as pd
 import default_arguments
 import cv2
+from gym import spaces
 
 
 from scipy.ndimage import label, generate_binary_structure
@@ -23,7 +24,7 @@ import time
 import matplotlib.pyplot as plt
 import os
 
-
+argus = default_arguments.get_defaults() 
 
 
 class PPOBufferPerception:
@@ -34,6 +35,7 @@ class PPOBufferPerception:
     """
 
     def __init__(self, ob_size, im_size, ac_size, size, gamma=0.99, lam=0.95):
+        # print("PPO_AC",ac_size)
         self.obs_buf = np.zeros(core.combined_shape(size, ob_size), dtype=np.float32)
         #print("im_size",type(im_size))
         self.im_buf = np.zeros(core.combined_shape(size, im_size), dtype=np.float32)
@@ -53,7 +55,8 @@ class PPOBufferPerception:
         """
         assert self.ptr < self.max_size     # buffer has to have room so you can store
         #print("store_im",im)
-        
+        # print("PPO_STORE!",self.act_buf[self.ptr] )
+        # print("PPO_Store_act",act)
         self.obs_buf[self.ptr] = obs
         self.im_buf[self.ptr] = im
         self.act_buf[self.ptr] = act
@@ -208,10 +211,9 @@ class MA_PPOBuffer:
             #self.args = args
             #self.ptr, self.path_start_idx, self.max_size = 0, 0, size
             #self.ptr, self.path_start_idx, self.max_size = 0, 0, size
-
+            # for ac_s in ac_size:
             self.buffers=tuple([PPOBuffer(ob_size, ac_size, size, gamma=gamma, lam=lam) for Robot in range(num_robots)])
-
-            #print("b",tuple(self.buffers), type(self.buffers))
+            
             
             
         def store(self, obs, acts, rews, vals, logps):
@@ -273,9 +275,28 @@ class MA_PPOBufferPerception:
             #self.ptr, self.path_start_idx, self.max_size = 0, 0, size
             #self.ptr, self.path_start_idx, self.max_size = 0, 0, size
             #print("im",type(im_size))
-            self.buffers=tuple([PPOBufferPerception(ob_size,im_size, ac_size, size, gamma=gamma, lam=lam) for Robot in range(num_robots)])
+            # print("ac_size",ac_size)
+            # for buffer, ob,im, act,rew,val,logp in zip(self.buffers, tuple(obs),tuple(im),tuple(acts),tuple(rews),tuple(vals.tolist()),tuple(logps.tolist())):
             
-            #print("b",tuple(self.buffers), type(self.buffers))
+            
+            
+            
+            # print("MA_AC",ac_size)
+            if argus.heterogeneous or argus.IHPPO:
+                self.buffer1=PPOBufferPerception(ob_size,im_size, ac_size[0], size, gamma=gamma, lam=lam)
+                self.buffer2=PPOBufferPerception(ob_size,im_size, ac_size[1], size, gamma=gamma, lam=lam)
+                self.buffers=self.buffer1,self.buffer2
+            else:
+                self.buffers=tuple([PPOBufferPerception(ob_size,im_size, ac_size, size, gamma=gamma, lam=lam) for Robot in range(num_robots)])
+            # # print("self.buffers",self.buffers,type(self.buffers))
+
+            # # # self.buffers [(<models.ppo_MA.PPOBufferPerception object at 0x7fd8566ec8b0>,), (<models.ppo_MA.PPOBufferPerception object at 0x7fd8566ec910>,)]
+            
+            # # # for ac_s in ac_size:
+            # # # self.buffers=tuple([PPOBuffer(ob_size, ac_s, size, gamma=gamma, lam=lam) for ac_s in ac_size])
+
+            # # # print("b",tuple(self.buffers), type(self.buffers))
+            # # print("b",tuple(self.buffers), type(self.buffers))
             
             
         def store(self, obs,im, acts, rews, vals, logps):
@@ -284,14 +305,18 @@ class MA_PPOBufferPerception:
             #print(num_robots,type(num_robots))
             #for Robot in range(num_robots):
             #robot_id_number=tuple(range(num_robots))
-            for buffer, ob,im, act,rew,val,logp in zip(self.buffers, tuple(obs),tuple(im),tuple(acts),tuple(rews),tuple(vals.tolist()),tuple(logps.tolist())):
+            for buffer, ob,im, act,rew,val,logp in zip(self.buffers, tuple(obs),tuple(im),tuple(acts),tuple(rews),tuple(vals.tolist()),tuple(logps)):
                     #self.ptr += 1
+                # km= buffer, ob,im, act,rew,val,logp
+                # print("store_arguments", buffer, ob,im, act,rew,val,logp,len(km))
+                # print("store_acts",act)
                 #print("store buffer.ptr",buffer.ptr)
                 #print(buffer,Robot,rew)
                 #print("bf",buffer,"ob", ob, "act",act,"rw",rew,"vl",val,"lgp",logp)
                 #print("buffer store",buffer.store(ob,act,rew,val,logp))
                 #print("ob_size_mabuf",len(tuple(obs)))
                 buffer.store(ob,im,act,rew,val,logp)
+            # print(buffer.store);exit()
             
 
         def finish_path(self, last_vals=()):
@@ -460,10 +485,19 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     torch.manual_seed(seed)
     np.random.seed(seed)
 
-    ob_size = env.observation_space.shape
-    ac_size = env.action_space.shape
-    # print(ob_size,ac_size)
-    #print("obs",env.observation_space,"action",env.action_space)
+    # ob_size = env.observation_space.shape
+    # ac_size = env.action_space.shape
+    
+
+    if env.args.heterogeneous:
+
+        ob_size = (env.ob_size,)
+        ac_size = tuple(env.ac_size)
+    else:
+        ob_size = env.observation_space.shape
+        ac_size = env.action_space.shape
+    # print(ob_size,ac_size,type(ob_size),type(ac_size));exit()
+    # print("obs",env.observation_space,"action",env.action_space)
     
 
     # Create actor-critic module
@@ -476,6 +510,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             print("Loading saved weights: ", load_path)
         else:
             ac = actor_critic(env.observation_space, im_size, env.action_space, **ac_kwargs)
+        # print("ac",ac)
         train_pi_iters = 10
         train_v_iters = 10
     else:    
@@ -485,6 +520,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             print("Loading saved weights: ", load_path)
         else:
             ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
+
+            # print("AC",ac);exit()
         train_pi_iters = 100
         train_v_iters = 100
 
@@ -513,12 +550,23 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             obs, im, act, adv, logp_old = data['obs'], data['im'], data['act'], data['adv'], data['logp']
         else:
             obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
-
+        # print( " data['act']",data['act']);exit()
         # Policy loss
+        # ac_space=spaces.Box(-10000.0, 10000.0, (len(act[0]),))
+        ac_space=spaces.Box(-10000.0, 10000.0, (len(act[0]),))
+        # if env.args.heterogeneous:
+        # ac = actor_critic(env.observation_space, im_size, ac_space, **ac_kwargs)
+        # print("obs",len(obs),env.observation_space,env.action_space,ac_space,len(act),len(act[0]),len(act[1]),act)
         if use_perception:
+            # if (env.args.heterogeneous or env.args.IHPPO) and not env.args.multi_titans:
+            #     ac = actor_critic(env.observation_space, im_size, ac_space, **ac_kwargs)
+            # else:
+            #     ac = actor_critic(env.observation_space, im_size, env.action_space, **ac_kwargs)
             pi, logp = ac.pi(obs, im, act)
+            # pi_spot,pi_titan, logp_spot,logp_titan = ac.pi(obs, im, act)
         else:
             pi, logp = ac.pi(obs, act)
+        # print("AC.PI",ac.pi)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1-clip_ratio, 1+clip_ratio) * adv
         loss_pi = -(torch.min(ratio * adv, clip_adv)).mean()
@@ -611,7 +659,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 # print("="*20)
                 writer.add_scalar("ARews/robot_" + str(num), np.mean(rewbuffer), epoch)
                 writer.add_scalar("ALens/robot_" + str(num), np.mean(lenbuffer), epoch)
-                writer.add_scalar("Stds/robot_" + str(num), np.mean(ac.pi.std.data.numpy()), epoch)
+                # writer.add_scalar("Stds/robot_" + str(num), np.mean(ac.pi.std_spot.data.numpy()), epoch)
+                # writer.add_scalar("Stds/robot_" + str(num), np.mean(ac.pi.std_titan.data.numpy()), epoch)
                 writer.add_scalar("RAM/robot_" + str(num), process.memory_info().rss/(1024.0 ** 3)*num_procs(), epoch)
                 writer.add_scalar("Lr_pi/robot_" + str(num), learning_rate_pi, epoch)
                 writer.add_scalar("Lr_vf/robot_" + str(num), learning_rate_vf, epoch)
@@ -628,7 +677,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             env.log_stuff(logger, num, writer, epoch)
 
             logger.log_tabular("RAM", process.memory_info().rss/(1024.0 ** 3)*num_procs())
-            logger.log_tabular('Std', np.mean(ac.pi.std.data.numpy()))
+            # logger.log_tabular('Std', np.mean(ac.pi.std.data.numpy()))
             # logger.log_tabular('Lr_pi', learning_rate_pi)
             # logger.log_tabular('Lr_vf', learning_rate_vf)
             logger.log_tabular('Time per ep', time.time() - t1)
@@ -665,13 +714,50 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     
     for epoch in range(epochs):
         st=time.time()
+        # print("checking how many observation",o, len(o))
         for t in range(local_steps_per_epoch):
             if use_perception:
-                a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                if env.args.heterogeneous:
+                    a_spot,a_titan, v, logp_spot, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                elif env.args.IHPPO:
+                    a_dtr,a_titan, v, logp_dtr, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                else:
+                    a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                
+            
             else:
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
+            # print("action_bef",a_spot,a_titan, v, logp_spot, logp_titan)
+            # print(ac_size);exit()
+            # print(env.robots);exit()
+            # if env.args.heterogeneous:
+            #     if ac_size==(2,3):
+            #         a=a_titan[0],a_spot[1]
+            #         logp=[logp_titan[0],logp_spot[1]]
+            #     elif ac_size==(3,2):
+            #         a=a_spot[0],a_titan[1]
+            #         logp=[logp_spot[0],logp_titan[1]]
 
-
+            if env.args.heterogeneous:
+                # if ac_size==(2,3):
+                if "titan" in str(env.robots[0]):
+                    a=a_titan[0],a_spot[1]
+                    logp=[logp_titan[0],logp_spot[1]]
+                # elif ac_size==(3,2):
+                elif "spot" in str(env.robots[0]):
+                    a=a_spot[0],a_titan[1]
+                    logp=[logp_spot[0],logp_titan[1]]
+            elif env.args.IHPPO:
+                # if ac_size==(2,3):
+                if "titan" in str(env.robots[0]):
+                    a=a_titan[0],a_dtr[1]
+                    logp=[logp_titan[0],logp_dtr[1]]
+                # elif ac_size==(3,2):
+                elif "dtr" in str(env.robots[0]):
+                    a=a_dtr[0],a_titan[1]
+                    logp=[logp_dtr[0],logp_titan[1]]
+            # print("val",v)
+              
             tt=time.time()
             next_o, r, d,termination, _ = env.step(a)
             # print("td", time.time()-tt)
@@ -910,8 +996,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #print(len(ep_ret_list),(ep_ret_list))
 
             #print(len(r_list), r_list)
-
-
+            
 
             # save and log
             if use_perception:
@@ -958,7 +1043,11 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 #if (timeout or epoch_ended) and not all(d):
                 if (timeout or epoch_ended) and not (all(d) or ( argus.single_done and any(d))):
                     if use_perception:
-                        _, v, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                        if env.args.heterogeneous or env.args.IHPPO:
+                        
+                            _,_, v,_, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                        else:
+                            _, v, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                     else:
                         _, v, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
                         #print("what is that tensor with 2 element",v.detach().numpy(), type(v.detach().numpy()))
@@ -1013,9 +1102,9 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
         
 
-        # Perform PPO update!
+        # Perform PPO update is inside print results function below!
         data_list= buf.get(robot_number)
-        #print("datalist",data_list)
+        # print("datalist",data_list);exit()
         for g in pi_optimizer.param_groups:
             learning_rate_pi = g['lr']
 

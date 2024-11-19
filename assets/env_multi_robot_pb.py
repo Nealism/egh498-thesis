@@ -1,3 +1,7 @@
+from assets.env_titan_pb_3 import Env as TitanEnv_speedy
+from assets.env_titan_pb_4_dt_speed import Env as DTR_Speed_ENV
+from assets.env_dtr_shape import Env as DTR_Shape_ENV
+from assets.env_dtr_pb import Env as DTREnv
 from assets.env_titan_pb_2 import Env as TitanEnv
 from assets.env_spot_pb_2 import Env as SpotEnv
 import pybullet as p
@@ -38,44 +42,6 @@ class Env(EnvBasePB):
         
         super().__init__(PATH)
 
-        self.all_log_things = [{} for _ in range(args.num_robots)]
-
-        if "pumpkin" in self.args.env:
-            self.ac_size = 22
-            self.ob_size = 7
-        else:
-            self.ac_size = 2
-            if self.args.static_robots > 1:
-                self.ob_size = 18
-            elif self.args.obstacle_avoidance:
-                self.ob_size = 16+2*(self.args.num_robots-1)
-
-            elif self.args.gap_avoidance and self.args.experiment_1 and self.args.occupancy_map and self.args.use_perception:
-                #print("owch")    
-                self.ob_size = 6#+2 *(self.args.num_robots-1)
-
-            elif self.args.gap_avoidance and self.args.experiment_2 and self.args.occupancy_map and self.args.use_perception:
-                
-                #print("owch")
-                self.ob_size = 6+2 *(self.args.num_robots-1)
-
-            elif self.args.gap_avoidance and self.args.experiment_3 and self.args.occupancy_map and self.args.use_perception:
-                
-                #print("owch")
-                self.ob_size = 7+5 *(self.args.num_robots-1)
-
-            elif self.args.gap_avoidance and self.args.experiment_3:
-
-                self.ob_size = 27+5*(self.args.num_robots-1)
-                
-            elif self.args.gap_avoidance:
-                self.ob_size = 26+2*(self.args.num_robots-1)
-            else:
-                #print("nowch")
-                self.ob_size = 6+2*(self.args.num_robots-1)
-        self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
-        self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
-
         self.steps = -1
 
         self.load_simulator()
@@ -83,7 +49,6 @@ class Env(EnvBasePB):
         
         objects = p.loadMJCF("./assets/xmls/ground.xml")
         self.worldId = objects[0]
-        
 
         if self.args.multi_spots:
             self.robots=[SpotEnv(PATH=PATH, args=args, writer=writer) for n in range(args.num_robots)]
@@ -95,6 +60,78 @@ class Env(EnvBasePB):
         elif self.args.heterogeneous:
             self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),SpotEnv(PATH=PATH, args=args, writer=writer) ]
             self.z_position=0.4555
+        elif self.args.heterogeneous_speedy:
+            self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),TitanEnv_speedy(PATH=PATH, args=args, writer=writer) ]
+            self.z_position=0.031
+        elif self.args.heterogeneous_DTR_TITAN:
+            self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),DTREnv(PATH=PATH, args=args, writer=writer) ]
+            self.z_position=0.031
+
+        elif self.args.heterogeneous_DTR_speed:
+            self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),DTR_Speed_ENV(PATH=PATH, args=args, writer=writer) ]
+            self.z_position=0.031
+
+        elif self.args.heterogeneous_DTR_shape:
+            self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),DTR_Shape_ENV(PATH=PATH, args=args, writer=writer) ]
+            self.z_position=0.031
+        # print("robots",self.robots)
+        self.all_log_things = [{} for _ in range(args.num_robots)]
+
+        # if "pumpkin" in self.args.env:
+        #     self.ac_size = 22
+        #     self.ob_size = 7
+        # else:
+        # self.ac_size = 3
+        
+        if self.args.heterogeneous or self.args.IHPPO:
+            self.ac_size=[]
+            self.action_space=[]
+            # print("self.robots",self.robots)
+            for Robot in self.robots:
+                self.ac_s = Robot.ac_size
+                # self.action_sp = spaces.Box(-10000*np.ones(self.ac_s), 10000*np.ones(self.ac_s), dtype=np.float32)
+                self.ac_size.append(self.ac_s)
+        else:
+            self.ac_size = self.robots[0].ac_size
+            # self.action_space.append(self.action_sp)
+        # self.action_space=np.array(self.action_space)
+        # print("self.ac_size",self.ac_size)
+        if self.args.static_robots > 1:
+            self.ob_size = 18
+        elif self.args.obstacle_avoidance:
+            self.ob_size = 16+2*(self.args.num_robots-1)
+
+        elif self.args.gap_avoidance and self.args.experiment_1 and self.args.occupancy_map and self.args.use_perception:
+            #print("owch")    
+            self.ob_size = 6#+2 *(self.args.num_robots-1)
+
+        elif self.args.gap_avoidance and self.args.experiment_2 and self.args.occupancy_map and self.args.use_perception:
+            
+            #print("owch")
+            self.ob_size = 6+2 *(self.args.num_robots-1)
+
+        elif self.args.gap_avoidance and self.args.experiment_3 and self.args.occupancy_map and self.args.use_perception:
+            
+            #print("owch")
+            self.ob_size = 7+5 *(self.args.num_robots-1)
+
+        elif self.args.gap_avoidance and self.args.experiment_3:
+
+            self.ob_size = 27+5*(self.args.num_robots-1)
+            
+        elif self.args.gap_avoidance:
+            self.ob_size = 26+2*(self.args.num_robots-1)
+        else:
+            #print("nowch")
+            self.ob_size = 6+2*(self.args.num_robots-1)
+        
+        self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
+        self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
+
+        # print("multi.action_space",self.action_space)
+        
+
+        
         # self.robots=[SpotEnv(PATH=PATH, args=args, writer=writer) for n in range(args.num_robots)]
         # print("ronots",self.robots)
 
@@ -447,7 +484,7 @@ class Env(EnvBasePB):
         terminations=[]
         self.Both_Robots_stuck=[]
         self.turn_both=False
-        # print(actions)
+        # print("MA_AC",actions)
         # self.ob_dicts=[]
         # actions=[[0.0,1.5]]
 
@@ -524,7 +561,7 @@ class Env(EnvBasePB):
 
 
             # print("self.buffer_linear_action",self.buffer_linear_action,"self.buffer_angular_action",self.buffer_angular_action)
-        if self.args.multi_titans or self.args.multi_spots:
+        if self.args.multi_titans or self.args.multi_spots or self.args.heterogeneous_speedy or self.args.heterogeneous_DTR_TITAN or self.args.heterogeneous_DTR_speed or self.args.heterogeneous_DTR_shape:
             for action,Robot in zip(actions,self.robots):
                 # print(action)
                 Robot.motor_action(action)
@@ -539,7 +576,7 @@ class Env(EnvBasePB):
                     self.turn_both=True
                     # print("turn_both",self.turn_both)
 
-        if self.args.multi_titans:
+        if self.args.multi_titans or self.args.heterogeneous_speedy or self.args.heterogeneous_DTR_TITAN or self.args.heterogeneous_DTR_speed or self.args.heterogeneous_DTR_shape:
             for _ in range(int(self.timeStep_10Hz/self.simStep)):
                 # print("self.steps",self.steps,self.timeStep_10Hz,self.simStep,self)
                 p.stepSimulation()
@@ -562,7 +599,7 @@ class Env(EnvBasePB):
                     Robot.get_observation2()
 
 
-        if self.args.heterogeneous:
+        if self.args.heterogeneous :
 
             for action,Robot in zip(actions,self.robots):
             
@@ -1435,11 +1472,19 @@ class Env(EnvBasePB):
                 # for index_hm,local_heightmap in enumerate(local_heightmaps):
                 #     print("ind",index,i,index_hm)
                 if index!=i:
-                # if index==i:
-                #     print("True")
-                    # Calculate robot-length and robot-width in grid cells
-                    robot_length = int(1.4 / (2 * self.global_resolution))
-                    robot_width = int(0.78 / (2 * self.global_resolution))
+                    
+                    if "titan" in str(self.robots[i]):
+                        robot_length = int(1.4 / (2 * self.global_resolution))
+                        robot_width = int(0.78 / (2 * self.global_resolution))
+                    elif "dtr" in str(self.robots[i]):
+                        robot_length = int(0.8 / (2 * self.global_resolution))
+                        robot_width = int(0.51 / (2 * self.global_resolution))
+                    elif "spot" in str(self.robots[i]):
+                        robot_length = int(1.1 / (2 * self.global_resolution))
+                        robot_width = int(0.5 / (2 * self.global_resolution))
+                    
+                
+                    
                     x_index=turtlebots_x_index[i]
                     y_index=turtlebots_y_index[i]
                     

@@ -46,8 +46,11 @@ def get_defaults():
     parser.add_argument('--heterogeneous_speedy', default=False, action="store_true")
     parser.add_argument('--random_speed', default=False, action="store_true")
     parser.add_argument('--IHPPO', default=False, action="store_true")
+<<<<<<< HEAD
     parser.add_argument('--RIPG', default=False, action="store_true")
     parser.add_argument('--Road_rule', default=False, action="store_true")
+=======
+>>>>>>> origin/feature/titan_multi_agent
     
     parser.add_argument('--turtle_titan', default=False, action="store_true")
     parser.add_argument('--turtle_dtr', default=False, action="store_true")
@@ -276,7 +279,7 @@ def get_env(args):
         from assets.env_titan_pb_1 import Env
         args.control_type = "velocity"
     elif args.env in ["titan_pb_2", "pumpkin_pb","turtle_titan"]:
-        from assets.env_titan_pb_2 import Env
+        from assets.env_titan_pb_2_objective1 import Env
         args.control_type = "velocity"
     elif args.env in ["titan_pb_3", "pumpkin_pb"]:
         from assets.env_titan_pb_3 import Env
