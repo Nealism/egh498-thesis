@@ -1227,10 +1227,100 @@ class Env(EnvBasePB):
         #                         self.exp_actions[1] = -0.1
         #     #print(self.exp_actions,self)
 
+        if self.args.gap_avoidance and self.args.RIPG:
+        # ####################_______WAY_POINT_SYSTEM______#####
+            #make sure to uncomment it when remove wall
+            # if self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2 or self.intersection_r1_r:
+            #     self.exp_actions[0] = 0
+            #     self.exp_actions[1] = 0
+            # else:
+            #print(self.heading_error_gapwp1,self.heading_error_gapwp2,self.heading_error)
 
+            
+
+            # else:
+            
+            
+            # self.exp_actions[1] = 1.5*np.clip(self.heading_error_gapwp1, -1, 1)
+            # self.exp_actions[0] = 0.05
+            self.exp_actions=actions
+            for robot_bbox in self.robots_bbox:
+            #print("k",robot_bbox,"whole",self.robots_bbox)
+                # if str(robot_bbox[0])==str(self):
+                #     #print(str(robot_bbox[0]),str(self))
+                #     self.robot1_near_robot2=False
+                if str(robot_bbox[0]) != str(self):
+                    self.robot1_near_robot2=False
+                    self.intersection_hline_rbbox,_= self.intersection_check(self.head_line_MA,robot_bbox[1])
+                    self.intersection_s1line_rbbox,_= self.intersection_check(self.side_line1g_MA,robot_bbox[1])
+                    self.intersection_s2line_rbbox,_= self.intersection_check(self.side_line2g_MA,robot_bbox[1])
+                    self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox,self.intersection_s1line_rbbox,self.intersection_s2line_rbbox]
+                    #print(self.int_check_lines_vs_rbbox,self)
+                    #print(num,robot_bbox[0]);exit()
+                    # print("checking",self.turn_both)
+
+                    if any(self.int_check_lines_vs_rbbox):
+                        self.robot1_near_robot2=True
+                        # print("self.robot1_near_robot2",self.robot1_near_robot2,self)
+                        # self.exp_actions[0] = -0.02
+                        self.exp_actions[0] = -1
+                        self.exp_actions[1] = 0
+                        if self.turn_both and self==self.All_Robot_ID[0]:
+                            self.exp_actions[0] = -1#0.02
+                            self.exp_actions[1] = 0
+                        elif self.turn_both and self==self.All_Robot_ID[1]:
+                            self.exp_actions[0] = -1#0.02
+                            self.exp_actions[1] = 0
+
+
+        elif self.args.gap_avoidance and self.args.Road_rule:
+        # ####################_______WAY_POINT_SYSTEM______#####
+            #make sure to uncomment it when remove wall
+            # if self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2 or self.intersection_r1_r:
+            #     self.exp_actions[0] = 0
+            #     self.exp_actions[1] = 0
+            # else:
+            #print(self.heading_error_gapwp1,self.heading_error_gapwp2,self.heading_error)
+
+            
+
+            # else:
+            
+            
+            # self.exp_actions[1] = 1.5*np.clip(self.heading_error_gapwp1, -1, 1)
+            # self.exp_actions[0] = 0.05
+            self.exp_actions=actions
+            for robot_bbox in self.robots_bbox:
+            #print("k",robot_bbox,"whole",self.robots_bbox)
+                # if str(robot_bbox[0])==str(self):
+                #     #print(str(robot_bbox[0]),str(self))
+                #     self.robot1_near_robot2=False
+                if str(robot_bbox[0]) != str(self):
+                    self.robot1_near_robot2=False
+                    self.intersection_hline_rbbox,_= self.intersection_check(self.head_line_MA,robot_bbox[1])
+                    self.intersection_s1line_rbbox,_= self.intersection_check(self.side_line1g_MA,robot_bbox[1])
+                    self.intersection_s2line_rbbox,_= self.intersection_check(self.side_line2g_MA,robot_bbox[1])
+                    # self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox,self.intersection_s1line_rbbox,self.intersection_s2line_rbbox]
+                    # self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox,self.intersection_s1line_rbbox]
+                    self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox, self.intersection_s1line_rbbox ]
+                    #print(self.int_check_lines_vs_rbbox,self)
+                    #print(num,robot_bbox[0]);exit()
+                    # print("checking",self.turn_both)
+
+                    if any(self.int_check_lines_vs_rbbox):
+                        self.robot1_near_robot2=True
+                        # print("self.robot1_near_robot2",self.robot1_near_robot2,self)
+                        self.exp_actions[0] = -1
+                        self.exp_actions[1] = 0
+                        # if self.turn_both and self==self.All_Robot_ID[0]:
+                        #     self.exp_actions[0] = -0.02
+                        #     self.exp_actions[1] = 0
+                        # elif self.turn_both and self==self.All_Robot_ID[1]:
+                        #     self.exp_actions[0] = -0.02
+                        #     self.exp_actions[1] = 0
 
         ##THIS MA BOOTSTRAP IS THE BEST AND SAVED############################
-        if self.args.gap_avoidance and self.args.MA_bootstrap:
+        elif self.args.gap_avoidance and self.args.MA_bootstrap:
         # ####################_______WAY_POINT_SYSTEM______#####
             #make sure to uncomment it when remove wall
             # if self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2 or self.intersection_r1_r:
@@ -1246,7 +1336,7 @@ class Env(EnvBasePB):
             
             self.exp_actions[1] = 1.5*np.clip(self.heading_error_gapwp1, -1, 1)
             self.exp_actions[0] = 0.05
-            
+            # print(actions,self)
             for robot_bbox in self.robots_bbox:
             #print("k",robot_bbox,"whole",self.robots_bbox)
                 # if str(robot_bbox[0])==str(self):
@@ -1566,8 +1656,11 @@ class Env(EnvBasePB):
             self.applied_actions=[0]*2
 
 
-        clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 1)
-        clipped_angular_vel_command=np.clip(self.applied_actions[1], -1.5, 1.5)
+        # clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 1)
+        # clipped_angular_vel_command=np.clip(self.applied_actions[1], -1.5, 1.5)
+
+        clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 0.75)
+        clipped_angular_vel_command=np.clip(self.applied_actions[1], -0.75, 0.75)
 
         self.clipped_applied_actions=[clipped_linear_vel_command,clipped_angular_vel_command]
 
@@ -1760,7 +1853,8 @@ class Env(EnvBasePB):
             # print(self.steps,self)
             # print(self.time_to_goal,self.steps,self.timeStep_10Hz,self.timeStep_10Hz*self.steps,self)
             # print("Event")
-            # print("Time_to_goal",self.timeStep_10Hz*self.steps,self)
+            # THIS ONE
+            print("Time_to_goal",self.timeStep_10Hz*self.steps,self)
             # print("self.goal_success",self.goal_success,self)
 
 
@@ -1782,6 +1876,7 @@ class Env(EnvBasePB):
         # print("Time_to_gapWp2",self.time_to_gapwp2)
         # print("gapWp1_to_gapWp2",self.time_to_gapwp2-self.time_to_gapwp1)
         # print("Time_to_goal",self.time_to_goal)
+        # print("Time_to_goal",self.timeStep_10Hz*self.steps,self)
         # print("gapWp2_to_goal",self.time_to_goal-self.time_to_gapwp2)
         # print("failure", self.trial-self.number_Goal_Reached)
 
@@ -8071,15 +8166,17 @@ class Env(EnvBasePB):
             
             
             if self.args.debug:
+                # self.intersection_s2line_rbbox
+                #self.side_line1g_MA
                 self.lineId=p.addUserDebugLine((self.pos[0], self.pos[1], 0.34), (self.heading_line_end[0], self.heading_line_end[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_heading)
 
-                self.lineId_s1=p.addUserDebugLine((self.robot1_bbox[3][0], self.robot1_bbox[3][1], 0.34), (self.side_line1_endg[0], self.side_line1_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_side2)
+                # self.lineId_s1=p.addUserDebugLine((self.robot1_bbox[3][0], self.robot1_bbox[3][1], 0.34), (self.side_line1_endg[0], self.side_line1_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_side2)
 
                 self.lineId_s2=p.addUserDebugLine((self.robot1_bbox[2][0], self.robot1_bbox[2][1], 0.34), (self.side_line2_endg[0], self.side_line2_endg[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_side1)
 
                 self.lineId_MA=p.addUserDebugLine((self.pos[0], self.pos[1], 0.34), (self.heading_line_end_MA[0], self.heading_line_end_MA[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_heading_MA)
 
-                self.lineId_s1_MA=p.addUserDebugLine((self.robot1_bbox[3][0], self.robot1_bbox[3][1], 0.34), (self.side_line1_endg_MA[0], self.side_line1_endg_MA[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_side2_MA)
+                # self.lineId_s1_MA=p.addUserDebugLine((self.robot1_bbox[3][0], self.robot1_bbox[3][1], 0.34), (self.side_line1_endg_MA[0], self.side_line1_endg_MA[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_side2_MA)
 
                 self.lineId_s2_MA=p.addUserDebugLine((self.robot1_bbox[2][0], self.robot1_bbox[2][1], 0.34), (self.side_line2_endg_MA[0], self.side_line2_endg_MA[1], 0.34), lineColorRGB=[0, 0, 1], lineWidth=50, lifeTime=1, replaceItemUniqueId=self.lineId_side1_MA)
 

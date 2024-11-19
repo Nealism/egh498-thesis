@@ -229,8 +229,8 @@ class Env(EnvBasePB):
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
         elif self.args.num_robots ==2:
             
-            # synchoniser_value=np.random.uniform(1.5, 2.5)
-            synchoniser_value=1.2
+            synchoniser_value=np.random.uniform(1.5, 2.5)
+            # synchoniser_value=1.2
             if self.args.generalise:
                 goal_offset_cross=np.random.uniform(7.0, 8.0)
                 

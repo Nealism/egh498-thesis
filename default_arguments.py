@@ -38,7 +38,20 @@ def get_defaults():
     parser.add_argument('--urdf', default=False, action="store_true")
     parser.add_argument('--multi_spots', default=False, action="store_true")
     parser.add_argument('--multi_titans', default=False, action="store_true")
+    parser.add_argument('--multi_dtrs', default=False, action="store_true")
     parser.add_argument('--heterogeneous', default=False, action="store_true")
+    parser.add_argument('--heterogeneous_DTR_TITAN', default=False, action="store_true")
+    parser.add_argument('--heterogeneous_DTR_speed', default=False, action="store_true")
+    parser.add_argument('--heterogeneous_DTR_shape', default=False, action="store_true")
+    parser.add_argument('--heterogeneous_speedy', default=False, action="store_true")
+    parser.add_argument('--random_speed', default=False, action="store_true")
+    parser.add_argument('--IHPPO', default=False, action="store_true")
+    parser.add_argument('--RIPG', default=False, action="store_true")
+    parser.add_argument('--Road_rule', default=False, action="store_true")
+    
+    parser.add_argument('--turtle_titan', default=False, action="store_true")
+    parser.add_argument('--turtle_dtr', default=False, action="store_true")
+    
     parser.add_argument('--cur', default=False, action="store_true")
     parser.add_argument('--hpc', default=False, action="store_true")
     parser.add_argument('--home', default=False, action="store_true")
@@ -97,13 +110,14 @@ def get_defaults():
     parser.add_argument('--figure', default=False, action="store_true")
     parser.add_argument('--train_figure', default=False, action="store_true")
     parser.add_argument('--jit_model', default=False, action="store_true")
-    parser.add_argument('--turtle_titan', default=False, action="store_true")
+    
     parser.add_argument('--randomness', type=int, default=1)
     parser.add_argument('--map_noise', default=False, action="store_true")
     parser.add_argument('--noise_mixed', default=False, action="store_true")
     parser.add_argument('--gap_offset', default=False, action="store_true")
     parser.add_argument('--generalise', default=False, action="store_true")
     parser.add_argument('--generalise_cross', default=False, action="store_true")
+    parser.add_argument('--combined_value', default=False, action="store_true")
     
 
 
@@ -268,7 +282,7 @@ def get_env(args):
         from assets.env_titan_pb_3 import Env
         args.control_type = "velocity"
     elif args.env in ["titan_pb_4", "pumpkin_pb"]:
-        from assets.env_titan_pb_4 import Env
+        from assets.env_titan_pb_4_dt_speed import Env
         args.control_type = "velocity"
     elif args.env == "titan_mj":
         from assets.env_titan_mj import Env

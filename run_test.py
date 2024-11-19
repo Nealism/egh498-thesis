@@ -121,7 +121,7 @@ def run(args):
     # print("ob_reset",obs)
     if args.use_perception:
         im = env.get_image()
-        # print(im,type(im))
+        # print(im,type(im),im[0][0][1].shape)
     # obs=[[obs[0],obs[0]]]
     # im=[im[0],im[0]]
     # obs=obs[0][0]
@@ -152,14 +152,17 @@ def run(args):
     action_saving1=[]
     action_saving2=[]
     save_time=11
+    robot1_stop_duration = np.random.uniform(0, 6)  # Random time between 1-3 seconds for robot 1
+        # robot1_stop_duration = np.random.uniform(3.5, 4)  # Random time between 1-3 seconds for robot 2
+    robot2_stop_duration = np.random.uniform(0, 6)  # Random time between 1-3 seconds for robot 2
+    
+
     while True:
         # print(len(im))
+        # print(robot1_stop_duration,robot2_stop_duration)
         current_time = env.steps*1/10
         # Initialize random stop durations for each robot
-        robot1_stop_duration = np.random.uniform(1, 6)  # Random time between 1-3 seconds for robot 1
-        # robot1_stop_duration = np.random.uniform(3.5, 4)  # Random time between 1-3 seconds for robot 2
-        robot2_stop_duration = np.random.uniform(1, 6)  # Random time between 1-3 seconds for robot 2
-
+        
         # print(env)
         # if  current_time < 100:
         # # if current_time > 3 and current_time < 8:
@@ -197,19 +200,26 @@ def run(args):
         #     # action=[[-1,0],[-1,0]]
         
         ####___RULE_BASED_TEST______
-        if current_time <2:
-            action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
-            # action = [[-0.2, 0], [-0.2, 0]]  # Default both robots to stop
-            # action=[[-1,0],[-1,0]]
-        # #Second condition: Stop robots individually for a random time after 2 seconds
-        # elif current_time < 2 + robot1_stop_duration or current_time < 2 + robot2_stop_duration:
+        # N=80
+        # mid_x = N // 2
+        # if np.any(im[0][0][:, mid_x:N] == 1):
+        #     print("KOMOILLAA")
+        # if current_time <1:
+        #     # print(im.shape)
+        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
         #     # action = [[0, 0], [0, 0]]  # Default both robots to stop
+        #     action = [[-0.2, 0], [-0.2, 0]]  # Default both robots to stop
+        # #     # action=[[-1,0],[-1,0]]
+        # #Second condition: Stop robots individually for a random time after 2 seconds
+        # if current_time < 0 + robot1_stop_duration or current_time < 2 + robot2_stop_duration:
+        #     # action = [[0, 0], [0, 0]]  # Default both robots to stop
+        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
             
         #     action_rl1 = pol.step(torch.as_tensor(np.array(obs[0]), dtype=torch.float32), torch.as_tensor(im[0], dtype=torch.float32), stochastic=False)[0]
             
         #     # print(action_rl)
         #     # Check if robot 1 should stop or continue moving
-        #     if current_time < 2 + robot1_stop_duration:
+        #     if current_time < 0 + robot1_stop_duration:
         #         action[0] = [0, 0]  # Robot 1 stops
         #     else:
         #         action[0] = action_rl1  # Robot 1 resumes movement
@@ -217,42 +227,42 @@ def run(args):
         #     if args.num_robots==2:
         #         action_rl2 = pol.step(torch.as_tensor(np.array(obs[1]), dtype=torch.float32), torch.as_tensor(im[1], dtype=torch.float32), stochastic=False)[0]
         #         # Check if robot 2 should stop or continue moving
-        #         if current_time < 2 + robot2_stop_duration:
+        #         if current_time < 0 + robot2_stop_duration:
         #             action[1] = [0, 0]  # Robot 2 stops
         #         else:
         #             action[1] = action_rl2  # Robot 2 resumes movement
+        # else:
+        if args.use_perception and not args.jit_model:
+            # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
+            action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            action_rl1 = pol.step(torch.as_tensor(np.array(obs[0]), dtype=torch.float32), torch.as_tensor(im[0], dtype=torch.float32), stochastic=False)[0]
+            action[0] = action_rl1 
+            
+            if args.num_robots==2:
+                action_rl2 = pol.step(torch.as_tensor(np.array(obs[1]), dtype=torch.float32), torch.as_tensor(im[1], dtype=torch.float32), stochastic=False)[0]
+            
+            
+                action[1] = action_rl2
+
+        elif args.use_perception and args.jit_model:
+            a_r1=torch.as_tensor(np.array([obs[0]]), dtype=torch.float32).unsqueeze(dim=0)
+            b_r1=model_z(torch.as_tensor(im[0], dtype=torch.float32))
+            # print(a_r1[0],"br1",b_r1)
+            # print(np.array(a_r1[0].detach().numpy()).shape,np.array(b_r1.detach().numpy()).shape)
+            concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
+            action_r1 = model_mu(concatenate_part_r1)
+
+            if args.num_robots==2:
+                a_r2=torch.as_tensor(np.array([obs[1]]), dtype=torch.float32).unsqueeze(dim=0)
+                b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
+                # print(a_r2[0],"br2",b_r2)
+                # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
+                concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
+                action_r2 = model_mu(concatenate_part_r2)
+                # print("ar1",action_r1,"ar2",action_r2)
         else:
-            if args.use_perception and not args.jit_model:
-                # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
-                action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
-                action_rl1 = pol.step(torch.as_tensor(np.array(obs[0]), dtype=torch.float32), torch.as_tensor(im[0], dtype=torch.float32), stochastic=False)[0]
-                action[0] = action_rl1 
-                
-                if args.num_robots==2:
-                    action_rl2 = pol.step(torch.as_tensor(np.array(obs[1]), dtype=torch.float32), torch.as_tensor(im[1], dtype=torch.float32), stochastic=False)[0]
-                
-                
-                    action[1] = action_rl2
-
-            elif args.use_perception and args.jit_model:
-                a_r1=torch.as_tensor(np.array([obs[0]]), dtype=torch.float32).unsqueeze(dim=0)
-                b_r1=model_z(torch.as_tensor(im[0], dtype=torch.float32))
-                # print(a_r1[0],"br1",b_r1)
-                # print(np.array(a_r1[0].detach().numpy()).shape,np.array(b_r1.detach().numpy()).shape)
-                concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
-                action_r1 = model_mu(concatenate_part_r1)
-
-                if args.num_robots==2:
-                    a_r2=torch.as_tensor(np.array([obs[1]]), dtype=torch.float32).unsqueeze(dim=0)
-                    b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
-                    # print(a_r2[0],"br2",b_r2)
-                    # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
-                    concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
-                    action_r2 = model_mu(concatenate_part_r2)
-                    # print("ar1",action_r1,"ar2",action_r2)
-            else:
-                action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
-                # print ("action_before", action,type(action))
+            action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
+            # print ("action_before", action,type(action))
         if not args.unclipped_vel and args.jit_model:
             r1_clipped_linear_vel_command=np.clip(action_r1[0][0].detach().numpy(), -0.5, 1)
             r1_clipped_angular_vel_command=np.clip(action_r1[0][1].detach().numpy(), -1.5, 1.5)
@@ -292,6 +302,7 @@ def run(args):
         # print(obs[0],"obs?")
         if args.use_perception:
                 im = env.get_image()
+                # print(im,type(im),im[0][0][1].shape)
         counting_step+=1
         # action_saving1.append(action[0][0])
         # action_saving2.append(action[0][1])
@@ -775,6 +786,7 @@ def run(args):
             obs = env.reset()
             if args.use_perception:
                 im = env.get_image()
+                # print(im,type(im),im[0][0][1].shape)
             n=n+1
             print("Trial_no",n)
             if n==100:

@@ -1,0 +1,7 @@
+args="--env multi_robot_pb --num_robots 1  --cur_succ 0   --gap_avoidance --epochs 8400 
+--max_ep_len 100 --local_epoch_len 100  --insert_wall --exp Saved_models/Turtle_titan/E3r32G1E1_singlerobot_400
+--folder 2024_09_18_18_37_46 --reward_fn 32      --occupancy_map --use_perception  
+--experiment_1 --home --gap_curr --starting_gap_width 1 --randomness 2 --multi_titans 
+--turtle_titan --map_show_function"
+
+python3 run_test.py ${args}
