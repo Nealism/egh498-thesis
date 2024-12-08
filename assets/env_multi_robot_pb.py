@@ -60,20 +60,20 @@ class Env(EnvBasePB):
         elif self.args.heterogeneous:
             self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),SpotEnv(PATH=PATH, args=args, writer=writer) ]
             self.z_position=0.4555
-        elif self.args.heterogeneous_speedy:
-            self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),TitanEnv_speedy(PATH=PATH, args=args, writer=writer) ]
-            self.z_position=0.031
-        elif self.args.heterogeneous_DTR_TITAN:
-            self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),DTREnv(PATH=PATH, args=args, writer=writer) ]
-            self.z_position=0.031
+        # elif self.args.heterogeneous_speedy:
+        #     self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),TitanEnv_speedy(PATH=PATH, args=args, writer=writer) ]
+        #     self.z_position=0.031
+        # elif self.args.heterogeneous_DTR_TITAN:
+        #     self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),DTREnv(PATH=PATH, args=args, writer=writer) ]
+        #     self.z_position=0.031
 
-        elif self.args.heterogeneous_DTR_speed:
-            self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),DTR_Speed_ENV(PATH=PATH, args=args, writer=writer) ]
-            self.z_position=0.031
+        # elif self.args.heterogeneous_DTR_speed:
+        #     self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),DTR_Speed_ENV(PATH=PATH, args=args, writer=writer) ]
+        #     self.z_position=0.031
 
-        elif self.args.heterogeneous_DTR_shape:
-            self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),DTR_Shape_ENV(PATH=PATH, args=args, writer=writer) ]
-            self.z_position=0.031
+        # elif self.args.heterogeneous_DTR_shape:
+        #     self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),DTR_Shape_ENV(PATH=PATH, args=args, writer=writer) ]
+        #     self.z_position=0.031
         # print("robots",self.robots)
         self.all_log_things = [{} for _ in range(args.num_robots)]
 
@@ -83,16 +83,9 @@ class Env(EnvBasePB):
         # else:
         # self.ac_size = 3
         
-        if self.args.heterogeneous or self.args.IHPPO:
-            self.ac_size=[]
-            self.action_space=[]
-            # print("self.robots",self.robots)
-            for Robot in self.robots:
-                self.ac_s = Robot.ac_size
-                # self.action_sp = spaces.Box(-10000*np.ones(self.ac_s), 10000*np.ones(self.ac_s), dtype=np.float32)
-                self.ac_size.append(self.ac_s)
-        else:
-            self.ac_size = self.robots[0].ac_size
+        
+
+        # print("ac_size",self.ac_size)
             # self.action_space.append(self.action_sp)
         # self.action_space=np.array(self.action_space)
         # print("self.ac_size",self.ac_size)
@@ -124,6 +117,20 @@ class Env(EnvBasePB):
         else:
             #print("nowch")
             self.ob_size = 6+2*(self.args.num_robots-1)
+
+
+        # if self.args.heterogeneous or self.args.IHPPO:
+        if self.args.heterogeneous:
+            self.ac_size=[]
+            self.action_space=[]
+            self.ob_size = 7
+            # print("self.robots",self.robots)
+            for Robot in self.robots:
+                self.ac_s = Robot.ac_size
+                # self.action_sp = spaces.Box(-10000*np.ones(self.ac_s), 10000*np.ones(self.ac_s), dtype=np.float32)
+                self.ac_size.append(self.ac_s)
+        else:
+            self.ac_size = self.robots[0].ac_size
         
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)

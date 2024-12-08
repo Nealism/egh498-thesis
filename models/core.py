@@ -16,7 +16,7 @@ def combined_shape(length, shape=None):
 
 def mlp(sizes, activation, output_activation=nn.Identity):
     layers = []
-    # print("mlp_sizes",sizes,"len_size-1",len(sizes)-1)
+    # print("mlp_sizes",sizes,"len_size-1",len(sizes)-1);exit()
     for j in range(len(sizes)-1):
         act = activation if j < len(sizes)-2 else output_activation
         # print("mlp_size",range(len(sizes)-1),sizes,j)
@@ -159,7 +159,10 @@ class MLPGaussianActorPerception(ActorPerception):
         super().__init__()
         self.obs_dim = obs_dim
         self.im_dim = im_dim
-        
+        if args.heterogeneous:
+            self.obs_dim=6
+            obs_dim=6
+        # print("self.obs_dim",self.obs_dim,act_dim);exit()
         # print(act_dim);exit()
         # act_dim=[3,3]
         # print("act_dim",act_dim)
@@ -189,60 +192,61 @@ class MLPGaussianActorPerception(ActorPerception):
             feature_shape=256
             feature_shape_r1=256
             feature_shape_r2=256
+            # print(obs_dim);exit()
             self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
             self.spot_output_layer = output_layer(feature_shape,3)
             self.titan_output_layer = output_layer(feature_shape,2)
             # feature_shape=256
             # self.output_layer = output_layer(feature_shape,act_dim)
-        elif (act_dim==(2,2)) and args.IHPPO:
-            dtr_act_dim=2
-            titan_act_dim=2
+        # elif (act_dim==(2,2)) and args.IHPPO:
+        #     dtr_act_dim=2
+        #     titan_act_dim=2
             
 
-            log_std_dtr = -0.0 * np.ones(dtr_act_dim, dtype=np.float32)
-            log_std_titan = -0.0 * np.ones(titan_act_dim, dtype=np.float32)
-            # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
-            self.log_std_dtr = torch.nn.Parameter(torch.as_tensor(log_std_dtr))
-            self.log_std_titan = torch.nn.Parameter(torch.as_tensor(log_std_titan))
-            self.z_net = CNN(im_dim)
-            # Need to do a dry run to initialise Lazy module
-            self.z_net(torch.zeros(self.im_dim))
-            # self.mu_net1 = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim[0]], activation)
-            # self.mu_net2 = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim[1]], activation)
-            # self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
-            feature_shape=256
-            feature_shape_r1=256
-            feature_shape_r2=256
-            self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
-            self.dtr_output_layer = output_layer(feature_shape,2)
-            self.titan_output_layer = output_layer(feature_shape,2)
-            # feature_shape=256
-            # self.output_layer = output_layer(feature_shape,act_dim)
-        elif (act_dim==(2,2) or act_dim==(3,3)):
-            act_dim=act_dim
-            # print("DID IT COME HERE",act_dim)
-            log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
-            self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
-            self.z_net = CNN(im_dim)
-            # Need to do a dry run to initialise Lazy module
-            self.z_net(torch.zeros(self.im_dim))
-            self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
-            feature_shape=256
-            self.output_layer = output_layer(feature_shape,act_dim)
+        #     log_std_dtr = -0.0 * np.ones(dtr_act_dim, dtype=np.float32)
+        #     log_std_titan = -0.0 * np.ones(titan_act_dim, dtype=np.float32)
+        #     # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+        #     self.log_std_dtr = torch.nn.Parameter(torch.as_tensor(log_std_dtr))
+        #     self.log_std_titan = torch.nn.Parameter(torch.as_tensor(log_std_titan))
+        #     self.z_net = CNN(im_dim)
+        #     # Need to do a dry run to initialise Lazy module
+        #     self.z_net(torch.zeros(self.im_dim))
+        #     # self.mu_net1 = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim[0]], activation)
+        #     # self.mu_net2 = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim[1]], activation)
+        #     # self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
+        #     feature_shape=256
+        #     feature_shape_r1=256
+        #     feature_shape_r2=256
+        #     self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+        #     self.dtr_output_layer = output_layer(feature_shape,2)
+        #     self.titan_output_layer = output_layer(feature_shape,2)
+        #     # feature_shape=256
+        #     # self.output_layer = output_layer(feature_shape,act_dim)
+        # elif (act_dim==(2,2) or act_dim==(3,3)):
+        #     act_dim=act_dim
+        #     # print("DID IT COME HERE",act_dim)
+        #     log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+        #     self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
+        #     self.z_net = CNN(im_dim)
+        #     # Need to do a dry run to initialise Lazy module
+        #     self.z_net(torch.zeros(self.im_dim))
+        #     self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+        #     feature_shape=256
+        #     self.output_layer = output_layer(feature_shape,act_dim)
 
-        elif len(act_dim)==1 and (args.IHPPO or args.heterogeneous):
+        # elif len(act_dim)==1 and (args.IHPPO or args.heterogeneous):
         
-            act_dim=act_dim[0]
-            # print("ISITCOMING")
-            # print("DID IT COME HERE",act_dim)
-            log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
-            self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
-            self.z_net = CNN(im_dim)
-            # Need to do a dry run to initialise Lazy module
-            self.z_net(torch.zeros(self.im_dim))
-            self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
-            feature_shape=256
-            self.output_layer = output_layer(feature_shape,act_dim)
+        #     act_dim=act_dim[0]
+        #     # print("ISITCOMING")
+        #     # print("DID IT COME HERE",act_dim)
+        #     log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+        #     self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
+        #     self.z_net = CNN(im_dim)
+        #     # Need to do a dry run to initialise Lazy module
+        #     self.z_net(torch.zeros(self.im_dim))
+        #     self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+        #     feature_shape=256
+        #     self.output_layer = output_layer(feature_shape,act_dim)
         else:
             act_dim=act_dim[0]
             # print("NextCOMING",[act_dim])
@@ -264,6 +268,28 @@ class MLPGaussianActorPerception(ActorPerception):
     def _distribution(self, obs, im):
         # print("obs_before",obs,len(obs),im,len(im))
         # obs=obs[0]
+        # print("core_obs",int(obs[1][0]))
+        if args.heterogeneous:
+            ob = obs
+            # print("obs",obs,type(obs),len(obs))
+            # # obs_1=torch.tensor(obs[0][1:])
+            # # obs_2=torch.tensor(obs[1][1:])
+            # obs = obs_1,obs_2
+            # obs =  torch.tensor([obs[0][1:], obs[1][1:]], dtype=torch.float32)
+            self.obs_dim=6
+            if len(obs)==2:
+                # obs =  torch.tensor([np.array(obs[0][1:]), np.array(obs[1][1:])], dtype=torch.float32)
+                # print("obs_before",obs)
+                obs = torch.tensor([np.array(observ[1:]) for observ in obs]) 
+            else:
+                # print("CHECKECHK")
+                # obs =  torch.tensor([np.array(obs[0][1:])], dtype=torch.float32)
+                # obs =  torch.tensor([np.array(obs)], dtype=torch.float32)
+                obs = torch.tensor([np.array(observ[1:]) for observ in obs]) 
+            # print("obs_after",obs,type(obs))
+        # print("obs_single_check",obs,len(obs))
+        # print("obs_after",len(obs),len(obs[0]),obs,"ob",ob,"rest_elements",int(ob[0][0]))
+        
         obs = torch.reshape(obs, [-1, self.obs_dim])
         # print("obs_after",obs,len(obs),im,len(im))
 
@@ -287,108 +313,83 @@ class MLPGaussianActorPerception(ActorPerception):
         #     )
         # self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
         # print("self.feature_extraction",self.feature_extraction,self.feature_extraction.shape)
-        if len(obs)==2 and args.heterogeneous:
+        if args.heterogeneous:
             self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
-
+            
             self.mu_spot=self.spot_output_layer(self.feature_extraction)
             # print("self.mu_spot",self.mu_spot,type(self.mu_spot),self.mu_spot.shape)
             self.mu_titan=self.titan_output_layer(self.feature_extraction)
-            # print(self.feature_extraction[0:1],self.feature_extraction[0:1].shape,self.feature_extraction[1:2].shape,self.feature_extraction.shape)
-            # self.mu_spot,self.mu_titan=self.output_layer(self.feature_extraction[0:1],self.feature_extraction[1:2])
             
-            
-            # self.mu_r1,self.mu_r2=self.output_layer_r1(self.feature_extraction[0:1]),self.output_layer_r2(self.feature_extraction[1:2])
-            
-
-
-            # # self.mu = model(torch.concat((obs, self.z_net(im)), -1))
-            # # print("mu_regular",self.mu)
-            # self.mu1 = self.mu_net1(torch.concat((obs[0:1], self.z_net(im[0:1])),-1))
-            # self.mu2 = self.mu_net2(torch.concat((obs[1:2], self.z_net(im[1:2])),-1))
-
-            # # Compare feature dimensions (second dimension)
-            # if self.mu1.shape[1] < self.mu2.shape[1]:
-            #     # Pad self.mu1 to match the feature size of self.mu2
-            #     padding_size = self.mu2.shape[1] - self.mu1.shape[1]
-            #     self.mu1_padded = F.pad(self.mu1, (0, padding_size))  # Pads self.mu1 on the right (feature dimension)
-            #     self.mu = torch.cat((self.mu1_padded, self.mu2), dim=0)  # Concatenate along the batch dimension
-            # elif self.mu2.shape[1] < self.mu1.shape[1]:
-            #     # Pad self.mu2 to match the feature size of self.mu1
-            #     padding_size = self.mu1.shape[1] - self.mu2.shape[1]
-            #     self.mu2_padded = F.pad(self.mu2, (0, padding_size))  # Pads self.mu2 on the right (feature dimension)
-            #     self.mu = torch.cat((self.mu1, self.mu2_padded), dim=0)  # Concatenate along the batch dimension
-            # else:
-            #     # If both have the same feature size, concatenate them directly
-            #     self.mu = torch.cat((self.mu1, self.mu2), dim=0)
-            # # self.mu = torch.cat((self.mu1, self.mu2), dim=0)
-            # print("mu_concate",self.mu)
-            # self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
-            # print("self.mu",self.mu,"self.mu2",self.mu2)
-            # self.std = torch.exp(self.log_std)
-            # self.std_r1 = torch.exp(self.log_std_r1)
-            # self.std_r2 = torch.exp(self.log_std_r2)
 
             self.std_spot = torch.exp(self.log_std_spot)
             self.std_titan = torch.exp(self.log_std_titan)
-
-            # print("NORMALDIM",self.mu.shape,self.std.shape,self.std,Normal(self.mu, self.std))
-            return Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan)
+            # print("OB_CHEKC",ob)
+            if len(obs)==2:            
+                return Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan)
         
-        elif len(obs)==2 and args.IHPPO:
-            self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
-
-            self.mu_dtr=self.dtr_output_layer(self.feature_extraction)
-            # print("self.mu_dtr",self.mu_dtr,type(self.mu_dtr),self.mu_dtr.shape)
-            self.mu_titan=self.titan_output_layer(self.feature_extraction)
-            # print(self.feature_extraction[0:1],self.feature_extraction[0:1].shape,self.feature_extraction[1:2].shape,self.feature_extraction.shape)
-            # self.mu_dtr,self.mu_titan=self.output_layer(self.feature_extraction[0:1],self.feature_extraction[1:2])
-            
-            
-            # self.mu_r1,self.mu_r2=self.output_layer_r1(self.feature_extraction[0:1]),self.output_layer_r2(self.feature_extraction[1:2])
-            
-
-
-            # # self.mu = model(torch.concat((obs, self.z_net(im)), -1))
-            # # print("mu_regular",self.mu)
-            # self.mu1 = self.mu_net1(torch.concat((obs[0:1], self.z_net(im[0:1])),-1))
-            # self.mu2 = self.mu_net2(torch.concat((obs[1:2], self.z_net(im[1:2])),-1))
-
-            # # Compare feature dimensions (second dimension)
-            # if self.mu1.shape[1] < self.mu2.shape[1]:
-            #     # Pad self.mu1 to match the feature size of self.mu2
-            #     padding_size = self.mu2.shape[1] - self.mu1.shape[1]
-            #     self.mu1_padded = F.pad(self.mu1, (0, padding_size))  # Pads self.mu1 on the right (feature dimension)
-            #     self.mu = torch.cat((self.mu1_padded, self.mu2), dim=0)  # Concatenate along the batch dimension
-            # elif self.mu2.shape[1] < self.mu1.shape[1]:
-            #     # Pad self.mu2 to match the feature size of self.mu1
-            #     padding_size = self.mu1.shape[1] - self.mu2.shape[1]
-            #     self.mu2_padded = F.pad(self.mu2, (0, padding_size))  # Pads self.mu2 on the right (feature dimension)
-            #     self.mu = torch.cat((self.mu1, self.mu2_padded), dim=0)  # Concatenate along the batch dimension
-            # else:
-            #     # If both have the same feature size, concatenate them directly
-            #     self.mu = torch.cat((self.mu1, self.mu2), dim=0)
-            # # self.mu = torch.cat((self.mu1, self.mu2), dim=0)
-            # print("mu_concate",self.mu)
-            # self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
-            # print("self.mu",self.mu,"self.mu2",self.mu2)
-            # self.std = torch.exp(self.log_std)
-            # self.std_r1 = torch.exp(self.log_std_r1)
-            # self.std_r2 = torch.exp(self.log_std_r2)
-
-            self.std_dtr = torch.exp(self.log_std_dtr)
-            self.std_titan = torch.exp(self.log_std_titan)
-
-            # print("NORMALDIM",self.mu.shape,self.std.shape,self.std,Normal(self.mu, self.std))
-            return Normal(self.mu_dtr, self.std_dtr),Normal(self.mu_titan, self.std_titan)
+            elif int(ob[0][0]) == 0 and not len(obs)==2 and args.heterogeneous:    
+                # print("f");exit()        
+                return Normal(self.mu_titan, self.std_titan)
         
-        elif len(obs)==1 and (args.IHPPO or args.heterogeneous): 
-            self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
+            elif int(ob[0][0]) == 1 and not len(obs)==2 and args.heterogeneous:            
+                return Normal(self.mu_spot, self.std_spot)
+        
+        # elif len(obs)==2 and args.IHPPO:
+        #     self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
 
-            self.mu=self.output_layer(self.feature_extraction)
-            self.std = torch.exp(self.log_std)
-            return Normal(self.mu, self.std)
+        #     self.mu_dtr=self.dtr_output_layer(self.feature_extraction)
+        #     # print("self.mu_dtr",self.mu_dtr,type(self.mu_dtr),self.mu_dtr.shape)
+        #     self.mu_titan=self.titan_output_layer(self.feature_extraction)
+        #     # print(self.feature_extraction[0:1],self.feature_extraction[0:1].shape,self.feature_extraction[1:2].shape,self.feature_extraction.shape)
+        #     # self.mu_dtr,self.mu_titan=self.output_layer(self.feature_extraction[0:1],self.feature_extraction[1:2])
+            
+            
+        #     # self.mu_r1,self.mu_r2=self.output_layer_r1(self.feature_extraction[0:1]),self.output_layer_r2(self.feature_extraction[1:2])
+            
+
+
+        #     # # self.mu = model(torch.concat((obs, self.z_net(im)), -1))
+        #     # # print("mu_regular",self.mu)
+        #     # self.mu1 = self.mu_net1(torch.concat((obs[0:1], self.z_net(im[0:1])),-1))
+        #     # self.mu2 = self.mu_net2(torch.concat((obs[1:2], self.z_net(im[1:2])),-1))
+
+        #     # # Compare feature dimensions (second dimension)
+        #     # if self.mu1.shape[1] < self.mu2.shape[1]:
+        #     #     # Pad self.mu1 to match the feature size of self.mu2
+        #     #     padding_size = self.mu2.shape[1] - self.mu1.shape[1]
+        #     #     self.mu1_padded = F.pad(self.mu1, (0, padding_size))  # Pads self.mu1 on the right (feature dimension)
+        #     #     self.mu = torch.cat((self.mu1_padded, self.mu2), dim=0)  # Concatenate along the batch dimension
+        #     # elif self.mu2.shape[1] < self.mu1.shape[1]:
+        #     #     # Pad self.mu2 to match the feature size of self.mu1
+        #     #     padding_size = self.mu1.shape[1] - self.mu2.shape[1]
+        #     #     self.mu2_padded = F.pad(self.mu2, (0, padding_size))  # Pads self.mu2 on the right (feature dimension)
+        #     #     self.mu = torch.cat((self.mu1, self.mu2_padded), dim=0)  # Concatenate along the batch dimension
+        #     # else:
+        #     #     # If both have the same feature size, concatenate them directly
+        #     #     self.mu = torch.cat((self.mu1, self.mu2), dim=0)
+        #     # # self.mu = torch.cat((self.mu1, self.mu2), dim=0)
+        #     # print("mu_concate",self.mu)
+        #     # self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
+        #     # print("self.mu",self.mu,"self.mu2",self.mu2)
+        #     # self.std = torch.exp(self.log_std)
+        #     # self.std_r1 = torch.exp(self.log_std_r1)
+        #     # self.std_r2 = torch.exp(self.log_std_r2)
+
+        #     self.std_dtr = torch.exp(self.log_std_dtr)
+        #     self.std_titan = torch.exp(self.log_std_titan)
+
+        #     # print("NORMALDIM",self.mu.shape,self.std.shape,self.std,Normal(self.mu, self.std))
+        #     return Normal(self.mu_dtr, self.std_dtr),Normal(self.mu_titan, self.std_titan)
+        
+        # elif len(obs)==1 and (args.IHPPO or args.heterogeneous): 
+        #     self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
+
+        #     self.mu=self.output_layer(self.feature_extraction)
+        #     self.std = torch.exp(self.log_std)
+        #     return Normal(self.mu, self.std)
         else:
             # print("GGCMING")
+            # print("CHEKINGLOPP");exit()
             self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
             self.std = torch.exp(self.log_std)
             return Normal(self.mu, self.std)
@@ -425,13 +426,30 @@ class MLPGaussianActorPerception(ActorPerception):
 
 class MLPCriticPerception(nn.Module):
 
+
+
     def __init__(self, obs_dim, hidden_sizes, activation, z_net):
         super().__init__()
         self.obs_dim = obs_dim
+        if args.heterogeneous:
+            self.obs_dim = 6
+            obs_dim = 6
         self.z_net = z_net
         self.v_net = mlp([obs_dim + 64] + list(hidden_sizes) + [1], activation)
 
-    def forward(self, obs, im):  
+    def forward(self, obs, im):
+        if args.heterogeneous:
+            # if len(obs)==2:
+            #     obs =  torch.tensor([np.array(obs[0][1:]), np.array(obs[1][1:])], dtype=torch.float32)
+            # else:
+            #     # print("CHECK",obs[0][1:])
+            #     obs =  torch.tensor(np.array(obs[0][1:]), dtype=torch.float32) 
+            if len(obs)==2:
+                # obs =  torch.tensor([np.array(obs[0][1:]), np.array(obs[1][1:])], dtype=torch.float32)
+                # print("V_obs_before",obs)
+                obs = torch.tensor([np.array(observ[1:]) for observ in obs]) 
+            else:
+                obs = torch.tensor([np.array(observ[1:]) for observ in obs])  
         obs = torch.reshape(obs, [-1, self.obs_dim])
         return torch.squeeze(self.v_net(torch.concat((obs, self.z_net(im)), -1)), -1) # Critical to ensure v has right shape.
 
@@ -446,6 +464,10 @@ class MLPActorCriticPerception(nn.Module):
         # action_space=Box(-10000.0, 10000.0, (2,3))
         # print("core",action_space.shape);exit()
         obs_dim = observation_space.shape[0]
+        # if args.heterogeneous:
+        #     obs_dim=6
+        # print("obs_dim",obs_dim)
+        # obs_dim = observation_space.shape[0]
         # obs_dim=6
         # im_dim=[1,80,80]
         # print(obs_dim)
@@ -457,7 +479,7 @@ class MLPActorCriticPerception(nn.Module):
         # # # policy builder depends on action space
         
         if isinstance(action_space, Box):
-            # print("core_shape",action_space,action_space.shape)
+            print("core_shape",action_space,action_space.shape)
             # self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape[0], hidden_sizes, activation)
             self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape, hidden_sizes, activation)
         # print("self.pi",self.pi)
@@ -472,8 +494,8 @@ class MLPActorCriticPerception(nn.Module):
         # pi = self.pi._distribution(obs, im)
         if args.heterogeneous:
             pi_spot,pi_titan = self.pi._distribution(obs, im)
-        elif args.IHPPO:
-            pi_dtr,pi_titan = self.pi._distribution(obs, im)
+        # elif args.IHPPO:
+        #     pi_dtr,pi_titan = self.pi._distribution(obs, im)
         else:
             pi = self.pi._distribution(obs, im)
         # pi = self.pi._distribution_clipped(obs, im)
@@ -484,9 +506,9 @@ class MLPActorCriticPerception(nn.Module):
             if args.heterogeneous:
                 a_spot = pi_spot.sample()
                 a_titan = pi_titan.sample()
-            elif args.IHPPO:
-                a_dtr = pi_dtr.sample()
-                a_titan = pi_titan.sample()
+            # elif args.IHPPO:
+            #     a_dtr = pi_dtr.sample()
+            #     a_titan = pi_titan.sample()
             else:
                 a = pi.sample()
             # print("STEPA",a);exit()
@@ -494,29 +516,29 @@ class MLPActorCriticPerception(nn.Module):
             if args.heterogeneous:
                 a_spot = self.pi.mu_spot
                 a_titan = self.pi.mu_titan
-            elif args.IHPPO:
-                a_dtr = self.pi.mu_dtr
-                a_titan = self.pi.mu_titan
+            # elif args.IHPPO:
+            #     a_dtr = self.pi.mu_dtr
+            #     a_titan = self.pi.mu_titan
             else:
                 a = self.pi.mu
             
-        # print("action_core",a_spot,"titanaction",a_titan)
-        if args.gausian_clip:
-            r1_clipped_linear_vel_command=np.clip(a[0][0].detach().numpy(), -0.5, 1)
-            r1_clipped_angular_vel_command=np.clip(a[0][1].detach().numpy(), -1.5, 1.5)
+        # # print("action_core",a_spot,"titanaction",a_titan)
+        # if args.gausian_clip:
+        #     r1_clipped_linear_vel_command=np.clip(a[0][0].detach().numpy(), -0.5, 1)
+        #     r1_clipped_angular_vel_command=np.clip(a[0][1].detach().numpy(), -1.5, 1.5)
 
-            r2_clipped_linear_vel_command=np.clip(a[1][0].detach().numpy(), -0.5, 1)
-            r2_clipped_angular_vel_command=np.clip(a[1][1].detach().numpy(), -1.5, 1.5)
+        #     r2_clipped_linear_vel_command=np.clip(a[1][0].detach().numpy(), -0.5, 1)
+        #     r2_clipped_angular_vel_command=np.clip(a[1][1].detach().numpy(), -1.5, 1.5)
 
-            a=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
-        # print("policy_vel",a,type(a))
+        #     a=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+        # # print("policy_vel",a,type(a))
 
         if args.heterogeneous:
             logp_a_spot = self.pi._log_prob_from_distribution(pi_spot, a_spot)
             logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
-        elif args.IHPPO:
-            logp_a_dtr = self.pi._log_prob_from_distribution(pi_dtr, a_dtr)
-            logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
+        # elif args.IHPPO:
+        #     logp_a_dtr = self.pi._log_prob_from_distribution(pi_dtr, a_dtr)
+        #     logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
         else:
             logp_a = self.pi._log_prob_from_distribution(pi, a)
         
@@ -541,19 +563,19 @@ class MLPActorCriticPerception(nn.Module):
             a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
             logp_a_copy_spot = logp_a_spot.cpu().detach().data.numpy().copy()
             logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
-        elif args.IHPPO:
-            a_copy_dtr = a_dtr.cpu().detach().data.numpy().copy()
-            a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
-            logp_a_copy_dtr = logp_a_dtr.cpu().detach().data.numpy().copy()
-            logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
+        # elif args.IHPPO:
+        #     a_copy_dtr = a_dtr.cpu().detach().data.numpy().copy()
+        #     a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
+        #     logp_a_copy_dtr = logp_a_dtr.cpu().detach().data.numpy().copy()
+        #     logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
         else:
             a_copy = a.cpu().detach().data.numpy().copy()
             logp_a_copy = logp_a.cpu().detach().data.numpy().copy()
         # print("val",v_copy);exit()
         if args.heterogeneous:
             return a_copy_spot, a_copy_titan, v_copy, logp_a_copy_spot, logp_a_copy_titan
-        elif args.IHPPO:
-            return a_copy_dtr, a_copy_titan, v_copy, logp_a_copy_dtr, logp_a_copy_titan
+        # elif args.IHPPO:
+        #     return a_copy_dtr, a_copy_titan, v_copy, logp_a_copy_dtr, logp_a_copy_titan
         else:
             return a_copy, v_copy, logp_a_copy
 

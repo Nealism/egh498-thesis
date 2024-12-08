@@ -46,11 +46,8 @@ def get_defaults():
     parser.add_argument('--heterogeneous_speedy', default=False, action="store_true")
     parser.add_argument('--random_speed', default=False, action="store_true")
     parser.add_argument('--IHPPO', default=False, action="store_true")
-<<<<<<< HEAD
     parser.add_argument('--RIPG', default=False, action="store_true")
     parser.add_argument('--Road_rule', default=False, action="store_true")
-=======
->>>>>>> origin/feature/titan_multi_agent
     
     parser.add_argument('--turtle_titan', default=False, action="store_true")
     parser.add_argument('--turtle_dtr', default=False, action="store_true")

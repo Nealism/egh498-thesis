@@ -282,6 +282,7 @@ class MA_PPOBufferPerception:
             
             
             # print("MA_AC",ac_size)
+            # print(self);exit()
             if argus.heterogeneous or argus.IHPPO:
                 self.buffer1=PPOBufferPerception(ob_size,im_size, ac_size[0], size, gamma=gamma, lam=lam)
                 self.buffer2=PPOBufferPerception(ob_size,im_size, ac_size[1], size, gamma=gamma, lam=lam)
@@ -490,7 +491,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     
 
     if env.args.heterogeneous:
-
+        # print("OB",env.ob_size)
         ob_size = (env.ob_size,)
         ac_size = tuple(env.ac_size)
     else:
@@ -510,7 +511,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             print("Loading saved weights: ", load_path)
         else:
             ac = actor_critic(env.observation_space, im_size, env.action_space, **ac_kwargs)
-        # print("ac",ac)
+        # print("ac",ac);exit()
         train_pi_iters = 10
         train_v_iters = 10
     else:    
@@ -539,7 +540,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     steps_per_epoch = local_epoch_len * num_procs()
     if use_perception:
         #print("type",im_size)
-
+        print("ob_size",ob_size,(ob_size[0]+1,))
         buf = MA_PPOBufferPerception(ob_size, im_size, ac_size, local_steps_per_epoch, gamma, lam, robot_number)
     else:
         buf = MA_PPOBuffer(ob_size, ac_size, local_steps_per_epoch, gamma, lam, robot_number)
@@ -553,10 +554,12 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         # print( " data['act']",data['act']);exit()
         # Policy loss
         # ac_space=spaces.Box(-10000.0, 10000.0, (len(act[0]),))
-        ac_space=spaces.Box(-10000.0, 10000.0, (len(act[0]),))
+        # ac_space=spaces.Box(-10000.0, 10000.0, (len(act[0]),))
         # if env.args.heterogeneous:
         # ac = actor_critic(env.observation_space, im_size, ac_space, **ac_kwargs)
         # print("obs",len(obs),env.observation_space,env.action_space,ac_space,len(act),len(act[0]),len(act[1]),act)
+        # print(act,len(act[0]))
+        # print(obs)
         if use_perception:
             # if (env.args.heterogeneous or env.args.IHPPO) and not env.args.multi_titans:
             #     ac = actor_critic(env.observation_space, im_size, ac_space, **ac_kwargs)
@@ -689,9 +692,21 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
 
     o, ep_rets, ep_lens = env.reset(), [0] * robot_number, [0]*robot_number
+    # print(o[1],"o",o[0])
     
-
-    
+    if env.args.heterogeneous:
+        # if ac_size==(2,3):
+        if "titan" in str(env.robots[0]):
+            # print("O_before",len(o[0]),o)
+            o[0] = np.insert(o[0], 0, 0)
+            o[1] = np.insert(o[1], 0, 1)
+            # print("O_after",len(o[0]),o)
+        # elif ac_size==(3,2):
+        elif "spot" in str(env.robots[0]):
+            # print("O_before",len(o[0]),o)
+            o[0] = np.insert(o[0], 0, 1)
+            o[1] = np.insert(o[1], 0, 0)
+    # print("O_after",len(o),o)
         
         #print(im);exit()
     if use_perception:
@@ -717,7 +732,9 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         # print("checking how many observation",o, len(o))
         for t in range(local_steps_per_epoch):
             if use_perception:
+                # print(o)
                 if env.args.heterogeneous:
+                    
                     a_spot,a_titan, v, logp_spot, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                 elif env.args.IHPPO:
                     a_dtr,a_titan, v, logp_dtr, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
@@ -737,7 +754,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #     elif ac_size==(3,2):
             #         a=a_spot[0],a_titan[1]
             #         logp=[logp_spot[0],logp_titan[1]]
-
+            
             if env.args.heterogeneous:
                 # if ac_size==(2,3):
                 if "titan" in str(env.robots[0]):
@@ -747,16 +764,16 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 elif "spot" in str(env.robots[0]):
                     a=a_spot[0],a_titan[1]
                     logp=[logp_spot[0],logp_titan[1]]
-            elif env.args.IHPPO:
-                # if ac_size==(2,3):
-                if "titan" in str(env.robots[0]):
-                    a=a_titan[0],a_dtr[1]
-                    logp=[logp_titan[0],logp_dtr[1]]
-                # elif ac_size==(3,2):
-                elif "dtr" in str(env.robots[0]):
-                    a=a_dtr[0],a_titan[1]
-                    logp=[logp_dtr[0],logp_titan[1]]
-            # print("val",v)
+            # elif env.args.IHPPO:
+            #     # if ac_size==(2,3):
+            #     if "titan" in str(env.robots[0]):
+            #         a=a_titan[0],a_dtr[1]
+            #         logp=[logp_titan[0],logp_dtr[1]]
+            #     # elif ac_size==(3,2):
+            #     elif "dtr" in str(env.robots[0]):
+            #         a=a_dtr[0],a_titan[1]
+            #         logp=[logp_dtr[0],logp_titan[1]]
+            # # print("val",v)
               
             tt=time.time()
             next_o, r, d,termination, _ = env.step(a)
@@ -999,6 +1016,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             
 
             # save and log
+            # print("STORE_O",o)
             if use_perception:
                 buf.store(o, im, a, r, v, logp)
             else:
@@ -1012,6 +1030,21 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             
             # Update obs (critical!)
             o = next_o
+
+            if env.args.heterogeneous:
+                # if ac_size==(2,3):
+                if "titan" in str(env.robots[0]):
+                    # print("O_before",len(o[0]),o)
+                    o[0] = np.insert(o[0], 0, 0)
+                    o[1] = np.insert(o[1], 0, 1)
+                    # print("O_after",len(o[0]),o)
+                # elif ac_size==(3,2):
+                elif "spot" in str(env.robots[0]):
+                    # print("O_before",len(o[0]),o)
+                    o[0] = np.insert(o[0], 0, 1)
+                    o[1] = np.insert(o[1], 0, 0)
+                    # print("O_after",len(o[0]),o)
+            # print("updated_O",o)
             
             if use_perception:
                 im = next_im
@@ -1078,6 +1111,20 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                     #print("local",len(local_rews.append(ep_ret[int(len(ep_ret)/2)])))
                 
                 o, ep_rets, ep_lens = env.reset(), [0] * robot_number, [0]*robot_number
+                if env.args.heterogeneous:
+                    # if ac_size==(2,3):
+                    if "titan" in str(env.robots[0]):
+                        # print("O_before",len(o[0]),o)
+                        o[0] = np.insert(o[0], 0, 0)
+                        o[1] = np.insert(o[1], 0, 1)
+                        # print("O_after",len(o[0]),o)
+                    # elif ac_size==(3,2):
+                    elif "spot" in str(env.robots[0]):
+                        # print("O_before",len(o[0]),o)
+                        o[0] = np.insert(o[0], 0, 1)
+                        o[1] = np.insert(o[1], 0, 0)
+                        # print("O_after",len(o[0]),o)
+                # print("updated_O",o);exit()
                 if use_perception:
                     im = env.get_image()
         if (epoch % save_freq == 0) or (epoch == epochs-1):
