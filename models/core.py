@@ -159,7 +159,7 @@ class MLPGaussianActorPerception(ActorPerception):
         super().__init__()
         self.obs_dim = obs_dim
         self.im_dim = im_dim
-        if args.heterogeneous:
+        if args.heterogeneous or args.titanheads:
             self.obs_dim=6
             obs_dim=6
         # print("self.obs_dim",self.obs_dim,act_dim);exit()
@@ -167,8 +167,10 @@ class MLPGaussianActorPerception(ActorPerception):
         # act_dim=[3,3]
         # print("act_dim",act_dim)
         # print(args.robots);exit()
+        # if (act_dim==(2,3) or act_dim==(3,2)) and args.heterogeneous or args.titanheads:
         if (act_dim==(2,3) or act_dim==(3,2)) and args.heterogeneous:
             # print("OR NOT")
+            # spot_act_dim=3
             spot_act_dim=3
             titan_act_dim=2
             # log_std = -0.5 * np.ones(act_dim, dtype=np.float32)
@@ -195,6 +197,26 @@ class MLPGaussianActorPerception(ActorPerception):
             # print(obs_dim);exit()
             self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
             self.spot_output_layer = output_layer(feature_shape,3)
+            self.titan_output_layer = output_layer(feature_shape,2)
+        if (act_dim==(2,2)) and args.titanheads:
+            spot_act_dim=2
+            titan_act_dim=2
+
+            log_std_spot = -0.0 * np.ones(spot_act_dim, dtype=np.float32)
+            log_std_titan = -0.0 * np.ones(titan_act_dim, dtype=np.float32)
+            # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+            self.log_std_spot = torch.nn.Parameter(torch.as_tensor(log_std_spot))
+            self.log_std_titan = torch.nn.Parameter(torch.as_tensor(log_std_titan))
+            self.z_net = CNN(im_dim)
+            # Need to do a dry run to initialise Lazy module
+            self.z_net(torch.zeros(self.im_dim))
+            
+            feature_shape=256
+            feature_shape_r1=256
+            feature_shape_r2=256
+            # print(obs_dim);exit()
+            self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+            self.spot_output_layer = output_layer(feature_shape,2)
             self.titan_output_layer = output_layer(feature_shape,2)
             # feature_shape=256
             # self.output_layer = output_layer(feature_shape,act_dim)
@@ -234,7 +256,7 @@ class MLPGaussianActorPerception(ActorPerception):
         #     feature_shape=256
         #     self.output_layer = output_layer(feature_shape,act_dim)
 
-        # elif len(act_dim)==1 and (args.IHPPO or args.heterogeneous):
+        # elif len(act_dim)==1 and (args.IHPPO or args.heterogeneous or args.titanheads):
         
         #     act_dim=act_dim[0]
         #     # print("ISITCOMING")
@@ -269,26 +291,22 @@ class MLPGaussianActorPerception(ActorPerception):
         # print("obs_before",obs,len(obs),im,len(im))
         # obs=obs[0]
         # print("core_obs",int(obs[1][0]))
-        if args.heterogeneous:
+        if args.heterogeneous or args.titanheads:
             ob = obs
-            # print("obs",obs,type(obs),len(obs))
-            # # obs_1=torch.tensor(obs[0][1:])
-            # # obs_2=torch.tensor(obs[1][1:])
-            # obs = obs_1,obs_2
-            # obs =  torch.tensor([obs[0][1:], obs[1][1:]], dtype=torch.float32)
             self.obs_dim=6
-            if len(obs)==2:
+            # if len(obs)==2:
                 # obs =  torch.tensor([np.array(obs[0][1:]), np.array(obs[1][1:])], dtype=torch.float32)
-                # print("obs_before",obs)
-                obs = torch.tensor([np.array(observ[1:]) for observ in obs]) 
-            else:
-                # print("CHECKECHK")
-                # obs =  torch.tensor([np.array(obs[0][1:])], dtype=torch.float32)
-                # obs =  torch.tensor([np.array(obs)], dtype=torch.float32)
-                obs = torch.tensor([np.array(observ[1:]) for observ in obs]) 
-            # print("obs_after",obs,type(obs))
-        # print("obs_single_check",obs,len(obs))
-        # print("obs_after",len(obs),len(obs[0]),obs,"ob",ob,"rest_elements",int(ob[0][0]))
+            # print("obs_before",obs)
+            obs = torch.tensor([np.array(observ[1:]) for observ in obs]) 
+            # print("checkhpc_obs",obs)
+            
+            # li = [observ[1:] for observ in obs]
+            # print("checkhpc_li",li)
+            # li=np.array(li)
+            # print("li_array",li)
+            # obs = torch.tensor(li) 
+            # print("obs_twoone",obs,type(obs))
+            
         
         obs = torch.reshape(obs, [-1, self.obs_dim])
         # print("obs_after",obs,len(obs),im,len(im))
@@ -313,7 +331,7 @@ class MLPGaussianActorPerception(ActorPerception):
         #     )
         # self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
         # print("self.feature_extraction",self.feature_extraction,self.feature_extraction.shape)
-        if args.heterogeneous:
+        if args.heterogeneous or args.titanheads:
             self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
             
             self.mu_spot=self.spot_output_layer(self.feature_extraction)
@@ -327,12 +345,12 @@ class MLPGaussianActorPerception(ActorPerception):
             if len(obs)==2:            
                 return Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan)
         
-            elif int(ob[0][0]) == 0 and not len(obs)==2 and args.heterogeneous:    
+            elif int(ob[0][0]) == 0 and not len(obs)==2 and args.heterogeneous or args.titanheads:    
                 # print("f");exit()        
-                return Normal(self.mu_titan, self.std_titan)
+                return Normal(self.mu_titan, self.std_titan),Normal(self.mu_titan, self.std_titan)
         
-            elif int(ob[0][0]) == 1 and not len(obs)==2 and args.heterogeneous:            
-                return Normal(self.mu_spot, self.std_spot)
+            elif int(ob[0][0]) == 1 and not len(obs)==2 and args.heterogeneous or args.titanheads:            
+                return Normal(self.mu_spot, self.std_spot),Normal(self.mu_spot, self.std_spot)
         
         # elif len(obs)==2 and args.IHPPO:
         #     self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
@@ -381,7 +399,7 @@ class MLPGaussianActorPerception(ActorPerception):
         #     # print("NORMALDIM",self.mu.shape,self.std.shape,self.std,Normal(self.mu, self.std))
         #     return Normal(self.mu_dtr, self.std_dtr),Normal(self.mu_titan, self.std_titan)
         
-        # elif len(obs)==1 and (args.IHPPO or args.heterogeneous): 
+        # elif len(obs)==1 and (args.IHPPO or args.heterogeneous or args.titanheads): 
         #     self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
 
         #     self.mu=self.output_layer(self.feature_extraction)
@@ -421,7 +439,7 @@ class MLPGaussianActorPerception(ActorPerception):
         return bounded_action
 
     def _log_prob_from_distribution(self, pi, act):
-        # print("pi",pi)
+        # print("pi",pi,"act",act,"self",self)
         return pi.log_prob(act).sum(axis=-1)    # Last axis sum needed for Torch Normal distribution
 
 class MLPCriticPerception(nn.Module):
@@ -431,25 +449,28 @@ class MLPCriticPerception(nn.Module):
     def __init__(self, obs_dim, hidden_sizes, activation, z_net):
         super().__init__()
         self.obs_dim = obs_dim
-        if args.heterogeneous:
+        if args.heterogeneous or args.titanheads:
             self.obs_dim = 6
             obs_dim = 6
         self.z_net = z_net
         self.v_net = mlp([obs_dim + 64] + list(hidden_sizes) + [1], activation)
 
     def forward(self, obs, im):
-        if args.heterogeneous:
+        if args.heterogeneous or args.titanheads:
             # if len(obs)==2:
             #     obs =  torch.tensor([np.array(obs[0][1:]), np.array(obs[1][1:])], dtype=torch.float32)
             # else:
             #     # print("CHECK",obs[0][1:])
             #     obs =  torch.tensor(np.array(obs[0][1:]), dtype=torch.float32) 
-            if len(obs)==2:
+            # if len(obs)==2:
                 # obs =  torch.tensor([np.array(obs[0][1:]), np.array(obs[1][1:])], dtype=torch.float32)
                 # print("V_obs_before",obs)
-                obs = torch.tensor([np.array(observ[1:]) for observ in obs]) 
-            else:
-                obs = torch.tensor([np.array(observ[1:]) for observ in obs])  
+                # obs = torch.tensor([np.array(observ[1:]) for observ in obs]) 
+            obs = torch.tensor([np.array(observ[1:]) for observ in obs]) 
+            # li = [observ[1:] for observ in obs]
+            # li=np.array(li)
+            # obs = torch.tensor(li) 
+              
         obs = torch.reshape(obs, [-1, self.obs_dim])
         return torch.squeeze(self.v_net(torch.concat((obs, self.z_net(im)), -1)), -1) # Critical to ensure v has right shape.
 
@@ -464,7 +485,7 @@ class MLPActorCriticPerception(nn.Module):
         # action_space=Box(-10000.0, 10000.0, (2,3))
         # print("core",action_space.shape);exit()
         obs_dim = observation_space.shape[0]
-        # if args.heterogeneous:
+        # if args.heterogeneous or args.titanheads:
         #     obs_dim=6
         # print("obs_dim",obs_dim)
         # obs_dim = observation_space.shape[0]
@@ -492,7 +513,7 @@ class MLPActorCriticPerception(nn.Module):
         # print("lenlen",len(obs),len(im))
         # obs=obs[0]
         # pi = self.pi._distribution(obs, im)
-        if args.heterogeneous:
+        if args.heterogeneous or args.titanheads:
             pi_spot,pi_titan = self.pi._distribution(obs, im)
         # elif args.IHPPO:
         #     pi_dtr,pi_titan = self.pi._distribution(obs, im)
@@ -503,7 +524,7 @@ class MLPActorCriticPerception(nn.Module):
         # print(pi_spot,pi_titan);exit()
 
         if stochastic:
-            if args.heterogeneous:
+            if args.heterogeneous or args.titanheads:
                 a_spot = pi_spot.sample()
                 a_titan = pi_titan.sample()
             # elif args.IHPPO:
@@ -513,7 +534,7 @@ class MLPActorCriticPerception(nn.Module):
                 a = pi.sample()
             # print("STEPA",a);exit()
         else:
-            if args.heterogeneous:
+            if args.heterogeneous or args.titanheads:
                 a_spot = self.pi.mu_spot
                 a_titan = self.pi.mu_titan
             # elif args.IHPPO:
@@ -533,7 +554,7 @@ class MLPActorCriticPerception(nn.Module):
         #     a=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
         # # print("policy_vel",a,type(a))
 
-        if args.heterogeneous:
+        if args.heterogeneous or args.titanheads:
             logp_a_spot = self.pi._log_prob_from_distribution(pi_spot, a_spot)
             logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
         # elif args.IHPPO:
@@ -544,11 +565,11 @@ class MLPActorCriticPerception(nn.Module):
         
         # print(obs[0:1],len(obs[0:1]),len(im[0:1]),im[0:1])
 
-        if args.heterogeneous or args.IHPPO:
+        if args.heterogeneous or args.titanheads or args.IHPPO:
             v1 = self.v(obs[0:1], im[0:1])
             v2 = self.v(obs[1:2], im[1:2])
             v= torch.concat((v1,v2), -1)
-        elif (args.heterogeneous or args.IHPPO) and args.combined_value:
+        elif (args.heterogeneous or args.titanheads or args.IHPPO) and args.combined_value:
             v = self.v(obs, im)
         else:
             v = self.v(obs, im)
@@ -558,7 +579,7 @@ class MLPActorCriticPerception(nn.Module):
         v_copy = v.cpu().detach().data.numpy().copy()
         # print("val",v_copy);exit()
 
-        if args.heterogeneous:
+        if args.heterogeneous or args.titanheads:
             a_copy_spot = a_spot.cpu().detach().data.numpy().copy()
             a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
             logp_a_copy_spot = logp_a_spot.cpu().detach().data.numpy().copy()
@@ -572,7 +593,7 @@ class MLPActorCriticPerception(nn.Module):
             a_copy = a.cpu().detach().data.numpy().copy()
             logp_a_copy = logp_a.cpu().detach().data.numpy().copy()
         # print("val",v_copy);exit()
-        if args.heterogeneous:
+        if args.heterogeneous or args.titanheads:
             return a_copy_spot, a_copy_titan, v_copy, logp_a_copy_spot, logp_a_copy_titan
         # elif args.IHPPO:
         #     return a_copy_dtr, a_copy_titan, v_copy, logp_a_copy_dtr, logp_a_copy_titan

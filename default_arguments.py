@@ -40,6 +40,7 @@ def get_defaults():
     parser.add_argument('--multi_titans', default=False, action="store_true")
     parser.add_argument('--multi_dtrs', default=False, action="store_true")
     parser.add_argument('--heterogeneous', default=False, action="store_true")
+    parser.add_argument('--titanheads', default=False, action="store_true")
     parser.add_argument('--heterogeneous_DTR_TITAN', default=False, action="store_true")
     parser.add_argument('--heterogeneous_DTR_speed', default=False, action="store_true")
     parser.add_argument('--heterogeneous_DTR_shape', default=False, action="store_true")

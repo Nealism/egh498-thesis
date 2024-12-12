@@ -283,7 +283,7 @@ class MA_PPOBufferPerception:
             
             # print("MA_AC",ac_size)
             # print(self);exit()
-            if argus.heterogeneous or argus.IHPPO:
+            if argus.heterogeneous or argus.titanheads or argus.IHPPO:
                 self.buffer1=PPOBufferPerception(ob_size,im_size, ac_size[0], size, gamma=gamma, lam=lam)
                 self.buffer2=PPOBufferPerception(ob_size,im_size, ac_size[1], size, gamma=gamma, lam=lam)
                 self.buffers=self.buffer1,self.buffer2
@@ -490,7 +490,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # ac_size = env.action_space.shape
     
 
-    if env.args.heterogeneous:
+    if env.args.heterogeneous or env.args.titanheads:
         # print("OB",env.ob_size)
         ob_size = (env.ob_size,)
         ac_size = tuple(env.ac_size)
@@ -555,13 +555,13 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         # Policy loss
         # ac_space=spaces.Box(-10000.0, 10000.0, (len(act[0]),))
         # ac_space=spaces.Box(-10000.0, 10000.0, (len(act[0]),))
-        # if env.args.heterogeneous:
+        # if env.args.heterogeneous or env.args.titanheads:
         # ac = actor_critic(env.observation_space, im_size, ac_space, **ac_kwargs)
         # print("obs",len(obs),env.observation_space,env.action_space,ac_space,len(act),len(act[0]),len(act[1]),act)
         # print(act,len(act[0]))
         # print(obs)
         if use_perception:
-            # if (env.args.heterogeneous or env.args.IHPPO) and not env.args.multi_titans:
+            # if (env.args.heterogeneous or env.args.titanheads or env.args.IHPPO) and not env.args.multi_titans:
             #     ac = actor_critic(env.observation_space, im_size, ac_space, **ac_kwargs)
             # else:
             #     ac = actor_critic(env.observation_space, im_size, env.action_space, **ac_kwargs)
@@ -625,6 +625,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 logger.log('Early stopping at step %d due to reaching max kl.'%i)
                 break
             loss_pi.backward()
+            # print(ac.pi);exit()
             mpi_avg_grads(ac.pi)    # average grads across MPI processes
             pi_optimizer.step()
 
@@ -694,7 +695,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     o, ep_rets, ep_lens = env.reset(), [0] * robot_number, [0]*robot_number
     # print(o[1],"o",o[0])
     
-    if env.args.heterogeneous:
+    if env.args.heterogeneous or env.args.titanheads:
         # if ac_size==(2,3):
         if "titan" in str(env.robots[0]):
             # print("O_before",len(o[0]),o)
@@ -733,7 +734,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         for t in range(local_steps_per_epoch):
             if use_perception:
                 # print(o)
-                if env.args.heterogeneous:
+                if env.args.heterogeneous or env.args.titanheads:
                     
                     a_spot,a_titan, v, logp_spot, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                 elif env.args.IHPPO:
@@ -747,7 +748,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             # print("action_bef",a_spot,a_titan, v, logp_spot, logp_titan)
             # print(ac_size);exit()
             # print(env.robots);exit()
-            # if env.args.heterogeneous:
+            # if env.args.heterogeneous or env.args.titanheads:
             #     if ac_size==(2,3):
             #         a=a_titan[0],a_spot[1]
             #         logp=[logp_titan[0],logp_spot[1]]
@@ -755,7 +756,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #         a=a_spot[0],a_titan[1]
             #         logp=[logp_spot[0],logp_titan[1]]
             
-            if env.args.heterogeneous:
+            if env.args.heterogeneous or env.args.titanheads:
                 # if ac_size==(2,3):
                 if "titan" in str(env.robots[0]):
                     a=a_titan[0],a_spot[1]
@@ -1031,7 +1032,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             # Update obs (critical!)
             o = next_o
 
-            if env.args.heterogeneous:
+            if env.args.heterogeneous or env.args.titanheads:
                 # if ac_size==(2,3):
                 if "titan" in str(env.robots[0]):
                     # print("O_before",len(o[0]),o)
@@ -1076,7 +1077,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 #if (timeout or epoch_ended) and not all(d):
                 if (timeout or epoch_ended) and not (all(d) or ( argus.single_done and any(d))):
                     if use_perception:
-                        if env.args.heterogeneous or env.args.IHPPO:
+                        if env.args.heterogeneous or env.args.titanheads or env.args.IHPPO:
                         
                             _,_, v,_, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                         else:
@@ -1111,7 +1112,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                     #print("local",len(local_rews.append(ep_ret[int(len(ep_ret)/2)])))
                 
                 o, ep_rets, ep_lens = env.reset(), [0] * robot_number, [0]*robot_number
-                if env.args.heterogeneous:
+                if env.args.heterogeneous or env.args.titanheads:
                     # if ac_size==(2,3):
                     if "titan" in str(env.robots[0]):
                         # print("O_before",len(o[0]),o)

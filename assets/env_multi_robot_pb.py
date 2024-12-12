@@ -60,6 +60,12 @@ class Env(EnvBasePB):
         elif self.args.heterogeneous:
             self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),SpotEnv(PATH=PATH, args=args, writer=writer) ]
             self.z_position=0.4555
+        elif self.args.titanheads:
+            self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),SpotEnv(PATH=PATH, args=args, writer=writer) ]
+            self.z_position=0.031
+        # elif self.args.titanheads:
+        #     self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),TitanEnv(PATH=PATH, args=args, writer=writer) ]
+        #     self.z_position=0.031
         # elif self.args.heterogeneous_speedy:
         #     self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),TitanEnv_speedy(PATH=PATH, args=args, writer=writer) ]
         #     self.z_position=0.031
@@ -120,7 +126,8 @@ class Env(EnvBasePB):
 
 
         # if self.args.heterogeneous or self.args.IHPPO:
-        if self.args.heterogeneous:
+        # if self.args.heterogeneous:
+        if self.args.heterogeneous or self.args.titanheads:
             self.ac_size=[]
             self.action_space=[]
             self.ob_size = 7
@@ -568,7 +575,7 @@ class Env(EnvBasePB):
 
 
             # print("self.buffer_linear_action",self.buffer_linear_action,"self.buffer_angular_action",self.buffer_angular_action)
-        if self.args.multi_titans or self.args.multi_spots or self.args.heterogeneous_speedy or self.args.heterogeneous_DTR_TITAN or self.args.heterogeneous_DTR_speed or self.args.heterogeneous_DTR_shape:
+        if self.args.multi_titans or self.args.multi_spots or self.args.titanheads or self.args.heterogeneous_speedy or self.args.heterogeneous_DTR_TITAN or self.args.heterogeneous_DTR_speed or self.args.heterogeneous_DTR_shape:
             for action,Robot in zip(actions,self.robots):
                 # print(action)
                 Robot.motor_action(action)
@@ -583,7 +590,7 @@ class Env(EnvBasePB):
                     self.turn_both=True
                     # print("turn_both",self.turn_both)
 
-        if self.args.multi_titans or self.args.heterogeneous_speedy or self.args.heterogeneous_DTR_TITAN or self.args.heterogeneous_DTR_speed or self.args.heterogeneous_DTR_shape:
+        if self.args.multi_titans or self.args.titanheads or self.args.heterogeneous_speedy or self.args.heterogeneous_DTR_TITAN or self.args.heterogeneous_DTR_speed or self.args.heterogeneous_DTR_shape:
             for _ in range(int(self.timeStep_10Hz/self.simStep)):
                 # print("self.steps",self.steps,self.timeStep_10Hz,self.simStep,self)
                 p.stepSimulation()
@@ -1486,9 +1493,12 @@ class Env(EnvBasePB):
                     elif "dtr" in str(self.robots[i]):
                         robot_length = int(0.8 / (2 * self.global_resolution))
                         robot_width = int(0.51 / (2 * self.global_resolution))
-                    elif "spot" in str(self.robots[i]):
-                        robot_length = int(1.1 / (2 * self.global_resolution))
-                        robot_width = int(0.5 / (2 * self.global_resolution))
+                    # elif "spot" in str(self.robots[i]): #This is actual Spot
+                    #     robot_length = int(1.1 / (2 * self.global_resolution))
+                    #     robot_width = int(0.5 / (2 * self.global_resolution))
+                    elif "spot" in str(self.robots[i]):  # This is titan but using spot env name
+                        robot_length = int(1.4 / (2 * self.global_resolution))
+                        robot_width = int(0.78 / (2 * self.global_resolution))
                     
                 
                     

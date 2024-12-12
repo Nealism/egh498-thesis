@@ -1074,6 +1074,7 @@ class Env(EnvBasePB):
         # actions=[0.0,1.5]
         # actions=np.array([0,1.5])
         # print("motor action",actions,self)
+        # print(self.max_gap_width-self.decrease_gap_width,self.final_gap_width)
         self.exp_actions = [0.0]*2
 
         
@@ -1231,7 +1232,7 @@ class Env(EnvBasePB):
         #                         self.exp_actions[1] = -0.1
         #     #print(self.exp_actions,self)
 
-        if self.args.gap_avoidance and self.args.RIPG and not self.Kp<5:
+        if self.args.gap_avoidance and self.args.RIPG:
         # ####################_______WAY_POINT_SYSTEM______#####
             #make sure to uncomment it when remove wall
             # if self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2 or self.intersection_r1_r:
@@ -1276,7 +1277,7 @@ class Env(EnvBasePB):
                         # print("New_TIME",self.reset_time)
                         if self.turn_both and self==self.All_Robot_ID[0]:
                             # print("New_TIME",self.reset_time);exit()
-                            if self.reset_time<2:
+                            if self.reset_time<0.5:
                                 self.exp_actions[0] = -0.75#0.02
                                 self.exp_actions[1] = 0
                             elif self.reset_time<np.random.uniform(0.5, 6):
@@ -1284,7 +1285,7 @@ class Env(EnvBasePB):
                                 self.exp_actions[1] = 0
                         elif self.turn_both and self==self.All_Robot_ID[1]:
                             # print("New_TIME",self.reset_time);exit()
-                            if self.reset_time<2:
+                            if self.reset_time<0.5:
                                 self.exp_actions[0] = -0.75#0.02
                                 self.exp_actions[1] = 0
                             elif self.reset_time<np.random.uniform(0.5, 6):
@@ -1292,8 +1293,18 @@ class Env(EnvBasePB):
                                 self.exp_actions[1] = 0
                         else:
                             # if self.reset_time<2:
-                            self.exp_actions[0] = -0.75#0.02
-                            self.exp_actions[1] = 0
+                            # if self.args.randomness==1:
+                            if self.reset_time<0.5:
+                                self.exp_actions[0] = -0.75#0.02
+                                self.exp_actions[1] = 0
+                            elif self.reset_time<np.random.uniform(0.5, 6):
+                                self.exp_actions[0] = 0#0.02
+                                self.exp_actions[1] = 0
+                            # if self.args.randomness==3:
+                            #     self.exp_actions[0] = -0.75#0.02
+                            #     self.exp_actions[1] = 0
+                            # self.exp_actions[0] = -0.75#0.02
+                            # self.exp_actions[1] = 0
                             # elif self.reset_time<np.random.uniform(0.5, 6):
                             #     self.exp_actions[0] = 0#0.02
                             #     self.exp_actions[1] = 0
@@ -1301,7 +1312,7 @@ class Env(EnvBasePB):
                             # self.exp_actions[1] = 0
 
 
-        elif self.args.gap_avoidance and self.args.Road_rule  and not self.Kp<5:
+        elif self.args.gap_avoidance and self.args.Road_rule:
         # ####################_______WAY_POINT_SYSTEM______#####
             #make sure to uncomment it when remove wall
             # if self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2 or self.intersection_r1_r:
@@ -1348,7 +1359,8 @@ class Env(EnvBasePB):
                         #     self.exp_actions[1] = 0
 
         ##THIS MA BOOTSTRAP IS THE BEST AND SAVED############################
-        elif self.args.gap_avoidance and self.args.MA_bootstrap  and not self.Kp<5:
+        # elif self.args.gap_avoidance and self.args.MA_bootstrap  and not self.Kp<5:
+        elif self.args.gap_avoidance and self.args.MA_bootstrap :
         # ####################_______WAY_POINT_SYSTEM______#####
             #make sure to uncomment it when remove wall
             # if self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2 or self.intersection_r1_r:
@@ -1472,7 +1484,7 @@ class Env(EnvBasePB):
             #print(self.exp_actions,self)
             
 
-        elif self.args.gap_avoidance and (self.args.regular_bootstrap)  and not self.Kp<5:
+        elif self.args.gap_avoidance and (self.args.regular_bootstrap):
 
             self.exp_actions[0] = 0.08
             self.exp_actions[1] = 0.5*np.clip(self.heading_error_gapwp1, -1, 1)
@@ -1613,10 +1625,13 @@ class Env(EnvBasePB):
         # 	else:	
         # 		self.exp_actions[0] = 0.0
         # 		self.exp_actions[1] = 0.5*np.clip(self.heading_error, -1, 1)
-        elif self.Kp<5:
-            # print("checking")
-            self.exp_actions[0] = 0
-            self.exp_actions[1] = 0
+        # elif self.Kp<5:
+        #     # print("checking")
+        #     self.exp_actions[0] = 0
+        #     self.exp_actions[1] = 0
+        # elif self.max_gap_width-self.decrease_gap_width == self.final_gap_width:
+        #     self.exp_actions[0] = 0
+        #     self.exp_actions[1] = 0
         else:
             if abs(self.heading_error) < 0.5 and self.dist_to_wp > 1.0:
                 self.exp_actions[0] = 0.25
@@ -7062,7 +7077,8 @@ class Env(EnvBasePB):
 
 
         if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-            collision= -0.4*step_counter
+            # collision= -0.8*step_counter
+            collision= -10
             #print("HIT_WALL")
         #     done=True
 
