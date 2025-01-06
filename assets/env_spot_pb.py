@@ -358,7 +358,7 @@ class Env(EnvBasePB):
     def step(self, actions):
 
         self.actions = actions
-
+        # print("action",actions)
         for _ in range(int(self.timeStep/self.simStep)):
             jointStates = p.getJointStates(self.Id,self.ordered_joint_indices)
             self.joints = list(np.array([jointStates[j[0]][0] for j in self.ordered_joints[:int(self.ac_size)]]))
@@ -560,7 +560,9 @@ class Env(EnvBasePB):
         commands_scale = np.array([1.0, 1.0, 1.0])
         dof_pos = 1.0
         dof_vel = 0.05
-     
+        # print("len",len(self.actions))
+        print("command",self.commands)
+        
         self.obs_buf = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
                                 (self.base_ang_vel  * ang_vel).reshape([1,3]),
                                 np.array([[self.roll, self.pitch]]),
@@ -570,6 +572,7 @@ class Env(EnvBasePB):
                                 (np.array(self.contacts)).reshape([1,8]),
                                 self.actions.reshape([1,self.ac_size])
                                 ),axis=-1)
+        print("chk",self.obs_buf[0][8:11])
 
     def apply_forces_yaw(self):
         yaw_force = 1.5*self.Kp*(self.commands[2] - self.yaw_vel)

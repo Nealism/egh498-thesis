@@ -68,7 +68,7 @@ def plot_performance(epochs_list, means_list, stds_list, labels, colors):
 
     # plt.title('Training Performance Comparison', fontsize=30)
     plt.xlabel('Epoch', fontsize=30)
-    plt.ylabel('Accuracy (%)', fontsize=30)
+    plt.ylabel('Goal Reaching Success Rate (%)', fontsize=30)
     plt.ylim(0, 100)  # Set y-axis limit to 100 for percentages
     # Explicitly setting the axes limits
     plt.xlim(left=0)  # Start x-axis at 0
@@ -76,10 +76,10 @@ def plot_performance(epochs_list, means_list, stds_list, labels, colors):
     plt.xticks(range(0, max(epochs_list[-1]) + 1, 100),fontsize=30)
     plt.yticks(fontsize=30)
     plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend(fontsize=20)
+    plt.legend(loc='upper left', fontsize=25)
 
     plt.tight_layout()
-    plt.savefig('comparison_performance_plot.png')  # Save the plot as a PNG file
+    plt.savefig('comparison_performance_plot1.png')  # Save the plot as a PNG file
     plt.show()
 
 def main():

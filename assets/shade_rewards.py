@@ -88,9 +88,9 @@ def plot_performance(epochs_list, means_list, stds_list, labels, colors):
     plt.legend(fontsize=20)
 
     # Update legend to include all elements
-    plt.legend(handles=[hatch_patch1, hatch_patch2] + [plt.Line2D([0], [0], color=color, lw=4, label=label) for label, color in zip(labels, colors)], fontsize=20)
+    plt.legend(handles=[hatch_patch1, hatch_patch2] + [plt.Line2D([0], [0], color=color, lw=4, label=label) for label, color in zip(labels, colors)], fontsize=30)
     plt.tight_layout()
-    plt.savefig('comparison_reward_plot.png')  # Save the plot as a PNG file
+    plt.savefig('comparison_reward_plot1.png')  # Save the plot as a PNG file
     plt.show()
 
 def main():

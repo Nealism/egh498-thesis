@@ -85,10 +85,10 @@ def plot_performance(epochs_list, means_list, stds_list, labels, colors):
     plt.xticks(range(0, max(epochs_list[-1]) + 1, 100), fontsize=30)
     plt.yticks(fontsize=30)
     plt.grid(True, linestyle='--', alpha=0.9)
-    plt.legend(fontsize=20)
+    plt.legend(fontsize=30)
 
     # Update legend to include all elements
-    plt.legend(handles=  [plt.Line2D([0], [0], color=color, lw=4, label=label) for label, color in zip(labels, colors)]+[hatch_patch1, hatch_patch2], fontsize=20)
+    plt.legend(handles=  [plt.Line2D([0], [0], color=color, lw=4, label=label) for label, color in zip(labels, colors)]+[hatch_patch1, hatch_patch2], fontsize=30)
     plt.tight_layout()
     plt.savefig('curriculum_learning_plot.png')  # Save the plot as a PNG file
     plt.show()

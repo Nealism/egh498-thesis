@@ -19,10 +19,13 @@ def setup_pytorch_for_mpi():
 
 def mpi_avg_grads(module):
     """ Average contents of gradient buffers across MPI processes. """
-    if num_procs()==1:
-        return
+    # if num_procs()==1:
+    #     return
+    
     for p in module.parameters():
-        # print("P",p,p.grad,module.parameters())
+        if p.grad==None:
+            continue
+        # print("P",p.grad)
         p_grad_numpy = p.grad.numpy()   # numpy view of tensor data
         
         avg_p_grad = mpi_avg(p.grad)

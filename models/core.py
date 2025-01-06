@@ -301,11 +301,11 @@ class MLPGaussianActorPerception(ActorPerception):
             # print("checkhpc_obs",obs)
             
             # li = [observ[1:] for observ in obs]
-            # print("checkhpc_li",li)
+            # # print("checkhpc_li",li)
             # li=np.array(li)
-            # print("li_array",li)
+            # # print("li_array",li)
             # obs = torch.tensor(li) 
-            # print("obs_twoone",obs,type(obs))
+            # # print("obs_twoone",obs,type(obs))
             
         
         obs = torch.reshape(obs, [-1, self.obs_dim])
@@ -347,10 +347,10 @@ class MLPGaussianActorPerception(ActorPerception):
         
             elif int(ob[0][0]) == 0 and not len(obs)==2 and args.heterogeneous or args.titanheads:    
                 # print("f");exit()        
-                return Normal(self.mu_titan, self.std_titan),Normal(self.mu_titan, self.std_titan)
+                return Normal(self.mu_titan, self.std_titan)
         
             elif int(ob[0][0]) == 1 and not len(obs)==2 and args.heterogeneous or args.titanheads:            
-                return Normal(self.mu_spot, self.std_spot),Normal(self.mu_spot, self.std_spot)
+                return Normal(self.mu_spot, self.std_spot)
         
         # elif len(obs)==2 and args.IHPPO:
         #     self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))

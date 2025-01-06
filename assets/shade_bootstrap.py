@@ -80,7 +80,7 @@ def plot_performance(epochs_list, means_list, stds_list, labels, colors):
     # plt.title('Training Performance Comparison', fontsize=30)
     plt.xlabel('Epoch', fontsize=30)
     plt.ylabel('Bootstrap Parameter, k', fontsize=30)
-    plt.ylim(0, 3)
+    plt.ylim(0, 400)
     plt.xlim(left=0, right=700)
     plt.xticks(range(0, max(epochs_list[-1]) + 1, 100), fontsize=30)
     plt.yticks(fontsize=30)
@@ -89,9 +89,9 @@ def plot_performance(epochs_list, means_list, stds_list, labels, colors):
 
     # Update legend to include all elements
     # plt.legend(handles=  [plt.Line2D([0], [0], color=color, lw=4, label=label) for label, color in zip(labels, colors)]+[hatch_patch1, hatch_patch2], fontsize=20)
-    plt.legend(handles=  [plt.Line2D([0], [0], color=color, lw=4, label=label) for label, color in zip(labels, colors)], fontsize=20)
+    plt.legend(handles=  [plt.Line2D([0], [0], color=color, lw=4, label=label) for label, color in zip(labels, colors)], fontsize=30)
     plt.tight_layout()
-    plt.savefig('bootstrap_parameter_plot.png')  # Save the plot as a PNG file
+    plt.savefig('bootstrap_parameter_plot1.png')  # Save the plot as a PNG file
     plt.show()
 
 def main():

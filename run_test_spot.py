@@ -62,8 +62,9 @@ def run(args):
 
     n=0
     while True:
+        print("obs",len(obs[0]))
         if args.use_perception:
-            print(im)
+            
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), torch.tensor(np.array(im).astype(np.float32)), stochastic=False)[0]
         else:
             # action = pol(torch.tensor(np.array(obs).astype(np.float32))).detach().numpy()[0]
@@ -86,10 +87,10 @@ def run(args):
         # elif env.steps < start + 900:
         #     env.commands = np.array([0., -0.5, 0])
          
-        print(rew)
-        print(env.commands)
-        print(env.vx, env.vy, env.yaw_vel)
-        print()
+        # print(rew)
+        # print(env.commands)
+        # print(env.vx, env.vy, env.yaw_vel)
+        # print()
         if args.use_perception:
             im = env.get_image()
 

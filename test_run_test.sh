@@ -1,6 +1,6 @@
 args="--env multi_robot_pb --num_robots 2  --cur_succ 0   --gap_avoidance --epochs 8400 
---max_ep_len 150 --local_epoch_len 3000  --insert_wall --exp 36216/E2r32G1E1 
---folder 2024_12_10_11_24_56 --reward_fn 33      --occupancy_map --use_perception  
+--max_ep_len 150 --local_epoch_len 3000  --insert_wall --exp 100005/E10r32G1E1 
+--folder 2024_12_13_13_17_17 --reward_fn 32      --occupancy_map --use_perception  
 --experiment_1 --hpc --gap_curr --starting_gap_width 1 --randomness 2 --multi_titans 
 --turtle_titan  "
 # --map_show

@@ -540,7 +540,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     steps_per_epoch = local_epoch_len * num_procs()
     if use_perception:
         #print("type",im_size)
-        print("ob_size",ob_size,(ob_size[0]+1,))
+        # print("ob_size",ob_size,(ob_size[0]+1,))
         buf = MA_PPOBufferPerception(ob_size, im_size, ac_size, local_steps_per_epoch, gamma, lam, robot_number)
     else:
         buf = MA_PPOBuffer(ob_size, ac_size, local_steps_per_epoch, gamma, lam, robot_number)

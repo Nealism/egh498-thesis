@@ -117,8 +117,21 @@ def run(args):
     # print(pol)
 
     obs = env.reset()
+
+    if env.args.heterogeneous or env.args.titanheads:
+        # if ac_size==(2,3):
+        if "titan" in str(env.robots[0]):
+            # print("O_before",len(o[0]),o)
+            obs[0] = np.insert(obs[0], 0, 0)
+            obs[1] = np.insert(obs[1], 0, 1)
+            # print("O_after",len(obs[0]),o)
+        # elif ac_size==(3,2):
+        elif "spot" in str(env.robots[0]):
+            # print("O_before",len(obs[0]),o)
+            obs[0] = np.insert(obs[0], 0, 1)
+            obs[1] = np.insert(obs[1], 0, 0)
     
-    # print("ob_reset",obs)
+    # print("ob_reset",obs,len(obs[0]),len(obs[1]))
     if args.use_perception:
         im = env.get_image()
         # print(im,type(im),im[0][0][1].shape)
@@ -235,14 +248,15 @@ def run(args):
         if args.use_perception and not args.jit_model:
             # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
             action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
-            action_rl1 = pol.step(torch.as_tensor(np.array(obs[0]), dtype=torch.float32), torch.as_tensor(im[0], dtype=torch.float32), stochastic=False)[0]
-            action[0] = action_rl1 
-            
-            if args.num_robots==2:
-                action_rl2 = pol.step(torch.as_tensor(np.array(obs[1]), dtype=torch.float32), torch.as_tensor(im[1], dtype=torch.float32), stochastic=False)[0]
-            
-            
-                action[1] = action_rl2
+            # if not args.titanheads or not args.heterogeneous:
+            #     action_rl1 = pol.step(torch.as_tensor(np.array(obs[0]), dtype=torch.float32), torch.as_tensor(im[0], dtype=torch.float32), stochastic=False)[0]
+            #     action[0] = action_rl1 
+                
+            #     if args.num_robots==2:
+            #         action_rl2 = pol.step(torch.as_tensor(np.array(obs[1]), dtype=torch.float32), torch.as_tensor(im[1], dtype=torch.float32), stochastic=False)[0]
+                
+                
+            #         action[1] = action_rl2
 
         elif args.use_perception and args.jit_model:
             a_r1=torch.as_tensor(np.array([obs[0]]), dtype=torch.float32).unsqueeze(dim=0)
@@ -299,10 +313,25 @@ def run(args):
         action=action_r
         # print(action)
         obs, _, done,termination, _ = env.step(action)
+
+
         # print(obs[0],"obs?")
         if args.use_perception:
                 im = env.get_image()
                 # print(im,type(im),im[0][0][1].shape)
+
+        if env.args.heterogeneous or env.args.titanheads:
+        # if ac_size==(2,3):
+            if "titan" in str(env.robots[0]):
+                # print("O_before",len(o[0]),o)
+                obs[0] = np.insert(obs[0], 0, 0)
+                obs[1] = np.insert(obs[1], 0, 1)
+                # print("O_after",len(obs[0]),o)
+            # elif ac_size==(3,2):
+            elif "spot" in str(env.robots[0]):
+                # print("O_before",len(obs[0]),o)
+                obs[0] = np.insert(obs[0], 0, 1)
+                obs[1] = np.insert(obs[1], 0, 0)
         counting_step+=1
         # action_saving1.append(action[0][0])
         # action_saving2.append(action[0][1])
@@ -787,6 +816,19 @@ def run(args):
             if args.use_perception:
                 im = env.get_image()
                 # print(im,type(im),im[0][0][1].shape)
+
+            if env.args.heterogeneous or env.args.titanheads:
+                # if ac_size==(2,3):
+                if "titan" in str(env.robots[0]):
+                    # print("O_before",len(o[0]),o)
+                    obs[0] = np.insert(obs[0], 0, 0)
+                    obs[1] = np.insert(obs[1], 0, 1)
+                    # print("O_after",len(obs[0]),o)
+                # elif ac_size==(3,2):
+                elif "spot" in str(env.robots[0]):
+                    # print("O_before",len(obs[0]),o)
+                    obs[0] = np.insert(obs[0], 0, 1)
+                    obs[1] = np.insert(obs[1], 0, 0)
             n=n+1
             print("Trial_no",n)
             if n==100:

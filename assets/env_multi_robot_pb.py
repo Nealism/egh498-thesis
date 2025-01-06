@@ -1,7 +1,7 @@
-from assets.env_titan_pb_3 import Env as TitanEnv_speedy
-from assets.env_titan_pb_4_dt_speed import Env as DTR_Speed_ENV
-from assets.env_dtr_shape import Env as DTR_Shape_ENV
-from assets.env_dtr_pb import Env as DTREnv
+# from assets.env_titan_pb_3 import Env as TitanEnv_speedy
+# from assets.env_titan_pb_4_dt_speed import Env as DTR_Speed_ENV
+# from assets.env_dtr_shape import Env as DTR_Shape_ENV
+# from assets.env_dtr_pb import Env as DTREnv
 from assets.env_titan_pb_2 import Env as TitanEnv
 from assets.env_spot_pb_2 import Env as SpotEnv
 import pybullet as p
@@ -61,6 +61,7 @@ class Env(EnvBasePB):
             self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),SpotEnv(PATH=PATH, args=args, writer=writer) ]
             self.z_position=0.4555
         elif self.args.titanheads:
+            # self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer) for n in range(args.num_robots)]
             self.robots=[TitanEnv(PATH=PATH, args=args, writer=writer),SpotEnv(PATH=PATH, args=args, writer=writer) ]
             self.z_position=0.031
         # elif self.args.titanheads:
@@ -1486,19 +1487,20 @@ class Env(EnvBasePB):
                 # for index_hm,local_heightmap in enumerate(local_heightmaps):
                 #     print("ind",index,i,index_hm)
                 if index!=i:
-                    
-                    if "titan" in str(self.robots[i]):
-                        robot_length = int(1.4 / (2 * self.global_resolution))
-                        robot_width = int(0.78 / (2 * self.global_resolution))
-                    elif "dtr" in str(self.robots[i]):
-                        robot_length = int(0.8 / (2 * self.global_resolution))
-                        robot_width = int(0.51 / (2 * self.global_resolution))
-                    # elif "spot" in str(self.robots[i]): #This is actual Spot
-                    #     robot_length = int(1.1 / (2 * self.global_resolution))
-                    #     robot_width = int(0.5 / (2 * self.global_resolution))
-                    elif "spot" in str(self.robots[i]):  # This is titan but using spot env name
-                        robot_length = int(1.4 / (2 * self.global_resolution))
-                        robot_width = int(0.78 / (2 * self.global_resolution))
+                    robot_length = int(1.4 / (2 * self.global_resolution))
+                    robot_width = int(0.78 / (2 * self.global_resolution))
+                    # if "titan" in str(self.robots[i]):
+                    #     robot_length = int(1.4 / (2 * self.global_resolution))
+                    #     robot_width = int(0.78 / (2 * self.global_resolution))
+                    # # elif "dtr" in str(self.robots[i]):
+                    # #     robot_length = int(0.8 / (2 * self.global_resolution))
+                    # #     robot_width = int(0.51 / (2 * self.global_resolution))
+                    # # # elif "spot" in str(self.robots[i]): #This is actual Spot
+                    # # #     robot_length = int(1.1 / (2 * self.global_resolution))
+                    # # #     robot_width = int(0.5 / (2 * self.global_resolution))
+                    # elif "spot" in str(self.robots[i]):  # This is titan but using spot env name
+                    #     robot_length = int(1.4 / (2 * self.global_resolution))
+                    #     robot_width = int(0.78 / (2 * self.global_resolution))
                     
                 
                     
