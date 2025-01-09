@@ -287,6 +287,7 @@ class MA_PPOBufferPerception:
                 self.buffer1=PPOBufferPerception(ob_size,im_size, ac_size[0], size, gamma=gamma, lam=lam)
                 self.buffer2=PPOBufferPerception(ob_size,im_size, ac_size[1], size, gamma=gamma, lam=lam)
                 self.buffers=self.buffer1,self.buffer2
+                # self.buffers=[PPOBufferPerception(ob_size,im_size, ac_size[0], size, gamma=gamma, lam=lam)]
             else:
                 self.buffers=tuple([PPOBufferPerception(ob_size,im_size, ac_size, size, gamma=gamma, lam=lam) for Robot in range(num_robots)])
             # # print("self.buffers",self.buffers,type(self.buffers))
@@ -306,6 +307,8 @@ class MA_PPOBufferPerception:
             #print(num_robots,type(num_robots))
             #for Robot in range(num_robots):
             #robot_id_number=tuple(range(num_robots))
+            # print("check",len((obs)),len((im)),len((acts)),len((rews)),len((vals.tolist())),len((logps)),(rews[1]))
+            # # for buffer, ob,im, act,rew,val,logp in zip(self.buffers, tuple(obs[1]),tuple(im[1]),tuple(acts[1]),tuple(rews[1]),tuple(vals.tolist()[1]),tuple(logps[1])):
             for buffer, ob,im, act,rew,val,logp in zip(self.buffers, tuple(obs),tuple(im),tuple(acts),tuple(rews),tuple(vals.tolist()),tuple(logps)):
                     #self.ptr += 1
                 # km= buffer, ob,im, act,rew,val,logp
@@ -316,7 +319,11 @@ class MA_PPOBufferPerception:
                 #print("bf",buffer,"ob", ob, "act",act,"rw",rew,"vl",val,"lgp",logp)
                 #print("buffer store",buffer.store(ob,act,rew,val,logp))
                 #print("ob_size_mabuf",len(tuple(obs)))
+
                 buffer.store(ob,im,act,rew,val,logp)
+            # self.buffers[0].store(obs[1],im[1],acts[1],rews[1],vals[1],logps[1])
+            
+            
             # print(buffer.store);exit()
             
 
@@ -755,7 +762,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             #     elif ac_size==(3,2):
             #         a=a_spot[0],a_titan[1]
             #         logp=[logp_spot[0],logp_titan[1]]
-            
+            # print("action",a,len(a));exit()
             if env.args.heterogeneous or env.args.titanheads:
                 # if ac_size==(2,3):
                 if "titan" in str(env.robots[0]):

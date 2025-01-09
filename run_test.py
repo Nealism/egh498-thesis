@@ -245,9 +245,26 @@ def run(args):
         #         else:
         #             action[1] = action_rl2  # Robot 2 resumes movement
         # else:
+        # print("obs",len(obs),obs)
         if args.use_perception and not args.jit_model:
             # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
-            action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            if args.heterogeneous or args.titanheads:
+                a_spot,a_titan, v, logp_spot, logp_titan =pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)
+            else:
+                action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            print(a_spot,a_titan,len(a_spot),len(a_titan))
+
+
+            if env.args.heterogeneous or env.args.titanheads:
+                # if ac_size==(2,3):
+                if "titan" in str(env.robots[0]):
+                    action=a_titan[0],a_spot[1]
+                    logp=[logp_titan[0],logp_spot[1]]
+                # elif ac_size==(3,2):
+                elif "spot" in str(env.robots[0]):
+                    action=a_spot[0],a_titan[1]
+                    logp=[logp_spot[0],logp_titan[1]]
+            # print(pol)
             # if not args.titanheads or not args.heterogeneous:
             #     action_rl1 = pol.step(torch.as_tensor(np.array(obs[0]), dtype=torch.float32), torch.as_tensor(im[0], dtype=torch.float32), stochastic=False)[0]
             #     action[0] = action_rl1 
@@ -258,59 +275,59 @@ def run(args):
                 
             #         action[1] = action_rl2
 
-        elif args.use_perception and args.jit_model:
-            a_r1=torch.as_tensor(np.array([obs[0]]), dtype=torch.float32).unsqueeze(dim=0)
-            b_r1=model_z(torch.as_tensor(im[0], dtype=torch.float32))
-            # print(a_r1[0],"br1",b_r1)
-            # print(np.array(a_r1[0].detach().numpy()).shape,np.array(b_r1.detach().numpy()).shape)
-            concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
-            action_r1 = model_mu(concatenate_part_r1)
+        # elif args.use_perception and args.jit_model:
+        #     a_r1=torch.as_tensor(np.array([obs[0]]), dtype=torch.float32).unsqueeze(dim=0)
+        #     b_r1=model_z(torch.as_tensor(im[0], dtype=torch.float32))
+        #     # print(a_r1[0],"br1",b_r1)
+        #     # print(np.array(a_r1[0].detach().numpy()).shape,np.array(b_r1.detach().numpy()).shape)
+        #     concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
+        #     action_r1 = model_mu(concatenate_part_r1)
 
-            if args.num_robots==2:
-                a_r2=torch.as_tensor(np.array([obs[1]]), dtype=torch.float32).unsqueeze(dim=0)
-                b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
-                # print(a_r2[0],"br2",b_r2)
-                # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
-                concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
-                action_r2 = model_mu(concatenate_part_r2)
-                # print("ar1",action_r1,"ar2",action_r2)
-        else:
-            action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
-            # print ("action_before", action,type(action))
-        if not args.unclipped_vel and args.jit_model:
-            r1_clipped_linear_vel_command=np.clip(action_r1[0][0].detach().numpy(), -0.5, 1)
-            r1_clipped_angular_vel_command=np.clip(action_r1[0][1].detach().numpy(), -1.5, 1.5)
-            action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
+        #     if args.num_robots==2:
+        #         a_r2=torch.as_tensor(np.array([obs[1]]), dtype=torch.float32).unsqueeze(dim=0)
+        #         b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
+        #         # print(a_r2[0],"br2",b_r2)
+        #         # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
+        #         concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
+        #         action_r2 = model_mu(concatenate_part_r2)
+        #         # print("ar1",action_r1,"ar2",action_r2)
+        # else:
+        #     action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
+        #     # print ("action_before", action,type(action))
+        # if not args.unclipped_vel and args.jit_model:
+        #     r1_clipped_linear_vel_command=np.clip(action_r1[0][0].detach().numpy(), -0.5, 1)
+        #     r1_clipped_angular_vel_command=np.clip(action_r1[0][1].detach().numpy(), -1.5, 1.5)
+        #     action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
 
-            if args.num_robots==2:
-                r2_clipped_linear_vel_command=np.clip(action_r2[0][0].detach().numpy(), -0.5, 1)
-                r2_clipped_angular_vel_command=np.clip(action_r2[0][1].detach().numpy(), -1.5, 1.5)
+        #     if args.num_robots==2:
+        #         r2_clipped_linear_vel_command=np.clip(action_r2[0][0].detach().numpy(), -0.5, 1)
+        #         r2_clipped_angular_vel_command=np.clip(action_r2[0][1].detach().numpy(), -1.5, 1.5)
 
-                # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
-                # action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
-                action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+        #         # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
+        #         # action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+        #         action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
         
-        elif not args.unclipped_vel and not args.jit_model:
-            # print("action",action,action[0][0],action[0][1])
-            r1_clipped_linear_vel_command=np.clip(action[0][0], -0.5, 1)
-            r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
-            action_r=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
+        # elif not args.unclipped_vel and not args.jit_model:
+        #     # print("action",action,action[0][0],action[0][1])
+        #     r1_clipped_linear_vel_command=np.clip(action[0][0], -0.5, 1)
+        #     r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
+        #     action_r=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
             
-            if args.num_robots==2:
+        #     if args.num_robots==2:
 
-                r2_clipped_linear_vel_command=np.clip(action[1][0], -0.5, 1)
-                r2_clipped_angular_vel_command=np.clip(action[1][1], -1.5, 1.5)
+        #         r2_clipped_linear_vel_command=np.clip(action[1][0], -0.5, 1)
+        #         r2_clipped_angular_vel_command=np.clip(action[1][1], -1.5, 1.5)
 
-                # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
-                action_r=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
-            # print(action_r)
-        # print ("action", action)#;exit()
-        # start_time=time.time()
-        # current_time=0
+        #         # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
+        #         action_r=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+        #     # print(action_r)
+        # # print ("action", action)#;exit()
+        # # start_time=time.time()
+        # # current_time=0
         
-        # time_saving.append(current_time)
+        # # time_saving.append(current_time)
 
-        action=action_r
+        # action=action_r
         # print(action)
         obs, _, done,termination, _ = env.step(action)
 

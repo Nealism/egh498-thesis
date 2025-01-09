@@ -165,7 +165,7 @@ class MLPGaussianActorPerception(ActorPerception):
         # print("self.obs_dim",self.obs_dim,act_dim);exit()
         # print(act_dim);exit()
         # act_dim=[3,3]
-        # print("act_dim",act_dim)
+        # print("act_dim______________________________->>",act_dim)
         # print(args.robots);exit()
         # if (act_dim==(2,3) or act_dim==(3,2)) and args.heterogeneous or args.titanheads:
         if (act_dim==(2,3) or act_dim==(3,2)) and args.heterogeneous:
@@ -218,6 +218,7 @@ class MLPGaussianActorPerception(ActorPerception):
             self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
             self.spot_output_layer = output_layer(feature_shape,2)
             self.titan_output_layer = output_layer(feature_shape,2)
+            # print("layer",self.spot_output_layer,self.titan_output_layer)
             # feature_shape=256
             # self.output_layer = output_layer(feature_shape,act_dim)
         # elif (act_dim==(2,2)) and args.IHPPO:
@@ -257,19 +258,39 @@ class MLPGaussianActorPerception(ActorPerception):
         #     self.output_layer = output_layer(feature_shape,act_dim)
 
         # elif len(act_dim)==1 and (args.IHPPO or args.heterogeneous or args.titanheads):
-        
-        #     act_dim=act_dim[0]
-        #     # print("ISITCOMING")
-        #     # print("DID IT COME HERE",act_dim)
-        #     log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
-        #     self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
+        #     print("th");exit()
+        #     spot_act_dim=2
+        #     titan_act_dim=2
+
+        #     log_std_spot = -0.0 * np.ones(spot_act_dim, dtype=np.float32)
+        #     log_std_titan = -0.0 * np.ones(titan_act_dim, dtype=np.float32)
+        #     # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+        #     self.log_std_spot = torch.nn.Parameter(torch.as_tensor(log_std_spot))
+        #     self.log_std_titan = torch.nn.Parameter(torch.as_tensor(log_std_titan))
         #     self.z_net = CNN(im_dim)
         #     # Need to do a dry run to initialise Lazy module
         #     self.z_net(torch.zeros(self.im_dim))
-        #     self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+            
         #     feature_shape=256
-        #     self.output_layer = output_layer(feature_shape,act_dim)
+        #     feature_shape_r1=256
+        #     feature_shape_r2=256
+        #     # print(obs_dim);exit()
+        #     self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+        #     self.spot_output_layer = output_layer(feature_shape,2)
+        #     self.titan_output_layer = output_layer(feature_shape,2)
+        #     # act_dim=act_dim[0]
+        #     # # print("ISITCOMING")
+        #     # # print("DID IT COME HERE",act_dim)
+        #     # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+        #     # self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
+        #     # self.z_net = CNN(im_dim)
+        #     # # Need to do a dry run to initialise Lazy module
+        #     # self.z_net(torch.zeros(self.im_dim))
+        #     # self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+        #     # feature_shape=256
+        #     # self.output_layer = output_layer(feature_shape,act_dim)
         else:
+            # print("th");exit()
             act_dim=act_dim[0]
             # print("NextCOMING",[act_dim])
             self.obs_dim = obs_dim
@@ -282,10 +303,10 @@ class MLPGaussianActorPerception(ActorPerception):
             self.z_net(torch.zeros(self.im_dim))
             self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
 
-        # self.output_layer = output_layer(feature_shape_r1,feature_shape_r2,act_dim)
-        # self.output_layer = [output_layer_r1(feature_shape_r1,act_dim[0]),output_layer_r2(feature_shape_r2,act_dim[1])]
-        # self.output_layer_r1 = output_layer_r1(feature_shape_r1,act_dim[0])
-        # self.output_layer_r2 =output_layer_r2(feature_shape_r2,act_dim[1])
+        # # self.output_layer = output_layer(feature_shape_r1,feature_shape_r2,act_dim)
+        # # self.output_layer = [output_layer_r1(feature_shape_r1,act_dim[0]),output_layer_r2(feature_shape_r2,act_dim[1])]
+        # # self.output_layer_r1 = output_layer_r1(feature_shape_r1,act_dim[0])
+        # # self.output_layer_r2 =output_layer_r2(feature_shape_r2,act_dim[1])
 
     def _distribution(self, obs, im):
         # print("obs_before",obs,len(obs),im,len(im))
@@ -345,11 +366,12 @@ class MLPGaussianActorPerception(ActorPerception):
             if len(obs)==2:            
                 return Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan)
         
-            elif int(ob[0][0]) == 0 and not len(obs)==2 and args.heterogeneous or args.titanheads:    
-                # print("f");exit()        
+            elif (int(ob[0][0]) == 0 and not len(obs)==2) and (args.heterogeneous or args.titanheads):    
+                        
                 return Normal(self.mu_titan, self.std_titan)
         
-            elif int(ob[0][0]) == 1 and not len(obs)==2 and args.heterogeneous or args.titanheads:            
+            elif (int(ob[0][0]) == 1 and not len(obs)==2) and (args.heterogeneous or args.titanheads):   
+                # print("f");exit()         
                 return Normal(self.mu_spot, self.std_spot)
         
         # elif len(obs)==2 and args.IHPPO:
@@ -565,14 +587,16 @@ class MLPActorCriticPerception(nn.Module):
         
         # print(obs[0:1],len(obs[0:1]),len(im[0:1]),im[0:1])
 
-        if args.heterogeneous or args.titanheads or args.IHPPO:
+        if ( args.heterogeneous or args.titanheads or args.IHPPO) and not args.combined_value:
             v1 = self.v(obs[0:1], im[0:1])
             v2 = self.v(obs[1:2], im[1:2])
             v= torch.concat((v1,v2), -1)
+            # print("value",v)
         elif (args.heterogeneous or args.titanheads or args.IHPPO) and args.combined_value:
             v = self.v(obs, im)
         else:
             v = self.v(obs, im)
+            # print("value_regular",v)
         
 
         # Memory leak happens here somewhere. Copying the arrays seem to help??

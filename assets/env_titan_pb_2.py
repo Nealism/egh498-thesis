@@ -377,8 +377,8 @@ class Env(EnvBasePB):
             self.ep_goal_success = np.mean(self.goal_success) if self.goal_success else 0.0
 
         self.goal_success = []
-        print("GOAL", self.ep_goal_success)
-        print("cur",self.cur_success,self)
+        # print("GOAL", self.ep_goal_success)
+        # print("cur",self.cur_success,self)
         #print(self.body_xyz)
         
 

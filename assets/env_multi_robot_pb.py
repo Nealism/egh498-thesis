@@ -574,7 +574,7 @@ class Env(EnvBasePB):
             plt.grid(True)
             plt.savefig(os.path.join(output_dir, 'Command_angular_velocity_plot.png'))
 
-
+            
             # print("self.buffer_linear_action",self.buffer_linear_action,"self.buffer_angular_action",self.buffer_angular_action)
         if self.args.multi_titans or self.args.multi_spots or self.args.titanheads or self.args.heterogeneous_speedy or self.args.heterogeneous_DTR_TITAN or self.args.heterogeneous_DTR_speed or self.args.heterogeneous_DTR_shape:
             for action,Robot in zip(actions,self.robots):
