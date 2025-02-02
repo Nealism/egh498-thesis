@@ -252,7 +252,8 @@ def run(args):
                 a_spot,a_titan, v, logp_spot, logp_titan =pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)
             else:
                 action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
-            print(a_spot,a_titan,len(a_spot),len(a_titan))
+            # print(a_spot,a_titan,len(a_spot),len(a_titan))
+            print(pol)
 
 
             if env.args.heterogeneous or env.args.titanheads:

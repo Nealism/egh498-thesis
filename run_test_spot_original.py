@@ -4,14 +4,13 @@ import glob
 import time
 from pathlib import Path
 import default_arguments
-import copy
 
 home = str(Path.home())
 
 def run(args): 
 
     args.env = "spot_pb"
-    
+
     if args.hpc:
         path_home = home + "/hpc-scratch/" + home.split("/")[-1]
     else:
@@ -46,15 +45,10 @@ def run(args):
     # USE_SPOT = False
     if USE_SPOT:
         # SPOT_MODEL_PATH = "./resources/spot/2024_04_30_08_59_43/model.pt" 
-        # SPOT_MODEL_PATH = "./resources/spot/2024_05_08_21_23_04/model.pt"
-        if args.jit_model: 
-            SPOT_MODEL_PATH="/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/spot_walking1.jit"
-            pol = torch.load(SPOT_MODEL_PATH)
-        else:
-            SPOT_MODEL_PATH = "./resources/spot/2024_05_13_11_11_30/model.pt" 
-            
-            pol = torch.load(SPOT_MODEL_PATH)
-        # print("pol",pol);exit()
+        # SPOT_MODEL_PATH = "./resources/spot/2024_05_08_21_23_04/model.pt" 
+        SPOT_MODEL_PATH = "./resources/spot/2024_05_13_11_11_30/model.pt" 
+        pol = torch.load(SPOT_MODEL_PATH)
+
     else:
         print("loading from ", PATH)
         pol = torch.load(PATH + "/model.pt")
@@ -62,45 +56,30 @@ def run(args):
     # else:
         # pol = torch.jit.load("./logs/chuck/exported/Oct18_09-03-12_/policy_1.pt")
 
-    # model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
-    # traced_script_module1 = torch.jit.script(model1)
-    # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
-    # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/spot_walking1.jit")
-
-
-
     obs = env.reset()
     if args.use_perception:
         im = env.get_image()
 
     n=0
     while True:
-        # obs[0][8:11]=[1,0,0]
+        obs[0][8:11]=[1,0,0]
         # print("chking",obs[0][8:11])
         # print("obs",len(obs[0]))
-        # env.commands=np.array([-0.75, 0.0, 0.75])
         if args.use_perception:
             
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), torch.tensor(np.array(im).astype(np.float32)), stochastic=False)[0]
-        
-        elif args.jit_model:
-            concatenate_part_r1=torch.as_tensor(np.array([obs]), dtype=torch.float32).unsqueeze(dim=0)[0]
-            action = pol(concatenate_part_r1).detach().numpy()
-            # print("action",action,len(action[0]),type(action));exit()
         else:
             # action = pol(torch.tensor(np.array(obs).astype(np.float32))).detach().numpy()[0]
-            
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
-            # print("action",action,len(action[0]),type(action));exit()
         obs, rew, done, _ = env.step(action)
-        
-        start = 15
+
+        # start = 100
         # if env.steps < start:
-        #     env.commands = np.array([-0.75, 0.0, -0.75])
-        # elif env.steps < start + 50:
-        #     env.commands = np.array([-0.75, 0.0, +0.75])
-        # elif env.steps < start + 7000:
-        #     env.commands = np.array([-0.75, -0.5, -0.75])
+        #     env.commands = np.array([0., 0.0, 0.0])
+        # elif env.steps < start + 200:
+        #     env.commands = np.array([0., 0.0, 1.5])
+        # elif env.steps < start + 400:
+        #     env.commands = np.array([0., 0.0, -1.5])
         # elif env.steps < start + 500:
         #     env.commands = np.array([1., 0.0, 0])
         # elif env.steps < start + 700:
@@ -117,10 +96,10 @@ def run(args):
         if args.use_perception:
             im = env.get_image()
 
-        # if done==True or env.steps > args.max_ep_len:
-        #     obs = env.reset()
-        #     if args.use_perception:
-        #         im = env.get_image()
+        if done==True or env.steps > args.max_ep_len:
+            obs = env.reset()
+            if args.use_perception:
+                im = env.get_image()
 
 if __name__== "__main__":
     args = default_arguments.get_defaults() 

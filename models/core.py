@@ -198,7 +198,7 @@ class MLPGaussianActorPerception(ActorPerception):
             self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
             self.spot_output_layer = output_layer(feature_shape,3)
             self.titan_output_layer = output_layer(feature_shape,2)
-        if (act_dim==(2,2)) and args.titanheads:
+        elif (act_dim==(2,2)) and args.titanheads:
             spot_act_dim=2
             titan_act_dim=2
 
@@ -522,7 +522,7 @@ class MLPActorCriticPerception(nn.Module):
         # # # policy builder depends on action space
         
         if isinstance(action_space, Box):
-            print("core_shape",action_space,action_space.shape)
+            # print("core_shape",action_space,action_space.shape)
             # self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape[0], hidden_sizes, activation)
             self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape, hidden_sizes, activation)
         # print("self.pi",self.pi)

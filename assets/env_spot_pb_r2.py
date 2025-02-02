@@ -13,18 +13,13 @@ import torch
 from assets.env_base_pb import EnvBasePB
 
 class Env(EnvBasePB):
-    # Terrain size and image size are the same
-    terrain_size = im_size = [1,100,100]
+    #Init timestep and simstep
     timeStep = 1/50
     timeStep_10Hz = 1/10
-    # timeStep = 1/10
-    # simStep = 1/200
     simStep = 1/100
 
-    # timeStep=0.2
-    # simStep=0.1
     def __init__(self, PATH=None, args=None, writer=None):
-
+        #Initiations like rank, writer, render ..
         self.rank = comm.Get_rank()
         self.args = args
         self.render = args.render and self.rank == 0
@@ -34,15 +29,18 @@ class Env(EnvBasePB):
         
         super().__init__(PATH)
 
+        #obs and action size
         self.ac_size = 12
         self.ob_size = 55
+
+        #init kp for bootstrap cur and robot heigh for a cur and best return for reset, action multiplier not needed
         self.Kp = 400
         self.initial_Kp = self.Kp
         self.ROBOT_HEIGHT = 0.5
         self.best_return = 0
         self.action_multiplier = 30
 
-
+        #limiting the command velocity range or threshold
         if self.args.with_initial_cmd:
             self.use_vx_reward = True
             self.use_vy_reward = True
@@ -72,50 +70,66 @@ class Env(EnvBasePB):
             self.min_vy = -0.0
             self.min_yaw_vel = -0.0
 
+        #defining target velocity range for command curriculum
         self.target_max_vx = 1.0
         self.target_max_vy = 0.5
         self.target_max_yaw_vel = 1.5
+        self.target_max_yaw_vel2 = 1.5
 
         self.target_min_vx = -0.5
         self.target_min_vy = -0.5
         self.target_min_yaw_vel = -1.5
         self.cmd_cur = True
 
+
+        #This was used in reset and reward joint
         self.w_cont = 0.1
 
         self.cmd_update_rate = 100
         self.cmd_vel = np.array([0.0, 0.0, 0.0])
-        self.action_scale = 0.5
 
+        #This was used to compute torque
+        self.action_scale = 0.5
         self.kp = 20.0
         self.kd = 0.5
-
         self.default_joints = np.array([0.0, 1.2, -2.0]*4)
+        self.default_joints2 = np.array([0.0, 1.2, -2.0]*4)
 
+
+        #initialise step from 0
         self.steps = 0
 
         # Needed if importing as Gym environment
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
         
+        #init episode from -1
         self.episodes = -1
         
+        #These were used in reset and observation
         self.target_yaw = 0.0
+        self.target_yaw2 = 0.0
         self.sign = 1
 
+        #set success criteria
         self.cur_success = deque([0.0], maxlen=5)
 
+        #initialising terrain cur
         if self.args.add_terrain:
             self.terrain_difficulty = self.args.initial_terrain_difficulty
         else:
             self.terrain_difficulty = 0
             self.terrain = None
 
+
+        #Needed if use apply disturbance 
         self.max_disturbance = 250
         self.final_disturbance = 1600
 
+        #to print and check joints
         self.states_to_restore = ["joints", "pos", "orn", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "episodes", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
+        #For plotting in tensorboard
         self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Difficulty": self.terrain_difficulty}
 
         self.reward_names = ["Reward/lin_vel", "Reward/lin_vx_error", "Reward/lin_vy_error", "Reward/ang_vel", "Reward/ang_vel_error", "Reward/orien", "Reward/height", "Reward/joints", "Reward/contacts", "Reward/rate", "Reward/avg"]
@@ -136,6 +150,21 @@ class Env(EnvBasePB):
     def load_specific_robot(self):
         
         self.load_urdf_robot("./assets/urdfs/spot/urdf/spot.urdf")
+
+        model_path="./assets/urdfs/spot/urdf/spot.urdf"
+        # EnvBasePB.load_urdf_robot(env,model_path)
+        # Id = p.loadURDF(model_path,
+        #                     flags=
+        #                         # p.URDF_USE_COLLISION | Turn off collision, kills the titan
+        #                             p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
+        #                             p.URDF_GOOGLEY_UNDEFINED_COLORS )
+        
+        
+        self.Id2=p.loadURDF(model_path,
+                                flags=
+                                    # p.URDF_USE_SELF_COLLISION | Turn off self collision, kills the titan
+                                    p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
+                                    p.URDF_GOOGLEY_UNDEFINED_COLORS )
 
         self.jdict = {}
         self.feet_dict = {}
@@ -192,6 +221,62 @@ class Env(EnvBasePB):
             p.changeDynamics(self.Id, self.feet_dict[key],lateralFriction=0.9, spinningFriction=0.9)
 
 
+        
+        #LOAD SPECIFIC ROBOT R2
+        self.ob_dict2 = {}
+        self.jdict2 = {}
+        self.feet_dict2 = {}
+        self.leg_dict2 = {}
+        self.body_dict2 = {}
+        self.feet2 = ["rear_left_lower_leg", "rear_right_lower_leg", "front_left_lower_leg", "front_right_lower_leg"]
+        self.legs2 = ["rear_left_upper_leg", "rear_right_upper_leg", "front_left_upper_leg", "front_right_upper_leg"]
+        self.feet_contact2 = {f:True for f in self.feet2}
+        self.ordered_joints2 = []
+        self.ordered_joint_indices2 = []
+        self.shin_dict2 = {}
+        self.arm_dict2 = {}
+        for j in range( p.getNumJoints(self.Id2) ):
+            info2 = p.getJointInfo(self.Id2, j)
+            link_name2 = info2[12].decode("ascii")
+            if link_name2 in self.feet2: self.feet_dict2[link_name2] = j
+            if link_name2 in self.legs2: self.leg_dict2[link_name2] = j
+            if link_name2=="pelvis": self.body_dict2["body_link"] = j
+            self.ordered_joint_indices2.append(j)
+            if info2[2] != p.JOINT_REVOLUTE: continue
+            jname2 = info2[1].decode("ascii")
+            # print(jname)
+
+            lower2, upper2 = (info2[8], info2[9])
+            self.ordered_joints2.append( (j, lower2, upper2) )
+            self.jdict2[jname2] = j
+        
+        # Do not change this order!! Else joint postions will be wrong
+        self.motor_names2 = ["front_left_hip_x"]
+        self.motor_names2 += ["front_left_hip_y"]
+        self.motor_names2 += ["front_left_knee"]
+        self.motor_names2 += ["front_right_hip_x"]
+        self.motor_names2 += ["front_right_hip_y"]
+        self.motor_names2 += ["front_right_knee"]
+        self.motor_names2 += ["rear_left_hip_x"]
+        self.motor_names2 += ["rear_left_hip_y"]
+        self.motor_names2 += ["rear_left_knee"]
+        self.motor_names2 += ["rear_right_hip_x"]
+        self.motor_names2 += ["rear_right_hip_y"]
+        self.motor_names2 += ["rear_right_knee"]
+        self.motor_power2 =  [20]*len(self.motor_names2)       
+
+        self.motors2 = [self.jdict2[n] for n in self.motor_names2]
+            
+        forces2 = np.ones(len(self.motors2))*240
+        # actions =
+        #  {key:0.0 for key in self.motor_names2}
+
+        p.setJointMotorControlArray(self.Id2, self.motors2, controlMode=p.VELOCITY_CONTROL, forces=[0.] * len(self.motor_names2))
+
+        for key in self.feet_dict2:
+            p.changeDynamics(self.Id2, self.feet_dict2[key],lateralFriction=0.9, spinningFriction=0.9)
+
+
     def check_for_success(self):
         return len(self.cur_success) == 5 and (np.array(self.cur_success) == True).all()
 
@@ -205,7 +290,6 @@ class Env(EnvBasePB):
         # Wait until both feet are on the ground before starting walking
         # self.paused = True
         self.paused = False
-        self.st = time.time()
 
         if self.episodes > -1:
             self.ep_success = self.get_success()
@@ -288,6 +372,7 @@ class Env(EnvBasePB):
 
 
         self.exp_joints = self.default_joints
+        self.exp_joints2 = self.default_joints2
 
         if terrain is not None:
             self.load_terrain(terrain)
@@ -311,11 +396,18 @@ class Env(EnvBasePB):
 
         self.z_offset = 0
 
+        self.ob_dict2 = {}
+        for foot2 in self.feet_dict2:
+            self.ob_dict2[foot2] = False
+            self.ob_dict2["prev_" + foot2] = False
+
+        self.z_offset2 = 0
+        # print("restore_state",restore_state)
         if restore_state is not None:
             self.set_position(pos=restore_state[0], orn=restore_state[1], joints=restore_state[2])
         else:
             rand_scale = self.max_disturbance / self.final_disturbance
-            pos = [0,0,0.5 + np.random.uniform(-0.05, 0.05)]
+            pos = [4,4,0.5 + np.random.uniform(-0.05, 0.05)]
             self.roll, self.pitch, self.yaw = [np.random.uniform(-0.05, 0.05), np.random.uniform(-0.05, 0.05), np.random.uniform(-0.05, 0.05)] 
             orn = p.getQuaternionFromEuler([self.roll, self.pitch, self.yaw])
             base_vel = [0,0,0]
@@ -324,7 +416,22 @@ class Env(EnvBasePB):
                 joints.append(np.clip(np.random.random() * rand_scale * 0.25 , j[1], j[2]))
             joints = self.default_joints + (np.random.random(self.ac_size)*0.2 - 0.1)
             joint_vel = [0]*len(self.motors)
-            self.set_position(pos, orn, joints, base_vel, joint_vel)
+            self.set_position(pos, orn, joints, base_vel, joint_vel,robot_id=self.Id)
+
+
+            rand_scale2 = self.max_disturbance / self.final_disturbance
+            pos2 = [0,0,0.5 + np.random.uniform(-0.05, 0.05)]
+            self.roll2, self.pitch2, self.yaw2 = [np.random.uniform(-0.05, 0.05), np.random.uniform(-0.05, 0.05), np.random.uniform(-0.05, 0.05)] 
+            orn2 = p.getQuaternionFromEuler([self.roll2, self.pitch2, self.yaw2])
+            base_vel2 = [0,0,0]
+            joints2 = []
+            for j in self.ordered_joints2:
+                joints2.append(np.clip(np.random.random() * rand_scale2 * 0.25 , j[1], j[2]))
+            joints2 = self.default_joints2 + (np.random.random(self.ac_size)*0.2 - 0.1)
+            joint_vel2 = [0]*len(self.motors2)
+            self.set_position(pos2, orn2, joints2, base_vel2, joint_vel2,robot_id=self.Id2)
+            # self.set_position([2,2,1],[0,0,0,1],robot_id=self.Id2)
+            
 
         self.actions = np.zeros(self.ac_size)
         self.prev_actions = self.actions
@@ -332,31 +439,40 @@ class Env(EnvBasePB):
         # self.commands = np.zeros(3)
 
         self.commands = np.random.uniform([self.min_vx, self.min_vy, self.min_yaw_vel],[self.max_vx, self.max_vy, self.max_yaw_vel])
+        self.commands2 = np.random.uniform([self.min_vx, self.min_vy, self.min_yaw_vel],[self.max_vx, self.max_vy, self.max_yaw_vel])
+        
         # self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(self.target_max_yaw_vel - self.args.yaw_cmd_dif, self.target_max_yaw_vel)
         # Set low lin velocities to zeros
         if np.random.random() < 0.8:
             self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(1.0, self.target_max_yaw_vel)
+            self.commands2[2] = np.random.choice([-1,1]) * np.random.uniform(1.0, self.target_max_yaw_vel2)
         else:
             self.commands[2] = np.random.choice([-1,1]) * np.random.uniform(0, 1.0)
+            self.commands2[2] = np.random.choice([-1,1]) * np.random.uniform(0, 1.0)
         
         self.commands[0] *= abs(self.commands[0])>0.1
         self.commands[1] *= abs(self.commands[1])>0.1
         self.commands[2] *= abs(self.commands[2])>0.1
-        self.target_yaw = self.yaw       
+        self.target_yaw2 = self.yaw2
 
 
-        self.target_yaw = self.yaw
+        
+
+
+        # self.target_yaw = self.yaw
         self.sign = 1
 
-        self.get_observation()
+        self.get_observation1()
+        self.get_observation2()
 
         self.step_count = 0
 
         # Experimental for symmetry:
         # self.all_actions = np.zeros([self.env_exp.sample_size, 6])
         self.indicies = [5,6,7,11,12,13]
+        self.indicies2 = [5,6,7,11,12,13]
 
-        return self.obs_buf
+        return self.obs_buf,self.obs_buf2
 
     def compute_torques(self, actions):
         return self.kp*(self.action_scale*actions + self.default_joints - np.array(self.joints)) - self.kd*(np.array(self.joint_vel))
@@ -365,11 +481,11 @@ class Env(EnvBasePB):
     def step(self, actions):
 
         self.actions = actions
-        # print("action",actions)
+        print("action",actions)
         
         # self.timeStep=0.1
         # self.simStep=0.02
-        # print("timesteping",int(self.timeStep_10Hz/self.timeStep))
+        print("timesteping",int(self.timeStep_10Hz/self.timeStep))
         # for _ in range(int(self.timeStep_10Hz/self.timeStep)):
         for _ in range(int(self.timeStep/self.simStep)):
             jointStates = p.getJointStates(self.Id,self.ordered_joint_indices)
@@ -416,10 +532,6 @@ class Env(EnvBasePB):
         reward, done = self.get_reward()
         self.total_return += reward
         self.steps += 1
-        self.endt = time.time()  # Record the end time after the simulation step
-        self.timest = self.endt - self.st  # Calculate the time elapsed during the simulation step
-        print("Timestep_10timeStep_10Hz:", self.timest/self.steps, "seconds",self.timeStep_10Hz,self.timeStep_50Hz,self.timeStep)
-        
 
         return self.obs_buf, reward, done, None
 
@@ -517,7 +629,7 @@ class Env(EnvBasePB):
             done = True
         return reward, done
 
-    def get_observation(self):
+    def get_observation1(self):
         jointStates = p.getJointStates(self.Id,self.ordered_joint_indices)
         self.joints = list(np.array([jointStates[j[0]][0] for j in self.ordered_joints[:int(self.ac_size)]]))
         
@@ -576,8 +688,7 @@ class Env(EnvBasePB):
         commands_scale = np.array([1.0, 1.0, 1.0])
         dof_pos = 1.0
         dof_vel = 0.05
-        # self.commands=[-0.75,-0.0,-0.0]
-        # # print("len",len(self.actions))
+        # print("len",len(self.actions))
         # print("command",self.commands)
         
         self.obs_buf = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
@@ -589,7 +700,80 @@ class Env(EnvBasePB):
                                 (np.array(self.contacts)).reshape([1,8]),
                                 self.actions.reshape([1,self.ac_size])
                                 ),axis=-1)
-        # print("chk",self.obs_buf[0][8:11])
+        print("chk",self.obs_buf[0][8:11])
+
+
+    def get_observation2(self):
+        jointStates2 = p.getJointStates(self.Id,self.ordered_joint_indices2)
+        self.joints2 = list(np.array([jointStates2[j[0]][0] for j in self.ordered_joints2[:int(self.ac_size)]]))
+        
+        # Scale vels 
+        if self.args.load_path != "":
+            # Used an additionally scaling for training translation.pt
+            self.joint_vel2 = list(np.array([jointStates2[j[0]][1] for j in self.ordered_joints2[:int(self.ac_size)]]) / 10) 
+        else:
+            self.joint_vel2 = list(np.array([jointStates2[j[0]][1] for j in self.ordered_joints2[:int(self.ac_size)]])) 
+        
+        self.ob_dict2.update({n + '_pos':j for n,j in zip(self.motor_names2, self.joints2)})
+
+
+        self.body_xyz2, (self.qx2, self.qy2, self.qz2, self.qw2) = p.getBasePositionAndOrientation(self.Id2)
+        self.pos2 = self.body_xyz2
+        self.orn2 = [self.qx2, self.qy2, self.qz2, self.qw2]
+        self.roll2, self.pitch2, self.yaw2 = p.getEulerFromQuaternion([self.qx2, self.qy2, self.qz2, self.qw2])
+
+        self.body_vxyz2, self.base_rot_vel2 = p.getBaseVelocity(self.Id2)
+        
+        self.roll_vel2 = self.base_rot_vel2[0]
+        self.pitch_vel2 = self.base_rot_vel2[1]
+        self.yaw_vel2 = self.base_rot_vel2[2]
+
+        rot_speed2 = np.array(
+        [[np.cos(-self.yaw2), -np.sin(-self.yaw2), 0],
+            [np.sin(-self.yaw2), np.cos(-self.yaw2), 0],
+            [		0,			 0, 1]]
+        )
+
+        self.vx2, self.vy2, self.vz2 = np.dot(rot_speed2, (self.body_vxyz2[0],self.body_vxyz2[1],self.body_vxyz2[2]))
+        
+        # Policy shouldn't know yaw
+        self.body2 = [self.vx2, self.vy2, self.vz2, self.roll2, self.pitch2, self.roll_vel2, self.pitch_vel2, self.yaw_vel2, self.body_xyz2[2] - self.z_offset2]
+
+        self.leg_contacts2 = []
+        for leg2 in self.leg_dict2:
+            self.ob_dict2[leg2] = len(p.getContactPoints(self.Id2, -1, self.leg_dict2[leg2], -1))>0
+            self.leg_contacts2 += [self.ob_dict2[leg2]]
+
+
+        self.contacts2 = []
+        for foot2 in self.feet_dict2:
+            self.ob_dict2["prev_" + foot2] = self.ob_dict2[foot2]
+            self.ob_dict2[foot2] = len(p.getContactPoints(self.Id2, -1, self.feet_dict2[foot2], -1))>0
+            self.contacts2 += [self.ob_dict2[foot2], self.ob_dict2["prev_" + foot2]]
+
+        self.target_yaw2 += self.commands2[2] * self.timeStep 
+        
+        self.base_lin_vel2 = np.array([self.vx2, self.vy2, self.vz2])
+        self.base_ang_vel2 = np.array([self.roll_vel2, self.pitch_vel2, self.yaw_vel2])
+        self.dof_pos2 = np.array(self.joints2)
+        self.dof_vel2 = np.array(self.joint_vel2)
+        lin_vel2 = 1.0
+        ang_vel2 = 1.0
+        commands_scale2 = np.array([1.0, 1.0, 1.0])
+        dof_pos2 = 1.0
+        dof_vel2 = 0.05
+        # print("len",len(self.actions))
+        # print("command",self.commands)
+        
+        self.obs_buf2 = np.concatenate((  (self.base_lin_vel2 * lin_vel2).reshape([1,3]),
+                                (self.base_ang_vel2  * ang_vel2).reshape([1,3]),
+                                np.array([[self.roll2, self.pitch2]]),
+                                (self.commands2[:3] * commands_scale2).reshape([1,3]),
+                                ((self.dof_pos2 - self.default_joints2) * dof_pos2).reshape([1,self.ac_size]),
+                                (self.dof_vel2 * dof_vel2).reshape([1,self.ac_size]),
+                                (np.array(self.contacts2)).reshape([1,8]),
+                                self.actions.reshape([1,self.ac_size])
+                                ),axis=-1)
 
     def apply_forces_yaw(self):
         yaw_force = 1.5*self.Kp*(self.commands[2] - self.yaw_vel)

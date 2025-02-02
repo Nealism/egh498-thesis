@@ -22,10 +22,14 @@ class EnvBasePB(EnvBase):
     terrain = np.zeros(terrain_size)
 
     timeStep_10Hz = 1/10
+    # timeStep_10Hz = 1/50
 
     simStep = 1/100
+    # simStep = 1/200
 
     timeStep_50Hz = 1/50
+
+    
 
     # simStep = 1/200
 
@@ -131,6 +135,7 @@ class EnvBasePB(EnvBase):
                                 # p.URDF_USE_SELF_COLLISION | Turn off self collision, kills the titan
                                   p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS |
                                   p.URDF_GOOGLEY_UNDEFINED_COLORS )
+    
         
     def load_urdf_robot2(self, model_path):
         #objects = p.loadMJCF("./assets/xmls/ground.xml")

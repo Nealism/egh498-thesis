@@ -75,10 +75,9 @@ def run(args):
 
     n=0
     while True:
-        # obs[0][8:11]=[1,0,0]
-        # print("chking",obs[0][8:11])
+        obs[0][8:11]=[1,0,0]
+        print("chking",obs[0][8:11])
         # print("obs",len(obs[0]))
-        # env.commands=np.array([-0.75, 0.0, 0.75])
         if args.use_perception:
             
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), torch.tensor(np.array(im).astype(np.float32)), stochastic=False)[0]
@@ -93,14 +92,14 @@ def run(args):
             action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
             # print("action",action,len(action[0]),type(action));exit()
         obs, rew, done, _ = env.step(action)
-        
-        start = 15
+
+        # start = 100
         # if env.steps < start:
-        #     env.commands = np.array([-0.75, 0.0, -0.75])
-        # elif env.steps < start + 50:
-        #     env.commands = np.array([-0.75, 0.0, +0.75])
-        # elif env.steps < start + 7000:
-        #     env.commands = np.array([-0.75, -0.5, -0.75])
+        #     env.commands = np.array([0., 0.0, 0.0])
+        # elif env.steps < start + 200:
+        #     env.commands = np.array([0., 0.0, 1.5])
+        # elif env.steps < start + 400:
+        #     env.commands = np.array([0., 0.0, -1.5])
         # elif env.steps < start + 500:
         #     env.commands = np.array([1., 0.0, 0])
         # elif env.steps < start + 700:
@@ -117,10 +116,10 @@ def run(args):
         if args.use_perception:
             im = env.get_image()
 
-        # if done==True or env.steps > args.max_ep_len:
-        #     obs = env.reset()
-        #     if args.use_perception:
-        #         im = env.get_image()
+        if done==True or env.steps > args.max_ep_len:
+            obs = env.reset()
+            if args.use_perception:
+                im = env.get_image()
 
 if __name__== "__main__":
     args = default_arguments.get_defaults() 

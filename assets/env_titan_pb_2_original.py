@@ -24,16 +24,16 @@ from statistics import mean
 #Inflation radious code are specified some in reset, some in reward function and mostly in observation.
 
 class Env(EnvBasePB):
+    terrain_size = im_size = [1,100,100]
     
     def __init__(self, PATH=None, args=None, writer=None,posi=None):
 
-        #Initiations like CPU parallelisation rank, arguments, render, path, writer for tensorboard plot, 
         self.rank = comm.Get_rank()
         self.args = args
         self.render = args.render and self.rank == 0
         self.PATH = PATH
         self.writer = writer
-        # self.master = True
+        self.master = True
         Initial_distance_to_goal=0
         self.number_Goal_Reached=0
         self.trial=0
@@ -42,15 +42,16 @@ class Env(EnvBasePB):
 
         
         
-    
+        
+        # self.timeStep_10Hz = 1/120
         super().__init__(PATH)
-        # Setting arguments to change functions (reward,reset,step) based on arguments
+
         self.reward_fn_name = f'get_reward_{self.args.reward_fn}'
+        #self.obs_fn_name = f'get_hlp_obs_{self.args.obs_fn}'
         self.reset_fn_name = f'reset_{self.args.reset_fn}'
         self.step_fn_name = f'step_{self.args.step_fn}'
 
         
-        #Action Size and Obs Size (Also setting input types using arguments)
         if "pumpkin" in self.args.env:
             self.ac_size = 2
             self.ob_size = 7
@@ -88,10 +89,6 @@ class Env(EnvBasePB):
             else:
                 #print("nowch")
                 self.ob_size = 6+2*(self.args.num_robots-1)
-
-        #Initialising KP for bootstrap curr, time to goal, 
-        # opposite angle to set goal position opposide side of wall if needed (not needed).
-        #Start Timer
         self.Kp = 400
         self.initial_Kp = self.Kp
         self.time_to_goal=0
@@ -99,12 +96,13 @@ class Env(EnvBasePB):
         self.time_to_gapwp2=0
         
         self.opposite_angle=0
-
+        self.dd=0
         self.start_time = time.time() 
-
+        self.pre_action=[0]*2
+        
 
         
-        #initialising single robot collision likelihood curr (Not Needed)
+
         if self.args.obstacle_avoidance and self.args.static_robots > 1 and self.args.single_collision_curr or self.args.cur:
             self.a=5.0
             self.b=0.5
@@ -113,20 +111,20 @@ class Env(EnvBasePB):
             self.a=0.0
             self.b=0.0
 
-        #initialising collision likelihood curr (Not Needed) but else command is needed
+
         if self.args.gap_avoidance and self.args.num_robots>1 and self.args.collision_likelihood_curr:
             self.increase_collision_rate=-2
         else:
             self.increase_collision_rate=0
             
             
-        #Initialising Gap cur and Tunnel Cur Parameters for Single Robot
         if self.args.num_robots==1: 
                    
             if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
                 #parameters for gap curr
                 self.max_gap_width=self.args.starting_gap_width
-                self.decrease_gap_width=0
+                #self.max_gap_width=2.5
+                self.decrease_gap_width=0#self.args.gap_decrease
                 self.final_gap_width=self.args.final_gap_width
                 #parameters for tunnel curr
                 self.max_tunnel_depth = 0.1
@@ -142,13 +140,13 @@ class Env(EnvBasePB):
                 self.increase_tunnel_depth = 0.1
                 self.max_gap_among_all_robots_individual_gap_width=self.max_gap_width
         
-        #Initialising Gap cur and Tunnel Cur Parameters for Multi Robot
         elif self.args.num_robots>1:
             
             if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
                 #parameters for gap curr
                 self.max_gap_width=self.args.starting_gap_width
-                self.decrease_gap_width=0
+                #self.max_gap_width=2.5
+                self.decrease_gap_width=0#self.args.gap_decrease
                 self.final_gap_width=self.args.final_gap_width
                 #parameters for tunnel curr
                 self.max_tunnel_depth = 0.2
@@ -164,27 +162,32 @@ class Env(EnvBasePB):
                 self.max_gap_among_all_robots_individual_gap_width=self.max_gap_width
             
 
-
+        # if self.args.gap_avoidance and self.args.cur and self.args.tunnel_curr:
+            
+        # elif self.args.gap_avoidance:
+        #     self.max_tunnel_depth=20
+        #     self.increase_tunnel_depth=0
 
 
    
         
-        #Initialising Region Cur Parameters
+
         if self.args.cur or self.args.region_curr:
             self.initial_goal_dist=6	
             self.max_goal_dist=12
         else:
             self.initial_goal_dist=8
-   
+            #np.random.choice([10,8,6])
             self.max_goal_dist=8
         
-
-        self.action_multiplier = 1
-  
+        # self.action_multiplier = 0.005
+        self.action_multiplier = 1#0.1
+        # print(10000*np.ones(self.ac_size))
+        # Needed if importing as Gym environment--  spaces.Discrete(self.ac_size) 
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
         self.steps = -1
-   
+        # self.steps_occupancy = -1
         
         self.reward_names = ["Reward/goal", "Reward/heading", "Reward/heading_obs", "Reward/neg", "Reward/MA_colision", "Reward/collision","Reward/reach"]
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
@@ -193,7 +196,8 @@ class Env(EnvBasePB):
         
     
         self.env_exp = None
-
+        self.target_speed = 1.0
+        self.target_yaw = 0.0
         
         self.initial_joints = [0.0] * 15 + [ 0.5, -0.5, -1.5707] + [-0.5, 0.5, -1.5707]
         self.cur_success = deque([0.0], maxlen=5)
@@ -212,13 +216,35 @@ class Env(EnvBasePB):
         self.episodes = -1
         self.total_steps = 0
         self.ob_dict = {}
-        
+        #self.done = False
+
+        # States that we want to restore, for resuming training after running a test
         self.states_to_restore = ["pos", "orn", "joints", "base_vel", "joint_vel", "args", "episodes", "steps", "total_steps"]
 
-        
+        # Things we want to log each training step (print and add to tensorboard)
+        #self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Diffficulty": self.terrain_difficulty}
+
         self.load_robot()
 
         
+
+
+    # def load_terrains(self):
+    #     """
+    #     Generates all Terrain objects for this environment and adds them to the terrains array.
+
+    #     NOTE: By default, always load the ground truth
+    #     NOTE: can optionally create other terrains 
+    #     """
+    #     # generate and load ground truth image
+    #     gt_arr = self.terrain_generator.gen_rand_ground_truth(0, 255, self.cfg.terrain.gt_img_dim)
+    #     gt_path = self.get_parent_dir(self.model_path)
+    #     gt_name = f"ground_truth_{str(self.rank)}"
+    #     gt_position = self.terr_cfg.hf_centre_pos
+    #     gt_size = (*self.terr_cfg.gt_mj_dim, self.terr_cfg.hf_elev, self.terr_cfg.hf_depth)
+
+    #     self.ground_truth = Hfield(gt_arr, gt_path, gt_name, gt_position, gt_size) 
+    #     self.terrains.append(self.ground_truth)
 
     def load_specific_robot(self):
 
@@ -1918,13 +1944,11 @@ class Env(EnvBasePB):
 
         #print("self.steps",self.steps)
         
-        
+        # self.endt = time.time()  # Record the end time after the simulation step
+        # self.timest = self.endt - self.st  # Calculate the time elapsed during the simulation step
+        # print("Timestep:", self.timest/self.steps, "seconds")
 
         self.steps += 1
-
-        self.endt = time.time()  # Record the end time after the simulation step
-        self.timest = self.endt - self.st  # Calculate the time elapsed during the simulation step
-        # print("Timestep:", self.timest/self.steps, "seconds",self.timeStep_10Hz)
         
         
         self.total_steps += 1

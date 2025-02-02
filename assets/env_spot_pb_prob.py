@@ -13,18 +13,13 @@ import torch
 from assets.env_base_pb import EnvBasePB
 
 class Env(EnvBasePB):
-    # Terrain size and image size are the same
-    terrain_size = im_size = [1,100,100]
+    #Init timestep and simstep
     timeStep = 1/50
     timeStep_10Hz = 1/10
-    # timeStep = 1/10
-    # simStep = 1/200
     simStep = 1/100
 
-    # timeStep=0.2
-    # simStep=0.1
     def __init__(self, PATH=None, args=None, writer=None):
-
+        #Initiations like rank, writer, render ..
         self.rank = comm.Get_rank()
         self.args = args
         self.render = args.render and self.rank == 0
@@ -34,15 +29,18 @@ class Env(EnvBasePB):
         
         super().__init__(PATH)
 
+        #obs and action size
         self.ac_size = 12
         self.ob_size = 55
+
+        #init kp for bootstrap cur and robot heigh for a cur and best return for reset, action multiplier not needed
         self.Kp = 400
         self.initial_Kp = self.Kp
         self.ROBOT_HEIGHT = 0.5
         self.best_return = 0
         self.action_multiplier = 30
 
-
+        #limiting the command velocity range or threshold
         if self.args.with_initial_cmd:
             self.use_vx_reward = True
             self.use_vy_reward = True
@@ -72,6 +70,7 @@ class Env(EnvBasePB):
             self.min_vy = -0.0
             self.min_yaw_vel = -0.0
 
+        #defining target velocity range for command curriculum
         self.target_max_vx = 1.0
         self.target_max_vy = 0.5
         self.target_max_yaw_vel = 1.5
@@ -81,41 +80,53 @@ class Env(EnvBasePB):
         self.target_min_yaw_vel = -1.5
         self.cmd_cur = True
 
+
+        #This was used in reset and reward joint
         self.w_cont = 0.1
 
         self.cmd_update_rate = 100
         self.cmd_vel = np.array([0.0, 0.0, 0.0])
-        self.action_scale = 0.5
 
+        #This was used to compute torque
+        self.action_scale = 0.5
         self.kp = 20.0
         self.kd = 0.5
-
         self.default_joints = np.array([0.0, 1.2, -2.0]*4)
 
+
+        #initialise step from 0
         self.steps = 0
 
         # Needed if importing as Gym environment
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
         
+        #init episode from -1
         self.episodes = -1
         
+        #These were used in reset and observation
         self.target_yaw = 0.0
         self.sign = 1
 
+        #set success criteria
         self.cur_success = deque([0.0], maxlen=5)
 
+        #initialising terrain cur
         if self.args.add_terrain:
             self.terrain_difficulty = self.args.initial_terrain_difficulty
         else:
             self.terrain_difficulty = 0
             self.terrain = None
 
+
+        #Needed if use apply disturbance 
         self.max_disturbance = 250
         self.final_disturbance = 1600
 
+        #to print and check joints
         self.states_to_restore = ["joints", "pos", "orn", "joint_vel", "args", "paused", "ep_success", "cur_success", "steps", "episodes", "ob_dict", "step_count", "z_offset", "terrain", "Kp", "max_disturbance", "env_exp"]
 
+        #For plotting in tensorboard
         self.log_things = {"Kp": self.Kp, "Success": self.cur_success, "Dist": self.max_disturbance, "Difficulty": self.terrain_difficulty}
 
         self.reward_names = ["Reward/lin_vel", "Reward/lin_vx_error", "Reward/lin_vy_error", "Reward/ang_vel", "Reward/ang_vel_error", "Reward/orien", "Reward/height", "Reward/joints", "Reward/contacts", "Reward/rate", "Reward/avg"]
@@ -205,7 +216,6 @@ class Env(EnvBasePB):
         # Wait until both feet are on the ground before starting walking
         # self.paused = True
         self.paused = False
-        self.st = time.time()
 
         if self.episodes > -1:
             self.ep_success = self.get_success()
@@ -365,11 +375,11 @@ class Env(EnvBasePB):
     def step(self, actions):
 
         self.actions = actions
-        # print("action",actions)
+        print("action",actions)
         
         # self.timeStep=0.1
         # self.simStep=0.02
-        # print("timesteping",int(self.timeStep_10Hz/self.timeStep))
+        print("timesteping",int(self.timeStep_10Hz/self.timeStep))
         # for _ in range(int(self.timeStep_10Hz/self.timeStep)):
         for _ in range(int(self.timeStep/self.simStep)):
             jointStates = p.getJointStates(self.Id,self.ordered_joint_indices)
@@ -416,10 +426,6 @@ class Env(EnvBasePB):
         reward, done = self.get_reward()
         self.total_return += reward
         self.steps += 1
-        self.endt = time.time()  # Record the end time after the simulation step
-        self.timest = self.endt - self.st  # Calculate the time elapsed during the simulation step
-        print("Timestep_10timeStep_10Hz:", self.timest/self.steps, "seconds",self.timeStep_10Hz,self.timeStep_50Hz,self.timeStep)
-        
 
         return self.obs_buf, reward, done, None
 
@@ -576,8 +582,7 @@ class Env(EnvBasePB):
         commands_scale = np.array([1.0, 1.0, 1.0])
         dof_pos = 1.0
         dof_vel = 0.05
-        # self.commands=[-0.75,-0.0,-0.0]
-        # # print("len",len(self.actions))
+        # print("len",len(self.actions))
         # print("command",self.commands)
         
         self.obs_buf = np.concatenate((  (self.base_lin_vel * lin_vel).reshape([1,3]),
@@ -589,7 +594,7 @@ class Env(EnvBasePB):
                                 (np.array(self.contacts)).reshape([1,8]),
                                 self.actions.reshape([1,self.ac_size])
                                 ),axis=-1)
-        # print("chk",self.obs_buf[0][8:11])
+        print("chk",self.obs_buf[0][8:11])
 
     def apply_forces_yaw(self):
         yaw_force = 1.5*self.Kp*(self.commands[2] - self.yaw_vel)
