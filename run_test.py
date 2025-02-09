@@ -151,12 +151,12 @@ def run(args):
     # model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
     # traced_script_module1 = torch.jit.script(model1)
     # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
-    # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_S.jit")
+    # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_simul.jit")
 
     # model2 = copy.deepcopy(pol.pi.z_net).to('cpu')
     # traced_script_module2 = torch.jit.script(model2)
     # # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
-    # traced_script_module2.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/z_net_S.jit")
+    # traced_script_module2.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/z_net_simul.jit")
 
 
     # print("traced_script_module1",traced_script_module1)

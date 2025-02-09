@@ -1920,9 +1920,9 @@ class Env(EnvBasePB):
         # print(self.applied_actions);exit()
         if self.body_xyz[2] < 0.4 or (abs(np.array([self.pitch, self.roll])) > 0.8).any() or (np.array(self.leg_contacts)).any():
             # print("poregse---------------------")
-            clipped_linear_vel_command=np.clip(self.applied_actions[0], 0, 0.75)
-            clipped_lateral_vel_command=np.clip(self.applied_actions[1], 0, 0)
-            clipped_angular_vel_command=np.clip(self.applied_actions[2], -0.75, 0.75)
+            clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.1, 0.5)
+            clipped_lateral_vel_command=np.clip(self.applied_actions[1], -0.05, 0.05)
+            clipped_angular_vel_command=np.clip(self.applied_actions[2], -0.5, 0.5)
 
         else:
             clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.3, 0.75)

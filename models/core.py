@@ -155,13 +155,15 @@ class ActorPerception(nn.Module):
 
 class MLPGaussianActorPerception(ActorPerception):
 
-    def __init__(self, obs_dim, im_dim, act_dim, hidden_sizes, activation):
+    def __init__(self, base, obs_dim, im_dim, act_dim, hidden_sizes, activation):
         super().__init__()
         self.obs_dim = obs_dim
         self.im_dim = im_dim
         if args.heterogeneous or args.titanheads:
             self.obs_dim=6
             obs_dim=6
+        print("base",base)
+        
         # print("self.obs_dim",self.obs_dim,act_dim);exit()
         # print(act_dim);exit()
         # act_dim=[3,3]
@@ -185,7 +187,11 @@ class MLPGaussianActorPerception(ActorPerception):
             # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
             self.log_std_spot = torch.nn.Parameter(torch.as_tensor(log_std_spot))
             self.log_std_titan = torch.nn.Parameter(torch.as_tensor(log_std_titan))
-            self.z_net = CNN(im_dim)
+            
+            if args.transfer_learning:
+                self.z_net = base.pi.z_net
+            else:
+                self.z_net = CNN(im_dim)
             # Need to do a dry run to initialise Lazy module
             self.z_net(torch.zeros(self.im_dim))
             # self.mu_net1 = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim[0]], activation)
@@ -195,9 +201,16 @@ class MLPGaussianActorPerception(ActorPerception):
             feature_shape_r1=256
             feature_shape_r2=256
             # print(obs_dim);exit()
-            self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+            if args.transfer_learning:
+                self.feature_layers = base.pi.mu_net[:-2]
+                # print("base.pi.mu_net",base.pi.mu_net[-2:])
+            else:
+                self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
             self.spot_output_layer = output_layer(feature_shape,3)
             self.titan_output_layer = output_layer(feature_shape,2)
+            # print("tensor-Sizes",self.spot_output_layer)
+            # self.spot_output_layer = base.pi.mu_net[-2:]
+            # self.titan_output_layer = base.pi.mu_net[-2:]
         elif (act_dim==(2,2)) and args.titanheads:
             spot_act_dim=2
             titan_act_dim=2
@@ -207,7 +220,10 @@ class MLPGaussianActorPerception(ActorPerception):
             # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
             self.log_std_spot = torch.nn.Parameter(torch.as_tensor(log_std_spot))
             self.log_std_titan = torch.nn.Parameter(torch.as_tensor(log_std_titan))
-            self.z_net = CNN(im_dim)
+            if args.transfer_learning:
+                self.z_net = base.pi.z_net
+            else:
+                self.z_net = CNN(im_dim)
             # Need to do a dry run to initialise Lazy module
             self.z_net(torch.zeros(self.im_dim))
             
@@ -215,7 +231,10 @@ class MLPGaussianActorPerception(ActorPerception):
             feature_shape_r1=256
             feature_shape_r2=256
             # print(obs_dim);exit()
-            self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+            if args.transfer_learning:
+                self.feature_layers = base.pi.mu_net[:-2]
+            else:
+                self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
             self.spot_output_layer = output_layer(feature_shape,2)
             self.titan_output_layer = output_layer(feature_shape,2)
             # print("layer",self.spot_output_layer,self.titan_output_layer)
@@ -298,10 +317,24 @@ class MLPGaussianActorPerception(ActorPerception):
             # log_std = -0.5 * np.ones(act_dim, dtype=np.float32)
             log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
             self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
-            self.z_net = CNN(im_dim)
+            if args.transfer_learning:
+                self.z_net = base.pi.z_net
+            else:
+                self.z_net = CNN(im_dim)
             # Need to do a dry run to initialise Lazy module
             self.z_net(torch.zeros(self.im_dim))
-            self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
+            if args.transfer_learning:
+                self.mu_net= base.pi.mu_net
+            else:
+                self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
+            # if args.transfer_learning:
+            #     self.feature_layers = base.pi.mu_net[:-2]
+            # else:
+            #     self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+            #     # self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+            # # self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
+            # feature_shape=256
+            # self.mu_net = output_layer(feature_shape,2)
 
         # # self.output_layer = output_layer(feature_shape_r1,feature_shape_r2,act_dim)
         # # self.output_layer = [output_layer_r1(feature_shape_r1,act_dim[0]),output_layer_r2(feature_shape_r2,act_dim[1])]
@@ -497,9 +530,121 @@ class MLPCriticPerception(nn.Module):
         return torch.squeeze(self.v_net(torch.concat((obs, self.z_net(im)), -1)), -1) # Critical to ensure v has right shape.
 
 
+class TransferMultiHeadMLPActorCriticPerception(nn.Module):
+    def __init__(self, base_actor):
+        super(TransferMultiHeadMLPActorCriticPerception, self).__init__()
+        # Use base actor's CNN and feature extractor
+        # self.z_net = base_actor.pi.z_net
+        # self.feature_layers = base_actor.pi.mu_net[:-2]  # Use all layers up to the last Linear
+        self.z_net = base_actor.z_net
+        self.feature_layers = base_actor.mu_net[:-2]  # Use all layers up to the last Linear
+        
+        # Additional output heads
+        self.spot_output_layer = nn.Linear(256, 2)
+        self.titan_output_layer = nn.Linear(256, 2)
+
+    def __init__(self, base_actor, obs_dim, im_dim, act_dim, hidden_sizes, activation):
+        # super().__init__()
+        super(TransferMultiHeadMLPActorCriticPerception, self).__init__()
+        self.obs_dim = obs_dim
+        self.im_dim = im_dim
+        if args.heterogeneous or args.titanheads:
+            self.obs_dim=6
+            obs_dim=6
+        if (act_dim==(2,3) or act_dim==(3,2)) and args.heterogeneous:
+            spot_act_dim=3
+            titan_act_dim=2
+            log_std_spot = -0.0 * np.ones(spot_act_dim, dtype=np.float32)
+            log_std_titan = -0.0 * np.ones(titan_act_dim, dtype=np.float32)
+            # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
+            self.log_std_spot = torch.nn.Parameter(torch.as_tensor(log_std_spot))
+            self.log_std_titan = torch.nn.Parameter(torch.as_tensor(log_std_titan))
+            # self.z_net = CNN(im_dim)
+            self.z_net = base_actor.z_net
+            # Need to do a dry run to initialise Lazy module
+            self.z_net(torch.zeros(self.im_dim))
+            feature_shape=256
+            self.feature_layers = base_actor.mu_net[:-2]
+            # self.feature_layers = mlp([obs_dim + 64] + list(hidden_sizes), activation)
+            self.spot_output_layer = output_layer(feature_shape,3)
+            self.titan_output_layer = output_layer(feature_shape,2)
+
+    def _distribution(self, obs, im):
+        # print("obs_before",obs,len(obs),im,len(im))
+        # obs=obs[0]
+        # print("core_obs",int(obs[1][0]))
+        if args.heterogeneous or args.titanheads:
+            ob = obs
+            self.obs_dim=6
+            # if len(obs)==2:
+                # obs =  torch.tensor([np.array(obs[0][1:]), np.array(obs[1][1:])], dtype=torch.float32)
+            # print("obs_before",obs)
+            obs = torch.tensor([np.array(observ[1:]) for observ in obs]) 
+            # print("checkhpc_obs",obs)
+            
+            # li = [observ[1:] for observ in obs]
+            # # print("checkhpc_li",li)
+            # li=np.array(li)
+            # # print("li_array",li)
+            # obs = torch.tensor(li) 
+            # # print("obs_twoone",obs,type(obs))
+            
+        
+        obs = torch.reshape(obs, [-1, self.obs_dim])
+        # print("obs_after",obs,len(obs),im,len(im))
+
+        # z = self.z_net(im)
+        # print("dis_im_1",im[0],len(im[0]))
+        # z = self.z_net(im[0:1])
+        # print("dimention_match",im.shape,obs.shape,len(obs))
+        # print("dimention_match_1",im[0:1].shape,obs.shape)
+        # z2 = self.z_net(im[1])
+        # print("self.z_net(im)",self.z_net(im[0:1]),self.z_net(im[0:1]).shape)
+        t=torch.concat((obs, self.z_net(im)), -1)
+        # print("concate_shape",t,t.shape)
+
+        # model = nn.Sequential(
+        #         nn.Linear(70, 256),   # Linear layer: 70 input features, 256 output features
+        #         nn.Tanh(),            # Tanh activation
+        #         nn.Linear(256, 256),  # Linear layer: 256 input features, 256 output features
+        #         nn.Tanh(),            # Tanh activation
+        #         nn.Linear(256, 3),    # Linear layer: 256 input features, 3 output features
+        #         nn.Identity()         # Identity function (no activation for final output)
+        #     )
+        # self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
+        # print("self.feature_extraction",self.feature_extraction,self.feature_extraction.shape)
+        if args.heterogeneous or args.titanheads:
+            self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
+            
+            self.mu_spot=self.spot_output_layer(self.feature_extraction)
+            # print("self.mu_spot",self.mu_spot,type(self.mu_spot),self.mu_spot.shape)
+            self.mu_titan=self.titan_output_layer(self.feature_extraction)
+            
+
+            self.std_spot = torch.exp(self.log_std_spot)
+            self.std_titan = torch.exp(self.log_std_titan)
+            # print("OB_CHEKC",ob)
+            if len(obs)==2:            
+                return Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan)
+        
+            elif (int(ob[0][0]) == 0 and not len(obs)==2) and (args.heterogeneous or args.titanheads):    
+                        
+                return Normal(self.mu_titan, self.std_titan)
+        
+            elif (int(ob[0][0]) == 1 and not len(obs)==2) and (args.heterogeneous or args.titanheads):   
+                # print("f");exit()         
+                return Normal(self.mu_spot, self.std_spot)
+    # def forward(self, x):
+    #     z = self.z_net(x)
+    #     features = self.feature_layers(z)
+    #     spot_output = self.spot_output_layer(features)
+    #     titan_output = self.titan_output_layer(features)
+    #     return spot_output, titan_output
+    
+
 class MLPActorCriticPerception(nn.Module):
 
-    def __init__(self, observation_space,  im_dim, action_space,
+    def __init__(self, base, observation_space,  im_dim, action_space,
                  hidden_sizes=(64,64), activation=nn.Tanh):
         
         super().__init__()
@@ -524,7 +669,9 @@ class MLPActorCriticPerception(nn.Module):
         if isinstance(action_space, Box):
             # print("core_shape",action_space,action_space.shape)
             # self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape[0], hidden_sizes, activation)
-            self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape, hidden_sizes, activation)
+            self.pi = MLPGaussianActorPerception(base, obs_dim, im_dim, action_space.shape, hidden_sizes, activation)
+            
+        
         # print("self.pi",self.pi)
         # build value function
         self.v  = MLPCriticPerception(obs_dim, hidden_sizes, activation, self.pi.z_net)

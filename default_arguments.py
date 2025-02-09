@@ -52,6 +52,7 @@ def get_defaults():
     
     parser.add_argument('--turtle_titan', default=False, action="store_true")
     parser.add_argument('--turtle_dtr', default=False, action="store_true")
+    parser.add_argument('--transfer_learning', default=False, action="store_true")
     
     parser.add_argument('--cur', default=False, action="store_true")
     parser.add_argument('--hpc', default=False, action="store_true")

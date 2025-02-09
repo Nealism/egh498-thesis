@@ -488,6 +488,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # TODO: Can't save locals() if using robotics toolbox (needed for joint goal), need to fix this, don't need to save all "locals()"
     # logger.save_config(locals())
 
+    base_model=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/model.pt")
+
     # Random seed
     seed += 10000 * proc_id()
     torch.manual_seed(seed)
@@ -507,7 +509,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # print(ob_size,ac_size,type(ob_size),type(ac_size));exit()
     # print("obs",env.observation_space,"action",env.action_space)
     
-
+    print(base_model.pi)
     # Create actor-critic module
     if use_perception:
         actor_critic=core.MLPActorCriticPerception
@@ -516,8 +518,24 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         if load_path != "":
             ac = torch.load(load_path)
             print("Loading saved weights: ", load_path)
+        elif env.args.transfer_learning:
+            ac = actor_critic(base_model, env.observation_space, im_size, env.action_space, **ac_kwargs)
+
+            # print("self.pi",ac.pi.z_net)
+            for param in ac.pi.z_net.parameters():
+                param.requires_grad = False
+            if env.args.heterogeneous or env.args.titanheads:
+
+                for param in ac.pi.feature_layers.parameters():
+                    param.requires_grad = False
+
+            if env.args.multi_titans:
+                for param in ac.pi.mu_net.parameters():
+                    param.requires_grad = False
+
+            
         else:
-            ac = actor_critic(env.observation_space, im_size, env.action_space, **ac_kwargs)
+            ac = actor_critic(None, env.observation_space, im_size, env.action_space, **ac_kwargs)
         # print("ac",ac);exit()
         train_pi_iters = 10
         train_v_iters = 10
