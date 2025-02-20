@@ -92,7 +92,8 @@ class Env(EnvBasePB):
         #Initialising KP for bootstrap curr, time to goal, 
         # opposite angle to set goal position opposide side of wall if needed (not needed).
         #Start Timer
-        self.Kp = 400
+        # self.Kp = 400
+        self.Kp = self.args.initial_kp
         self.initial_Kp = self.Kp
         self.time_to_goal=0
         self.time_to_gapwp1=0
@@ -1042,7 +1043,9 @@ class Env(EnvBasePB):
         # ===========================
         # This is an expert functionexper
         # ===========================
-    def motor_action(self,actions):
+    def motor_action(self,actions,expert_ac):
+        # print("Action",actions)
+        # print("expert_ac",expert_ac)
         # print("KP",self.Kp,self.Kp/self.initial_Kp)
         # print("titanaction",actions)
         # actions=[0.0,1.5]
@@ -1051,8 +1054,131 @@ class Env(EnvBasePB):
         # print(self.max_gap_width-self.decrease_gap_width,self.final_gap_width)
         self.exp_actions = [0.0]*2
 
+        if self.args.gap_avoidance and self.args.Pretrained_cur:
+            # obs = MUL.reset()
+            # im = MUL.get_image()
+            # pol=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/model.pt")
+            # sp_ac = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            
+            self.exp_actions[1] =expert_ac[1]
+            self.exp_actions[0] = expert_ac[0]
+            
+            # print("self.exp_actions_immediate",self.exp_actions[0],self.exp_actions[1])
+            
+            for robot_bbox in self.robots_bbox:
+            #print("k",robot_bbox,"whole",self.robots_bbox)
+                # if str(robot_bbox[0])==str(self):
+                #     #print(str(robot_bbox[0]),str(self))
+                #     self.robot1_near_robot2=False
+                if str(robot_bbox[0]) != str(self):
+                    self.robot1_near_robot2=False
+                    self.intersection_hline_rbbox,_= self.intersection_check(self.head_line_MA,robot_bbox[1])
+                    self.intersection_s1line_rbbox,_= self.intersection_check(self.side_line1g_MA,robot_bbox[1])
+                    self.intersection_s2line_rbbox,_= self.intersection_check(self.side_line2g_MA,robot_bbox[1])
+                    # self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox,self.intersection_s1line_rbbox,self.intersection_s2line_rbbox]
+                    # self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox,self.intersection_s1line_rbbox]
+                    self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox, self.intersection_s1line_rbbox ]
+                    #print(self.int_check_lines_vs_rbbox,self)
+                    #print(num,robot_bbox[0]);exit()
+                    # print("checking",self.turn_both)
+
+                    if any(self.int_check_lines_vs_rbbox):
+                        self.robot1_near_robot2=True
+                        # print("self.robot1_near_robot2",self.robot1_near_robot2,self)
+                        self.exp_actions[0] = expert_ac[0]*0.2
+                        self.exp_actions[1] = expert_ac[0]*0.25
+            
+            # for robot_bbox in self.robots_bbox:
+            # #print("k",robot_bbox,"whole",self.robots_bbox)
+            #     # if str(robot_bbox[0])==str(self):
+            #     #     #print(str(robot_bbox[0]),str(self))
+            #     #     self.robot1_near_robot2=False
+            #     if str(robot_bbox[0]) != str(self):
+            #         self.robot1_near_robot2=False
+            #         self.intersection_hline_rbbox,_= self.intersection_check(self.head_line_MA,robot_bbox[1])
+            #         self.intersection_s1line_rbbox,_= self.intersection_check(self.side_line1g_MA,robot_bbox[1])
+            #         self.intersection_s2line_rbbox,_= self.intersection_check(self.side_line2g_MA,robot_bbox[1])
+            #         self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox,self.intersection_s1line_rbbox,self.intersection_s2line_rbbox]
+            #         #print(self.int_check_lines_vs_rbbox,self)
+            #         #print(num,robot_bbox[0]);exit()
+            #         # print("checking",self.turn_both)
+
+            #         if any(self.int_check_lines_vs_rbbox):
+            #             self.robot1_near_robot2=True
+            #             # print("self.robot1_near_robot2",self.robot1_near_robot2,self)
+            #             self.exp_actions[0] = -0.01
+            #             self.exp_actions[1] = 0
+            #             if self.turn_both and self==self.All_Robot_ID[0]:
+            #                 self.exp_actions[0] = 0
+            #                 self.exp_actions[1] = 0
+            #             elif self.turn_both and self==self.All_Robot_ID[1]:
+            #                 self.exp_actions[0] = 0
+            #                 self.exp_actions[1] = 0
+
+
+                
+            #     # if self==self.All_Robot_ID[1]:    
+            #     #     print(self.robot1_near_robot2,self)
+            #             #break
+
+            # # if self.intersection_r1_r:
+            # #     print("TRRRRRRUUEEE")
+            # #     self.exp_actions[0] = 0
+            # #     self.exp_actions[1] = 0
+
         
-        
+            # if self.gapwp1_reach:
+            #     # self.exp_actions[1] = 1.5*np.clip(self.heading_error_gapwp2, -1.5, 1.5)
+            #     # # self.exp_actions[0] = 0.025
+            #     # self.exp_actions[0] = 0.05
+                
+            #     for robot_bbox in self.robots_bbox:
+            # #print("k",robot_bbox,"whole",self.robots_bbox)
+            #     # if str(robot_bbox[0])==str(self):
+            #     #     #print(str(robot_bbox[0]),str(self))
+            #     #     self.robot1_near_robot2=False
+            #         if str(robot_bbox[0]) != str(self):
+            #             self.robot1_near_robot2=False
+            #             self.intersection_hline_rbbox,_= self.intersection_check(self.head_line_MA,robot_bbox[1])
+            #             self.intersection_s1line_rbbox,_= self.intersection_check(self.side_line1g_MA,robot_bbox[1])
+            #             self.intersection_s2line_rbbox,_= self.intersection_check(self.side_line2g_MA,robot_bbox[1])
+            #             self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox,self.intersection_s1line_rbbox,self.intersection_s2line_rbbox]
+            #             #print(self.int_check_lines_vs_rbbox,self)
+            #             #print(num,robot_bbox[0]);exit()
+            #             # print("checking",self.turn_both)
+
+            #             if any(self.int_check_lines_vs_rbbox):
+            #                 self.robot1_near_robot2=True
+            #                 # print("self.robot1_near_robot2",self.robot1_near_robot2,self)
+            #                 self.exp_actions[0] = -0.03
+            #                 self.exp_actions[1] = -0.02
+            #                 # if self.turn_both and self==self.All_Robot_ID[0]:
+            #                 #     self.exp_actions[0] = 0.0
+            #                 #     self.exp_actions[1] = 0.5
+            #                 # elif self.turn_both and self==self.All_Robot_ID[1]:
+            #                 #     self.exp_actions[0] = 0.0
+            #                 #     self.exp_actions[1] = 0.0
+                
+
+            
+            #     if self.gapwp2_reach:
+            #         # self.exp_actions[1] = 1.5*np.clip(self.heading_error, -1, 1)
+
+            #         # # self.exp_actions[0] = 1000
+            #         # self.exp_actions[0] = 0.15
+            #         for robot_bbox in self.robots_bbox:
+            # #print("k",robot_bbox,"whole",self.robots_bbox)
+            #     # if str(robot_bbox[0])==str(self):
+            #     #     #print(str(robot_bbox[0]),str(self))
+            #     #     self.robot1_near_robot2=False
+            #             if str(robot_bbox[0]) != str(self):
+            #                 self.robot1_near_robot2=False
+            #                 self.intersection_hline_rbbox,_= self.intersection_check(self.head_line_MA,robot_bbox[1])
+            #                 self.intersection_s1line_rbbox,_= self.intersection_check(self.side_line1g_MA,robot_bbox[1])
+            #                 self.intersection_s2line_rbbox,_= self.intersection_check(self.side_line2g_MA,robot_bbox[1])
+            #                 self.int_check_lines_vs_rbbox=[self.intersection_hline_rbbox,self.intersection_s1line_rbbox,self.intersection_s2line_rbbox]
+            #                 #print(self.int_check_lines_vs_rbbox,self)
+            
         # ##########################__RAY_LINE___###################
         #if self.args.num_robots > 1:
         # 	if self.hit[0] == True:
@@ -1206,7 +1332,7 @@ class Env(EnvBasePB):
         #                         self.exp_actions[1] = -0.1
         #     #print(self.exp_actions,self)
 
-        if self.args.gap_avoidance and self.args.RIPG:
+        elif self.args.gap_avoidance and self.args.RIPG:
         # ####################_______WAY_POINT_SYSTEM______#####
             #make sure to uncomment it when remove wall
             # if self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2 or self.intersection_r1_r:
@@ -1621,11 +1747,14 @@ class Env(EnvBasePB):
         # print("self.exp_actions",self.exp_actions)
         if self.args.unclipped_vel:
             self.exp_actions=self.exp_actions*np.array([10,16])
+
+        elif self.args.Pretrained_cur:
+            self.exp_actions=self.exp_actions
             
         else:
             self.exp_actions=self.exp_actions*np.array([35,70])
         # print("self.exp_actions_afer",self.exp_actions)
-
+        # actions=[0.1,0.1]
         if self.args.just_expert or (self.args.cur or self.args.expert_curr) and self.goal_moved==False:
             # print(self.goal_moved,"goal_moved")
             #Make sure to uncomment it when freezing robot when hitting wall lines to work with multi robot
@@ -1647,7 +1776,7 @@ class Env(EnvBasePB):
             
             if not self.args.just_expert:
                 # print("actionssssss",actions,type(actions))
-                self.applied_actions += self.action_multiplier*actions
+                self.applied_actions += self.action_multiplier*actions*(1-self.Kp/self.initial_Kp)
             
         else:
             # print(self.goal_moved,"goal_moved")
@@ -1674,7 +1803,7 @@ class Env(EnvBasePB):
         
         if self.tipped:
             self.applied_actions=[0]*2
-
+        # print("applied_action",self.applied_actions)
 
         # clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 1)
         # clipped_angular_vel_command=np.clip(self.applied_actions[1], -1.5, 1.5)

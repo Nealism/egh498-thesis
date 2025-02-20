@@ -487,9 +487,24 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     loggers = [EpochLogger(**logger_kwargs) for _ in range(robot_number)]
     # TODO: Can't save locals() if using robotics toolbox (needed for joint goal), need to fix this, don't need to save all "locals()"
     # logger.save_config(locals())
+    # base_model_path="/home/kom018/behaviour_rl/Saved_models/Turtle_titan/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/model.pt"
+    base_model_path="/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/model.pt"
+    
+    base_model=torch.load(base_model_path)
 
-    base_model=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/model.pt")
+    # if env.args.transfer_learning:
+    #     for name, param in base_model.named_parameters():
+    #         if 'weight' in name:  # Filter to get only weights, not biases
+    #             # std_dev = torch.std(param.data)  
+    #             std_dev = param.data
 
+    # # print("Base_STD",std_dev) 
+
+    # print("BAAAAAAAAAAAAAAAAAAAAA",base_model.pi.std);exit()
+
+    model_mu=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/mu_net_simul.jit")
+    model_z=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/z_net_simul.jit")
+    # print(model_mu,"model_mu")
     # Random seed
     seed += 10000 * proc_id()
     torch.manual_seed(seed)
@@ -509,7 +524,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # print(ob_size,ac_size,type(ob_size),type(ac_size));exit()
     # print("obs",env.observation_space,"action",env.action_space)
     
-    print(base_model.pi)
+    # print(base_model.pi)
     # Create actor-critic module
     if use_perception:
         actor_critic=core.MLPActorCriticPerception
@@ -520,18 +535,34 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             print("Loading saved weights: ", load_path)
         elif env.args.transfer_learning:
             ac = actor_critic(base_model, env.observation_space, im_size, env.action_space, **ac_kwargs)
+            # ac = torch.load(base_model_path)
+            # print("ac",ac)
 
             # print("self.pi",ac.pi.z_net)
-            for param in ac.pi.z_net.parameters():
-                param.requires_grad = False
-            if env.args.heterogeneous or env.args.titanheads:
-
-                for param in ac.pi.feature_layers.parameters():
+            if not env.args.freezing_off:
+                for param in ac.pi.z_net.parameters():
                     param.requires_grad = False
+                if env.args.heterogeneous or env.args.titanheads:
 
-            if env.args.multi_titans:
-                for param in ac.pi.mu_net.parameters():
-                    param.requires_grad = False
+                    for param in ac.pi.feature_layers.parameters():
+                        param.requires_grad = False
+
+                    
+
+
+                    if env.args.spot_additional_layer:
+                        for param in ac.pi.spot_additional_layer.parameters():
+                            param.requires_grad = False
+
+                    # for param in ac.pi.spot_output_layer.parameters():
+                    #     param.requires_grad = True
+                    if env.args.titan_frozen_layer:
+                        for param in ac.pi.titan_output_layer.parameters():
+                            param.requires_grad = False
+
+                if env.args.multi_titans:
+                    for param in ac.pi.mu_net.parameters():
+                        param.requires_grad = False
 
             
         else:
@@ -544,6 +575,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         if load_path != "":
             ac = torch.load(load_path)
             print("Loading saved weights: ", load_path)
+        # elif env.args.transfer_learning:
+        #     ac = actor_critic(base_model, env.observation_space, env.action_space, **ac_kwargs)
         else:
             ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
 
@@ -770,6 +803,54 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             
             else:
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
+
+
+            if env.args.Pretrained_cur:
+            # obs = MUL.reset()
+            # im = MUL.get_image()
+                model_mu=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/mu_net_simul.jit")
+                model_z=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/z_net_simul.jit")
+                if env.args.multi_titans or env.args.multi_spots:
+                    a_r1=torch.as_tensor(np.array([o[0]]), dtype=torch.float32).unsqueeze(dim=0)
+                elif env.args.heterogeneous:
+                    a_r1=torch.as_tensor(np.array([o[0][1:]]), dtype=torch.float32).unsqueeze(dim=0)
+                b_r1=model_z(torch.as_tensor(im[0], dtype=torch.float32))
+                # print(a_r1[0],"br1",b_r1)
+                # print(np.array(a_r1[0].detach().numpy()).shape,np.array(b_r1.detach().numpy()).shape)
+                concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
+                action_r1 = model_mu(concatenate_part_r1)
+
+                if env.args.num_robots==2:
+
+                    if env.args.multi_titans or env.args.multi_spots:
+                        a_r2=torch.as_tensor(np.array([o[1]]), dtype=torch.float32).unsqueeze(dim=0)
+                    elif env.args.heterogeneous:
+                        a_r2=torch.as_tensor(np.array([o[1][1:]]), dtype=torch.float32).unsqueeze(dim=0)
+                    # a_r2=torch.as_tensor(np.array([o[1]]), dtype=torch.float32).unsqueeze(dim=0)
+                    b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
+                    # print(a_r2[0],"br2",b_r2)
+                    # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
+                    concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
+                    action_r2 = model_mu(concatenate_part_r2)
+                    # print("ar1",action_r1,"ar2",action_r2)
+                
+                r1_clipped_linear_vel_command=np.clip(action_r1[0][0].detach().numpy(), -0.75, 0.75)
+                r1_clipped_angular_vel_command=np.clip(action_r1[0][1].detach().numpy(), -0.75, 0.75)
+                action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
+
+                if env.args.num_robots==2:
+                    r2_clipped_linear_vel_command=np.clip(action_r2[0][0].detach().numpy(), -0.75, 0.75)
+                    r2_clipped_angular_vel_command=np.clip(action_r2[0][1].detach().numpy(), -0.75, 0.75)
+
+                    # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
+                    # action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+                    action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+                # pol=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/model.pt")
+                # sp_ac = pol.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+                sp_ac=action_r
+                # print("sp_ac",sp_ac)
+            else: 
+                sp_ac=np.array([[0., 0.],[0., 0.]])
             # print("action_bef",a_spot,a_titan, v, logp_spot, logp_titan)
             # print(ac_size);exit()
             # print(env.robots);exit()
@@ -802,7 +883,10 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             # # print("val",v)
               
             tt=time.time()
-            next_o, r, d,termination, _ = env.step(a)
+            # if env.args.Pretrained_cur:
+            next_o, r, d,termination, _ = env.step(a,sp_ac)
+            # else:
+            #     next_o, r, d,termination, _ = env.step(a,0)
             # print("td", time.time()-tt)
             tt=time.time()
             #print("O_len",len(next_o),len(next_o[0]),"o",next_o)

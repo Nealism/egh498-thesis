@@ -158,6 +158,16 @@ def run(args):
     # # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
     # traced_script_module2.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/z_net_simul.jit")
 
+    # model3 = copy.deepcopy(pol.v.v_net).to('cpu')
+    # traced_script_module3 = torch.jit.script(model3)
+    # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
+    # traced_script_module3.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/v_net_simul.jit")
+
+    # model4 = copy.deepcopy(pol.v.z_net).to('cpu')
+    # traced_script_module4 = torch.jit.script(model4)
+    # # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
+    # traced_script_module4.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/vz_net_simul.jit")
+
 
     # print("traced_script_module1",traced_script_module1)
     # print("traced_script_module2",traced_script_module2)
@@ -253,7 +263,7 @@ def run(args):
             else:
                 action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
             # print(a_spot,a_titan,len(a_spot),len(a_titan))
-            print(pol)
+            # print(pol)
 
 
             if env.args.heterogeneous or env.args.titanheads:

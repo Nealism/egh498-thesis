@@ -53,6 +53,13 @@ def get_defaults():
     parser.add_argument('--turtle_titan', default=False, action="store_true")
     parser.add_argument('--turtle_dtr', default=False, action="store_true")
     parser.add_argument('--transfer_learning', default=False, action="store_true")
+    parser.add_argument('--spot_additional_layer', default=False, action="store_true")
+    parser.add_argument('--titan_frozen_layer', default=False, action="store_true")
+    parser.add_argument('--freezing_off', default=False, action="store_true")
+    parser.add_argument('--Pretrained_cur', default=False, action="store_true")
+    parser.add_argument('--feature_only', default=False, action="store_true")
+    parser.add_argument('--initial_kp', type=int, default=400)
+    parser.add_argument('--separate_node', type=int, default=400)
     
     parser.add_argument('--cur', default=False, action="store_true")
     parser.add_argument('--hpc', default=False, action="store_true")

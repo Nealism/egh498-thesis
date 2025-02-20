@@ -493,7 +493,7 @@ class Env(EnvBasePB):
 
 
 
-    def step(self,actions):
+    def step(self,actions,expert_acs):
         obs = []
         rews=[]
         dones=[]
@@ -578,9 +578,9 @@ class Env(EnvBasePB):
             
             # print("self.buffer_linear_action",self.buffer_linear_action,"self.buffer_angular_action",self.buffer_angular_action)
         if self.args.multi_titans or self.args.multi_spots or self.args.titanheads or self.args.heterogeneous_speedy or self.args.heterogeneous_DTR_TITAN or self.args.heterogeneous_DTR_speed or self.args.heterogeneous_DTR_shape:
-            for action,Robot in zip(actions,self.robots):
+            for action,expert_ac,Robot in zip(actions,expert_acs,self.robots):
                 # print(action)
-                Robot.motor_action(action)
+                Robot.motor_action(action,expert_ac)
 
                 if self.args.gap_avoidance:
                     self.Both_Robots_stuck.append(Robot.robot1_near_robot2)
@@ -617,9 +617,9 @@ class Env(EnvBasePB):
 
         if self.args.heterogeneous :
 
-            for action,Robot in zip(actions,self.robots):
+            for action,expert_ac,Robot in zip(actions,expert_acs,self.robots):
             
-                Robot.motor_action(action)
+                Robot.motor_action(action,expert_ac)
 
                 if self.args.gap_avoidance:
                     self.Both_Robots_stuck.append(Robot.robot1_near_robot2)
