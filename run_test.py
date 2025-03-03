@@ -340,7 +340,53 @@ def run(args):
 
         # action=action_r
         # print(action)
-        obs, _, done,termination, _ = env.step(action)
+        if env.args.Pretrained_cur:
+            # obs = MUL.reset()
+            # im = MUL.get_image()
+            model_mu=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/mu_net_simul.jit")
+            model_z=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/z_net_simul.jit")
+            if env.args.multi_titans or env.args.multi_spots:
+                a_r1=torch.as_tensor(np.array([obs[0]]), dtype=torch.float32).unsqueeze(dim=0)
+            elif env.args.heterogeneous:
+                a_r1=torch.as_tensor(np.array([obs[0][1:]]), dtype=torch.float32).unsqueeze(dim=0)
+            b_r1=model_z(torch.as_tensor(im[0], dtype=torch.float32))
+            # print(a_r1[0],"br1",b_r1)
+            # print(np.array(a_r1[0].detach().numpy()).shape,np.array(b_r1.detach().numpy()).shape)
+            concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
+            action_r1 = model_mu(concatenate_part_r1)
+
+            if env.args.num_robots==2:
+
+                if env.args.multi_titans or env.args.multi_spots:
+                    a_r2=torch.as_tensor(np.array([obs[1]]), dtype=torch.float32).unsqueeze(dim=0)
+                elif env.args.heterogeneous:
+                    a_r2=torch.as_tensor(np.array([obs[1][1:]]), dtype=torch.float32).unsqueeze(dim=0)
+                # a_r2=torch.as_tensor(np.array([o[1]]), dtype=torch.float32).unsqueeze(dim=0)
+                b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
+                # print(a_r2[0],"br2",b_r2)
+                # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
+                concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
+                action_r2 = model_mu(concatenate_part_r2)
+                # print("ar1",action_r1,"ar2",action_r2)
+            
+            r1_clipped_linear_vel_command=np.clip(action_r1[0][0].detach().numpy(), -0.75, 0.75)
+            r1_clipped_angular_vel_command=np.clip(action_r1[0][1].detach().numpy(), -0.75, 0.75)
+            action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
+
+            if env.args.num_robots==2:
+                r2_clipped_linear_vel_command=np.clip(action_r2[0][0].detach().numpy(), -0.75, 0.75)
+                r2_clipped_angular_vel_command=np.clip(action_r2[0][1].detach().numpy(), -0.75, 0.75)
+
+                # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
+                # action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+                action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+            # pol=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/model.pt")
+            # sp_ac = pol.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            sp_ac=action_r
+            # print("sp_ac",sp_ac)
+        else: 
+            sp_ac=np.array([[0., 0.],[0., 0.]])
+        obs, _, done,termination, _ = env.step(action,sp_ac)
 
 
         # print(obs[0],"obs?")

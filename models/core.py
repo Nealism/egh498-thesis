@@ -143,12 +143,30 @@ class ActorPerception(nn.Module):
         #     logp_a_spot = self._log_prob_from_distribution(pi_spot, act)
         #     logp_a_titan = self._log_prob_from_distribution(pi_titan, act)
         # return pi_spot,pi_titan, logp_a_spot, logp_a_titan
+        # print("pi",pi);exit()
         logp_a = None
-        # print("pi_check",pi,act)
-        if act is not None:
-            logp_a = self._log_prob_from_distribution(pi, act)
+        if isinstance(pi, tuple):
+            # print("pkdaosdpisa",pi[0],pi[1])
+
+            pi=pi[0],pi[1]
+            # print("pi_check",pi)
+            if act is not None:
+                # print("act",act)
+                act_linang = torch.stack((act[:, 0], act[:, 2]), dim=1)
+                act_lat = act[:, 1].unsqueeze(1)
+                # print("actlinagn",act_linang)
+                # print("act_lat",act_lat)
+                logp_a_linang = self._log_prob_from_distribution(pi[0], act_linang)
+                logp_a_lat = self._log_prob_from_distribution(pi[1], act_lat)
+                logp_a=[logp_a_linang,logp_a_lat]
             
-        return pi, logp_a
+            return pi, logp_a 
+        else:
+            # print("pi2_check",pi)
+            if act is not None:
+                logp_a = self._log_prob_from_distribution(pi, act)
+            # print("loga",logp_a,logp_a.shape)    
+            return pi, logp_a
 
 
 
@@ -182,15 +200,27 @@ class MLPGaussianActorPerception(ActorPerception):
             # # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
             # self.log_std_r1 = torch.nn.Parameter(torch.as_tensor(log_std_r1))
             # self.log_std_r2 = torch.nn.Parameter(torch.as_tensor(log_std_r2))
-
-            log_std_spot = -0.0 * np.ones(spot_act_dim, dtype=np.float32)
-            log_std_titan = -0.0 * np.ones(titan_act_dim, dtype=np.float32)
+            if args.separate_node:
+                log_std_spot = -0.0 * np.ones(spot_act_dim-1, dtype=np.float32)
+                log_std_spot_lateral = -0.0 * np.ones(spot_act_dim-2, dtype=np.float32)
+                log_std_titan = -0.0 * np.ones(titan_act_dim, dtype=np.float32)
+            else:
+                log_std_spot = -0.0 * np.ones(spot_act_dim, dtype=np.float32)
+                log_std_titan = -0.0 * np.ones(titan_act_dim, dtype=np.float32)
             # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
 
-            if args.transfer_learning:
+            if args.transfer_learning and not args.separate_node:
                 # log_std = -0.0 * np.ones(act_dim, dtype=np.float32)
                 self.log_std_spot = torch.nn.Parameter(torch.as_tensor(log_std_spot))
                 self.log_std_titan = base.pi.log_std
+            elif args.transfer_learning and args.separate_node:
+                self.log_std_spot = base.pi.log_std
+                self.log_std_spot_lateral = torch.nn.Parameter(torch.as_tensor(log_std_spot_lateral))
+                self.log_std_titan = base.pi.log_std
+            elif args.separate_node and not args.transfer_learning: 
+                self.log_std_spot = torch.nn.Parameter(torch.as_tensor(log_std_spot))
+                self.log_std_spot_lateral = torch.nn.Parameter(torch.as_tensor(log_std_spot_lateral))
+                self.log_std_titan = torch.nn.Parameter(torch.as_tensor(log_std_titan))
             else:
                 self.log_std_spot = torch.nn.Parameter(torch.as_tensor(log_std_spot))
                 self.log_std_titan = torch.nn.Parameter(torch.as_tensor(log_std_titan))
@@ -203,8 +233,10 @@ class MLPGaussianActorPerception(ActorPerception):
                 self.z_net = base.pi.z_net
             else:
                 self.z_net = CNN(im_dim)
+            # print(im_dim)
             # Need to do a dry run to initialise Lazy module
             self.z_net(torch.zeros(self.im_dim))
+            # print("CK-___________",self.z_net(torch.zeros(self.im_dim)).shape)
             # self.mu_net1 = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim[0]], activation)
             # self.mu_net2 = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim[1]], activation)
             # self.mu_net = mlp([obs_dim + 64] + list(hidden_sizes) + [act_dim], activation)
@@ -225,10 +257,13 @@ class MLPGaussianActorPerception(ActorPerception):
             # # print("tensor-Sizes",self.spot_output_layer)
             # # self.spot_output_layer = base.pi.mu_net[-2:]
             # self.titan_output_layer = base.pi.mu_net[-2:]
-            if args.transfer_learning:
+            if args.transfer_learning :
                 
                 if args.spot_additional_layer:
                     self.spot_output_layer = output_layer(2,3)
+                elif args.separate_node:
+                    self.spot_output_layer = base.pi.mu_net[-2:]
+                    self.spot_lateral_layer = output_layer(feature_shape,1)
                 else:
                     self.spot_output_layer = output_layer(feature_shape,3)
                 
@@ -236,8 +271,14 @@ class MLPGaussianActorPerception(ActorPerception):
                     self.titan_output_layer = output_layer(feature_shape,2)
                 else:
                     self.titan_output_layer = base.pi.mu_net[-2:]
+
+
                 
-                
+            elif args.separate_node and not args.transfer_learning:
+                self.spot_output_layer = output_layer(feature_shape,2)
+                self.spot_lateral_layer = output_layer(feature_shape,1)
+                self.titan_output_layer = output_layer(feature_shape,2)
+
             else:
                 self.spot_output_layer = output_layer(feature_shape,3)
                 self.titan_output_layer = output_layer(feature_shape,2)
@@ -422,7 +463,7 @@ class MLPGaussianActorPerception(ActorPerception):
         t=torch.concat((obs, self.z_net(im)), -1)
         # print("concate_shape",t,t.shape)
 
-        # model = nn.Sequential(
+        # model = nn.Sequential(self.z_net(im[0]),self.z_net(im[0]).shape
         #         nn.Linear(70, 256),   # Linear layer: 70 input features, 256 output features
         #         nn.Tanh(),            # Tanh activation
         #         nn.Linear(256, 256),  # Linear layer: 256 input features, 256 output features
@@ -433,7 +474,25 @@ class MLPGaussianActorPerception(ActorPerception):
         # self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
         # print("self.feature_extraction",self.feature_extraction,self.feature_extraction.shape)
         if args.heterogeneous or args.titanheads:
-            self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
+
+            if args.individual_policy and len(obs)==2:
+                # print(im,obs,im[0].shape,obs[0].shape);exit()
+                # obser=torch.tensor([obs[0].numpy()]),torch.tensor([obs[1].numpy()])
+                # obser = torch.stack(obser, dim=0)
+                # print(ob)
+                obser=obs[0].reshape(1, 6),obs[1].reshape(1, 6)
+                # print("Inside_check",len(obs),len(obs[0]),obs)
+                # print(self.z_net(im[0]).shape,obs[0].shape);exit()
+                # print(type(obs),type(obser))
+                # print(obs.shape,type(obser))
+                # print(obs[0].shape,obs.shape,obser[0].shape)
+                # print(obs,obs[0],torch.tensor([obs[0].numpy()]).shape,obs[0].shape);exit()
+                # print((obs[0], self.z_net(im[0])),len(obs[0], self.z_net(im[0])));exit()
+                self.feature_extraction1 = self.feature_layers(torch.concat((obser[0], self.z_net(im[0])), -1))
+                self.feature_extraction2 = self.feature_layers(torch.concat((obser[1], self.z_net(im[1])), -1))
+            else:
+                # print("chcskdhasdjl")
+                self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
             
             if args.spot_additional_layer:
                 # self.mu_spot=self.spot_output_layer(self.feature_extraction)
@@ -444,24 +503,56 @@ class MLPGaussianActorPerception(ActorPerception):
                 self.mu_spot=self.spot_output_layer(self.intermediate)
                 # print("self.mu_spot",self.mu_spot,type(self.mu_spot),self.mu_spot.shape)
                 self.mu_titan=self.titan_output_layer(self.feature_extraction)
+            elif args.individual_policy and len(obs)==2:
+                self.mu_spot=self.spot_output_layer(self.feature_extraction1)
+                self.mu_titan=self.titan_output_layer(self.feature_extraction2)
+            elif args.separate_node:
+                self.mu_spot=self.spot_output_layer(self.feature_extraction)
+                self.mu_spot_lateral=self.spot_lateral_layer(self.feature_extraction)
+                self.mu_titan=self.titan_output_layer(self.feature_extraction)
             else:
                 self.mu_spot=self.spot_output_layer(self.feature_extraction)
                 self.mu_titan=self.titan_output_layer(self.feature_extraction)
-
-            self.std_spot = torch.exp(self.log_std_spot)
-            self.std_titan = torch.exp(self.log_std_titan)
-            # print("self.std_titan",self.std_titan)
+            # print(self.mu_titan,self.mu_spot);exit()
+            # print(torch.concat((obs[0], self.z_net(im[0])), -1).shape);exit()
+            
+            # print("self.std_titan",self.std_titan.shape,self.std_spot.shape);exit()
             # print("OB_CHEKC",ob)
-            if len(obs)==2:            
-                return Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan)
-        
-            elif (int(ob[0][0]) == 0 and not len(obs)==2) and (args.heterogeneous or args.titanheads):    
-                        
-                return Normal(self.mu_titan, self.std_titan)
-        
-            elif (int(ob[0][0]) == 1 and not len(obs)==2) and (args.heterogeneous or args.titanheads):   
-                # print("f");exit()         
-                return Normal(self.mu_spot, self.std_spot)
+            # print("len(obs)",len(obs))
+            if args.separate_node:
+                self.std_spot = torch.exp(self.log_std_spot)
+                self.std_spot_lateral = torch.exp(self.log_std_spot_lateral)
+                self.std_titan = torch.exp(self.log_std_titan)
+                # print("self.std_spot",self.std_spot,"self.std_spot_lateral",self.std_spot_lateral)
+                if len(obs)==2: 
+                    # print("GCOSSSSS?????????",self.mu_spot, self.std_spot,self.mu_spot_lateral, self.std_spot_lateral)          
+                    # print("GCOSSSSS?????????",(Normal(self.mu_spot, self.std_spot),Normal(self.mu_spot_lateral, self.std_spot_lateral),Normal(self.mu_titan, self.std_titan)))          
+                    return Normal(self.mu_spot, self.std_spot),Normal(self.mu_spot_lateral, self.std_spot_lateral),Normal(self.mu_titan, self.std_titan)
+            
+                elif (int(ob[0][0]) == 0 and not len(obs)==2) and (args.heterogeneous or args.titanheads):    
+                    # print("G1OSSSSS?????????",len(obs),Normal(self.mu_titan, self.std_titan));exit()        
+                    return Normal(self.mu_titan, self.std_titan)
+            
+                elif (int(ob[0][0]) == 1 and not len(obs)==2) and (args.heterogeneous or args.titanheads):   
+                    # print("f");exit()  
+                    # print("GCOSSSSS?????????",self.mu_spot, self.std_spot,self.mu_spot_lateral, self.std_spot_lateral)
+                    # print("G2OSSSSS?????????",Normal(self.mu_spot, self.std_spot), Normal(self.mu_spot_lateral, self.std_spot_lateral))      
+                    return Normal(self.mu_spot, self.std_spot),Normal(self.mu_spot_lateral, self.std_spot_lateral)
+            else:
+                self.std_spot = torch.exp(self.log_std_spot)
+                self.std_titan = torch.exp(self.log_std_titan)
+                if len(obs)==2: 
+                    # print("GCOSSSSS?????????",((Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan))))          
+                    return Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan)
+            
+                elif (int(ob[0][0]) == 0 and not len(obs)==2) and (args.heterogeneous or args.titanheads):    
+                    # print("G1OSSSSS?????????",len(obs),Normal(self.mu_titan, self.std_titan));exit()        
+                    return Normal(self.mu_titan, self.std_titan)
+            
+                elif (int(ob[0][0]) == 1 and not len(obs)==2) and (args.heterogeneous or args.titanheads):   
+                    # print("f");exit()  
+                    # print("G2OSSSSS?????????",Normal(self.mu_spot, self.std_spot));exit()       
+                    return Normal(self.mu_spot, self.std_spot)
         
         # elif len(obs)==2 and args.IHPPO:
         #     self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
@@ -562,6 +653,7 @@ class MLPGaussianActorPerception(ActorPerception):
 
     def _log_prob_from_distribution(self, pi, act):
         # print("pi",pi,"act",act,"self",self)
+        # print("pi",pi,"type",type(pi))
         return pi.log_prob(act).sum(axis=-1)    # Last axis sum needed for Torch Normal distribution
 
 class MLPCriticPerception(nn.Module):
@@ -647,10 +739,12 @@ class MLPActorCriticPerception(nn.Module):
         # print("lenlen",len(obs),len(im))
         # obs=obs[0]
         # pi = self.pi._distribution(obs, im)
-        if args.heterogeneous or args.titanheads:
+        if (args.heterogeneous or args.titanheads) and not args.separate_node:
             pi_spot,pi_titan = self.pi._distribution(obs, im)
         # elif args.IHPPO:
         #     pi_dtr,pi_titan = self.pi._distribution(obs, im)
+        elif (args.heterogeneous or args.titanheads) and args.separate_node:
+            pi_spot,pi_spot_lateral,pi_titan = self.pi._distribution(obs, im)
         else:
             pi = self.pi._distribution(obs, im)
         # pi = self.pi._distribution_clipped(obs, im)
@@ -658,18 +752,26 @@ class MLPActorCriticPerception(nn.Module):
         # print(pi_spot,pi_titan);exit()
 
         if stochastic:
-            if args.heterogeneous or args.titanheads:
+            if (args.heterogeneous or args.titanheads) and not args.separate_node:
                 a_spot = pi_spot.sample()
                 a_titan = pi_titan.sample()
             # elif args.IHPPO:
             #     a_dtr = pi_dtr.sample()
             #     a_titan = pi_titan.sample()
+            elif (args.heterogeneous or args.titanheads) and args.separate_node:
+                a_spot = pi_spot.sample()
+                a_spot_lateral = pi_spot_lateral.sample()
+                a_titan = pi_titan.sample()
             else:
                 a = pi.sample()
             # print("STEPA",a);exit()
         else:
-            if args.heterogeneous or args.titanheads:
+            if (args.heterogeneous or args.titanheads) and not args.separate_node:
                 a_spot = self.pi.mu_spot
+                a_titan = self.pi.mu_titan
+            elif (args.heterogeneous or args.titanheads) and args.separate_node:
+                a_spot = self.pi.mu_spot
+                a_spot_lateral = self.pi.mu_spot_lateral
                 a_titan = self.pi.mu_titan
             # elif args.IHPPO:
             #     a_dtr = self.pi.mu_dtr
@@ -688,8 +790,12 @@ class MLPActorCriticPerception(nn.Module):
         #     a=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
         # # print("policy_vel",a,type(a))
 
-        if args.heterogeneous or args.titanheads:
+        if (args.heterogeneous or args.titanheads) and not args.separate_node:
             logp_a_spot = self.pi._log_prob_from_distribution(pi_spot, a_spot)
+            logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
+        elif (args.heterogeneous or args.titanheads) and args.separate_node:
+            logp_a_spot = self.pi._log_prob_from_distribution(pi_spot, a_spot)
+            logp_a_spot_lateral = self.pi._log_prob_from_distribution(pi_spot_lateral, a_spot_lateral)
             logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
         # elif args.IHPPO:
         #     logp_a_dtr = self.pi._log_prob_from_distribution(pi_dtr, a_dtr)
@@ -715,7 +821,7 @@ class MLPActorCriticPerception(nn.Module):
         v_copy = v.cpu().detach().data.numpy().copy()
         # print("val",v_copy);exit()
 
-        if args.heterogeneous or args.titanheads:
+        if (args.heterogeneous or args.titanheads) and not args.separate_node:
             a_copy_spot = a_spot.cpu().detach().data.numpy().copy()
             a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
             logp_a_copy_spot = logp_a_spot.cpu().detach().data.numpy().copy()
@@ -725,12 +831,21 @@ class MLPActorCriticPerception(nn.Module):
         #     a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
         #     logp_a_copy_dtr = logp_a_dtr.cpu().detach().data.numpy().copy()
         #     logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
+        elif (args.heterogeneous or args.titanheads) and args.separate_node:
+            a_copy_spot = a_spot.cpu().detach().data.numpy().copy()
+            a_copy_spot_lateral = a_spot_lateral.cpu().detach().data.numpy().copy()
+            a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
+            logp_a_copy_spot = logp_a_spot.cpu().detach().data.numpy().copy()
+            logp_a_copy_spot_lateral = logp_a_spot_lateral.cpu().detach().data.numpy().copy()
+            logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
         else:
             a_copy = a.cpu().detach().data.numpy().copy()
             logp_a_copy = logp_a.cpu().detach().data.numpy().copy()
         # print("val",v_copy);exit()
-        if args.heterogeneous or args.titanheads:
+        if (args.heterogeneous or args.titanheads) and not args.separate_node:
             return a_copy_spot, a_copy_titan, v_copy, logp_a_copy_spot, logp_a_copy_titan
+        elif (args.heterogeneous or args.titanheads) and args.separate_node:
+            return a_copy_spot,a_copy_spot_lateral, a_copy_titan, v_copy, logp_a_copy_spot,logp_a_copy_spot_lateral, logp_a_copy_titan
         # elif args.IHPPO:
         #     return a_copy_dtr, a_copy_titan, v_copy, logp_a_copy_dtr, logp_a_copy_titan
         else:

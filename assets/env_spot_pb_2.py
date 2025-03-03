@@ -45,7 +45,8 @@ class Env(EnvBasePB):
         self.number_Goal_Reached=0
         self.trial=0
         # self.fall_count=0
-        
+        self.f=0
+        self.g=0
         self.prev_dist_to_goal= Initial_distance_to_goal
 
         
@@ -248,7 +249,12 @@ class Env(EnvBasePB):
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
         self.ep_reward_dict = {reward:0 for reward in self.reward_names}
 
-        
+        if self.args.expert_curr or self.args.cur:
+            self.action_names = ["Action/Linear", "Action/Angular", "Action/Lateral", "Prior_Action/Linear", "Prior_Action/Angular", "Prior_Action/Lateral", "Policy_Action/Linear", "Policy_Action/Angular", "Policy_Action/Lateral"]
+        else:
+            self.action_names = ["Action/Linear", "Action/Angular", "Action/Lateral","Policy_Action/Linear", "Policy_Action/Angular", "Policy_Action/Lateral"]
+        self.action_dict = {action:deque(maxlen=100) for action in self.action_names} 
+        self.ep_action_dict = {action:0 for action in self.action_names}
     
         self.env_exp = None
         self.target_speed = 1.0
@@ -444,6 +450,7 @@ class Env(EnvBasePB):
             return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "EC: Kp": self.Kp }
 
         return_dict.update(self.reward_dict)
+        return_dict.update(self.action_dict)
         return return_dict
 
     
@@ -478,6 +485,11 @@ class Env(EnvBasePB):
             for key in self.reward_dict:
                 self.reward_dict[key].append(self.ep_reward_dict[key]/self.steps)
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
+
+        if self.steps > 0:
+            for key in self.action_dict:
+                self.action_dict[key].append(self.ep_action_dict[key])
+        # self.ep_action_dict = {action:0 for action in self.action_names}
 
         if self.episodes > -1:
 
@@ -1206,7 +1218,14 @@ class Env(EnvBasePB):
     def motor_action(self,actions,expert_ac):
         # print("spot action",actions,type(actions))
         # actions=np.array([1.0,0.0])
+
+
+
+        self.ep_action_dict["Policy_Action/Linear"] += abs(actions[0])
+        self.ep_action_dict["Policy_Action/Angular"] += abs(actions[2])
+        self.ep_action_dict["Policy_Action/Lateral"] += abs(actions[1])
         self.exp_actions = [0.0]*3
+        
         # print("SP_AC",actions)
         # ##########################__RAY_LINE___###################
         #if self.args.num_robots > 1:
@@ -1936,11 +1955,15 @@ class Env(EnvBasePB):
             # # if self.args.num_robots >1 and self.robot1_near_robot2 and not self.turn_both:
             #     self.applied_actions=[0]*3
             # else:
-            
+            self.ep_action_dict["Prior_Action/Linear"] += abs(self.exp_actions[0])
+            self.ep_action_dict["Prior_Action/Angular"] += abs(self.exp_actions[2])
+            self.ep_action_dict["Prior_Action/Lateral"] += abs(self.exp_actions[1])
             self.applied_actions = (self.Kp/self.initial_Kp) *np.array(self.exp_actions)
             if not self.args.just_expert:
-                # print(self.action_multiplier,"j,",actions)
-                self.applied_actions += self.action_multiplier*actions*(1-self.Kp/self.initial_Kp)
+                if self.args.Pretrained_cur:
+                    self.applied_actions += self.action_multiplier*actions*(1-self.Kp/self.initial_Kp)
+                else:
+                    self.applied_actions += self.action_multiplier*actions
             
         else:
             
@@ -2062,6 +2085,15 @@ class Env(EnvBasePB):
 
         
         self.commands=np.array([clipped_linear_vel_command,clipped_lateral_vel_command,clipped_angular_vel_command])
+        
+        # print(abs(clipped_linear_vel_command/0.75),type(clipped_linear_vel_command))
+        self.f +=abs(clipped_linear_vel_command/0.75)
+        self.g +=abs(clipped_linear_vel_command)
+        self.ep_action_dict["Action/Linear"] += abs((clipped_linear_vel_command)/0.75)
+        self.ep_action_dict["Action/Angular"] += abs(clipped_angular_vel_command/0.75)
+        self.ep_action_dict["Action/Lateral"] += abs(clipped_lateral_vel_command/0.3)
+        # print("fg",self.f,self.g,self.ep_action_dict["Action/Linear"])
+        
         # self.commands=np.array([-0.75,-0.5,-0.75])
         # self.commands=np.array([self.applied_actions[0],0,self.applied_actions[1]])
 

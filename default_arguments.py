@@ -59,7 +59,11 @@ def get_defaults():
     parser.add_argument('--Pretrained_cur', default=False, action="store_true")
     parser.add_argument('--feature_only', default=False, action="store_true")
     parser.add_argument('--initial_kp', type=int, default=400)
-    parser.add_argument('--separate_node', type=int, default=400)
+    parser.add_argument('--separate_node', default=False, action="store_true")
+    parser.add_argument('--individual_policy', default=False, action="store_true")
+    parser.add_argument('--indexed_policy', default=False, action="store_true")
+    parser.add_argument('--unindexed_policy', default=False, action="store_true")
+    parser.add_argument('--spot_frozen_layer', default=False, action="store_true")
     
     parser.add_argument('--cur', default=False, action="store_true")
     parser.add_argument('--hpc', default=False, action="store_true")

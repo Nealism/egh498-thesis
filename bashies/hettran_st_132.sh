@@ -17,21 +17,21 @@ declare -a Experiments=(
 
 
                       #Simple Reward 4
-                      "400127/E1r32G1E1"
-                      "400127/E2r32G1E1"
-                      "400127/E3r32G1E1"
-                      "400127/E4r32G1E1"
-                      "400127/E5r32G1E1"
-                      "400127/E6r32G1E1"
-                      "400127/E7r32G1E1"
-                      "400127/E8r32G1E1"
-                      "400127/E9r32G1E1"
-                      "400127/E10r32G1E1"
-                      "400127/E11r32G1E1"
-                      "400127/E12r32G1E1"
-                      "400127/E13r32G1E1"
-                      "400127/E14r32G1E1"
-                      "400127/E15r32G1E1"
+                      "400132/E1r32G1E1"
+                      "400132/E2r32G1E1"
+                      "400132/E3r32G1E1"
+                      "400132/E4r32G1E1"
+                      "400132/E5r32G1E1"
+                      "400132/E6r32G1E1"
+                      "400132/E7r32G1E1"
+                      "400132/E8r32G1E1"
+                      "400132/E9r32G1E1"
+                      "400132/E10r32G1E1"
+                      "400132/E11r32G1E1"
+                      "400132/E12r32G1E1"
+                      "400132/E13r32G1E1"
+                      "400132/E14r32G1E1"
+                      "400132/E15r32G1E1"
                       
 
 
@@ -109,5 +109,5 @@ declare -a Arguments=(
             
 export SBATCH_ACCOUNT=OD-227420
 for (( i=0; i<${#Arguments[@]}; i++ )); do 
-  sbatch ./base_csiro_pet.sh "run.py" ${Experiments[$i]} "${Arguments[$i]}" "24:00:00"
+  sbatch ./base_csiro_pet.sh "run.py" ${Experiments[$i]} "${Arguments[$i]}" "72:00:00"
 done
