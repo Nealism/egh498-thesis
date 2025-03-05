@@ -1218,7 +1218,7 @@ class Env(EnvBasePB):
     def motor_action(self,actions,expert_ac):
         # print("spot action",actions,type(actions))
         # actions=np.array([1.0,0.0])
-
+        # print("ac",actions)
 
 
         self.ep_action_dict["Policy_Action/Linear"] += abs(actions[0])

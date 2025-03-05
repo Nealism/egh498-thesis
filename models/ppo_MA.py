@@ -639,43 +639,43 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         else:
             pi, logp = ac.pi(obs, act)
         # print("AC.PI",ac.pi)
-        if isinstance(logp, list):
-            # print(type(logp),type(logp_old))
-            ratio_linang = torch.exp(logp[0] - logp_old)
-            ratio_lat = torch.exp(logp[1] - logp_old)
-            clip_adv_linang = torch.clamp(ratio_linang, 1-clip_ratio, 1+clip_ratio) * adv
-            clip_adv_lat = torch.clamp(ratio_lat, 1-clip_ratio, 1+clip_ratio) * adv
-            loss_pi_linang = -(torch.min(ratio_linang * adv, clip_adv_linang)).mean()
-            loss_pi_lat = -(torch.min(ratio_lat * adv, clip_adv_lat)).mean()
-            loss_pi = (loss_pi_linang + loss_pi_lat) / 2
-            # print("loss",loss_pi_linang,loss_pi_lat,loss_pi)
+        # if isinstance(logp, list):
+        #     # print(type(logp),type(logp_old))
+        #     ratio_linang = torch.exp(logp[0] - logp_old)
+        #     ratio_lat = torch.exp(logp[1] - logp_old)
+        #     clip_adv_linang = torch.clamp(ratio_linang, 1-clip_ratio, 1+clip_ratio) * adv
+        #     clip_adv_lat = torch.clamp(ratio_lat, 1-clip_ratio, 1+clip_ratio) * adv
+        #     loss_pi_linang = -(torch.min(ratio_linang * adv, clip_adv_linang)).mean()
+        #     loss_pi_lat = -(torch.min(ratio_lat * adv, clip_adv_lat)).mean()
+        #     loss_pi = (loss_pi_linang + loss_pi_lat) / 2
+        #     # print("loss",loss_pi_linang,loss_pi_lat,loss_pi)
 
-            # Useful extra info
-            approx_kl_linang = (logp_old - logp[0]).mean().item()
-            approx_kl_lat = (logp_old - logp[1]).mean().item()
-            approx_kl = (approx_kl_linang + approx_kl_lat) / 2
-            ent_linang = pi[0].entropy().mean().item()
-            ent_lat = pi[0].entropy().mean().item()
-            ent=(ent_linang + ent_lat) / 2
-            clipped_linang = ratio_linang.gt(1+clip_ratio) | ratio_linang.lt(1-clip_ratio)
-            clipped_lat = ratio_lat.gt(1+clip_ratio) | ratio_lat.lt(1-clip_ratio)
-            clipfrac_linang = torch.as_tensor(clipped_linang, dtype=torch.float32).mean().item()
-            clipfrac_lat = torch.as_tensor(clipped_lat, dtype=torch.float32).mean().item()
-            clipfrac = (clipfrac_linang + clipfrac_lat) / 2
-            pi_info = dict(kl=approx_kl, ent=ent, cf=clipfrac)
+        #     # Useful extra info
+        #     approx_kl_linang = (logp_old - logp[0]).mean().item()
+        #     approx_kl_lat = (logp_old - logp[1]).mean().item()
+        #     approx_kl = (approx_kl_linang + approx_kl_lat) / 2
+        #     ent_linang = pi[0].entropy().mean().item()
+        #     ent_lat = pi[0].entropy().mean().item()
+        #     ent=(ent_linang + ent_lat) / 2
+        #     clipped_linang = ratio_linang.gt(1+clip_ratio) | ratio_linang.lt(1-clip_ratio)
+        #     clipped_lat = ratio_lat.gt(1+clip_ratio) | ratio_lat.lt(1-clip_ratio)
+        #     clipfrac_linang = torch.as_tensor(clipped_linang, dtype=torch.float32).mean().item()
+        #     clipfrac_lat = torch.as_tensor(clipped_lat, dtype=torch.float32).mean().item()
+        #     clipfrac = (clipfrac_linang + clipfrac_lat) / 2
+        #     pi_info = dict(kl=approx_kl, ent=ent, cf=clipfrac)
 
 
-        else:
-            ratio = torch.exp(logp - logp_old)
-            clip_adv = torch.clamp(ratio, 1-clip_ratio, 1+clip_ratio) * adv
-            loss_pi = -(torch.min(ratio * adv, clip_adv)).mean()
-            # print("loss",loss_pi)
-            # Useful extra info
-            approx_kl = (logp_old - logp).mean().item()
-            ent = pi.entropy().mean().item()
-            clipped = ratio.gt(1+clip_ratio) | ratio.lt(1-clip_ratio)
-            clipfrac = torch.as_tensor(clipped, dtype=torch.float32).mean().item()
-            pi_info = dict(kl=approx_kl, ent=ent, cf=clipfrac)
+        # else:
+        ratio = torch.exp(logp - logp_old)
+        clip_adv = torch.clamp(ratio, 1-clip_ratio, 1+clip_ratio) * adv
+        loss_pi = -(torch.min(ratio * adv, clip_adv)).mean()
+        # print("loss",loss_pi)
+        # Useful extra info
+        approx_kl = (logp_old - logp).mean().item()
+        ent = pi.entropy().mean().item()
+        clipped = ratio.gt(1+clip_ratio) | ratio.lt(1-clip_ratio)
+        clipfrac = torch.as_tensor(clipped, dtype=torch.float32).mean().item()
+        pi_info = dict(kl=approx_kl, ent=ent, cf=clipfrac)
 
         return loss_pi, pi_info
 
@@ -759,8 +759,12 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 # print("="*20)
                 writer.add_scalar("ARews/robot_" + str(num), np.mean(rewbuffer), epoch)
                 writer.add_scalar("ALens/robot_" + str(num), np.mean(lenbuffer), epoch)
-                # writer.add_scalar("Stds/robot_" + str(num), np.mean(ac.pi.std_spot.data.numpy()), epoch)
-                # writer.add_scalar("Stds/robot_" + str(num), np.mean(ac.pi.std_titan.data.numpy()), epoch)
+                if env.args.multi_titans or env.args.multi_spots:
+                    writer.add_scalar("Stds/robot_" + str(num), np.mean(ac.pi.std.data.numpy()), epoch)
+                elif env.args.heterogeneous or env.args.titanheads:
+                    writer.add_scalar("Stds/spot_" + str(num), np.mean(ac.pi.std_spot.data.numpy()), epoch)
+                    writer.add_scalar("Stds/titan_" + str(num), np.mean(ac.pi.std_titan.data.numpy()), epoch)
+                # print("ac.pi.std_titan.data",ac.pi.std_titan.data,ac.pi.std_spot.data.numpy())
                 writer.add_scalar("RAM/robot_" + str(num), process.memory_info().rss/(1024.0 ** 3)*num_procs(), epoch)
                 writer.add_scalar("Lr_pi/robot_" + str(num), learning_rate_pi, epoch)
                 writer.add_scalar("Lr_vf/robot_" + str(num), learning_rate_vf, epoch)
@@ -830,15 +834,20 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         for t in range(local_steps_per_epoch):
             if use_perception:
                 # print(o)
-                if (env.args.heterogeneous or env.args.titanheads) and not env.args.separate_node:
+
+                if (env.args.heterogeneous or env.args.titanheads):
                     
                     a_spot,a_titan, v, logp_spot, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                 
-                elif (env.args.heterogeneous or env.args.titanheads) and env.args.separate_node:
-                    # print("acc",ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32)))
-                    a_spot,a_spot_lateral, a_titan, v, logp_spot,logp_spot_lateral, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
-                elif env.args.IHPPO:
-                    a_dtr,a_titan, v, logp_dtr, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                # if (env.args.heterogeneous or env.args.titanheads) and not env.args.separate_node:
+                    
+                #     a_spot,a_titan, v, logp_spot, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                
+                # elif (env.args.heterogeneous or env.args.titanheads) and env.args.separate_node:
+                #     # print("acc",ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32)))
+                #     a_spot,a_spot_lateral, a_titan, v, logp_spot,logp_spot_lateral, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                # elif env.args.IHPPO:
+                #     a_dtr,a_titan, v, logp_dtr, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                 else:
                     a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                 
@@ -907,20 +916,20 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             if env.args.heterogeneous or env.args.titanheads:
                 # if ac_size==(2,3):
 
-                if env.args.separate_node:
-                    if "titan" in str(env.robots[0]):
-                        # print("spoot",logp_spot[0],np.array((a_spot[1][0],a_spot_lateral[1][0],a_spot[1][1])),type(a_spot[1]))
-                        a=a_titan[0],np.array((a_spot[1][0],a_spot_lateral[1][0],a_spot[1][1]))
-                        logp=[logp_titan[0],logp_spot[1],logp_spot_lateral[1]]
+                # if env.args.separate_node:
+                #     if "titan" in str(env.robots[0]):
+                #         # print("spoot",logp_spot[0],np.array((a_spot[1][0],a_spot_lateral[1][0],a_spot[1][1])),type(a_spot[1]))
+                #         a=a_titan[0],np.array((a_spot[1][0],a_spot_lateral[1][0],a_spot[1][1]))
+                #         logp=[logp_titan[0],logp_spot[1],logp_spot_lateral[1]]
+                #         print("sepa",a_spot,a_spot_lateral,a_titan)
+                #     # elif ac_size==(3,2):
+                #     elif "spot" in str(env.robots[0]):
                         
-                    # elif ac_size==(3,2):
-                    elif "spot" in str(env.robots[0]):
-                        
-                        # a=a_spot[0],a_spot_lateral[0],a_titan[1]
-                        a=np.array((a_spot[0][0],a_spot_lateral[0][0],a_spot[0][1])),a_titan[1]
-                        # logp=[logp_spot[0],logp_titan[1]]
-                        logp=[logp_spot[0],logp_spot_lateral[0],logp_titan[1]]
-                elif env.args.individual_policy:
+                #         # a=a_spot[0],a_spot_lateral[0],a_titan[1]
+                #         a=np.array((a_spot[0][0],a_spot_lateral[0][0],a_spot[0][1])),a_titan[1]
+                #         # logp=[logp_spot[0],logp_titan[1]]
+                #         logp=[logp_spot[0],logp_spot_lateral[0],logp_titan[1]]
+                if env.args.individual_policy:
                     if "titan" in str(env.robots[0]):
                         a=a_titan[0],a_spot[0]
                         logp=[logp_titan[0],logp_spot[0]]
@@ -1253,12 +1262,17 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 #if (timeout or epoch_ended) and not all(d):
                 if (timeout or epoch_ended) and not (all(d) or ( argus.single_done and any(d))):
                     if use_perception:
-                        if (env.args.heterogeneous or env.args.titanheads or env.args.IHPPO) and not env.args.separate_node:
+                        if (env.args.heterogeneous or env.args.titanheads or env.args.IHPPO):
                         
                             _,_, v,_, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
-                        elif (env.args.heterogeneous or env.args.titanheads or env.args.IHPPO) and env.args.separate_node:
+
+                        # if (env.args.heterogeneous or env.args.titanheads or env.args.IHPPO) and not env.args.separate_node:
                         
-                            _,_,_, v,_,_, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                        #     _,_, v,_, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+
+                        # elif (env.args.heterogeneous or env.args.titanheads or env.args.IHPPO) and env.args.separate_node:
+                        
+                        #     _,_,_, v,_,_, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                         
                         else:
                             _, v, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))

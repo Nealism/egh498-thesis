@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 
 def get_defaults():
     
@@ -131,7 +132,7 @@ def get_defaults():
     parser.add_argument('--generalise', default=False, action="store_true")
     parser.add_argument('--generalise_cross', default=False, action="store_true")
     parser.add_argument('--combined_value', default=False, action="store_true")
-    
+    parser.add_argument('--std_lat', type=float, default=1.0)
 
 
 

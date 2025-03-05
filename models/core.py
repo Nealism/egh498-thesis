@@ -145,28 +145,28 @@ class ActorPerception(nn.Module):
         # return pi_spot,pi_titan, logp_a_spot, logp_a_titan
         # print("pi",pi);exit()
         logp_a = None
-        if isinstance(pi, tuple):
-            # print("pkdaosdpisa",pi[0],pi[1])
+        # if isinstance(pi, tuple):
+        #     # print("pkdaosdpisa",pi[0],pi[1])
 
-            pi=pi[0],pi[1]
-            # print("pi_check",pi)
-            if act is not None:
-                # print("act",act)
-                act_linang = torch.stack((act[:, 0], act[:, 2]), dim=1)
-                act_lat = act[:, 1].unsqueeze(1)
-                # print("actlinagn",act_linang)
-                # print("act_lat",act_lat)
-                logp_a_linang = self._log_prob_from_distribution(pi[0], act_linang)
-                logp_a_lat = self._log_prob_from_distribution(pi[1], act_lat)
-                logp_a=[logp_a_linang,logp_a_lat]
+        #     pi=pi[0],pi[1]
+        #     # print("pi_check",pi)
+        #     if act is not None:
+        #         # print("act",act)
+        #         act_linang = torch.stack((act[:, 0], act[:, 2]), dim=1)
+        #         act_lat = act[:, 1].unsqueeze(1)
+        #         # print("actlinagn",act_linang)
+        #         # print("act_lat",act_lat)
+        #         logp_a_linang = self._log_prob_from_distribution(pi[0], act_linang)
+        #         logp_a_lat = self._log_prob_from_distribution(pi[1], act_lat)
+        #         logp_a=[logp_a_linang,logp_a_lat]
             
-            return pi, logp_a 
-        else:
-            # print("pi2_check",pi)
-            if act is not None:
-                logp_a = self._log_prob_from_distribution(pi, act)
-            # print("loga",logp_a,logp_a.shape)    
-            return pi, logp_a
+        #     return pi, logp_a 
+        # else:
+        #     # print("pi2_check",pi)
+        if act is not None:
+            logp_a = self._log_prob_from_distribution(pi, act)
+        # print("loga",logp_a,logp_a.shape)    
+        return pi, logp_a
 
 
 
@@ -519,40 +519,52 @@ class MLPGaussianActorPerception(ActorPerception):
             # print("self.std_titan",self.std_titan.shape,self.std_spot.shape);exit()
             # print("OB_CHEKC",ob)
             # print("len(obs)",len(obs))
+            # if args.separate_node:
+            #     self.std_spot = torch.exp(self.log_std_spot)
+            #     self.std_spot_lateral = torch.exp(self.log_std_spot_lateral)
+            #     self.std_titan = torch.exp(self.log_std_titan)
+            #     self.std_spot = torch.cat((self.std_spot[[0]], self.std_spot_lateral, self.std_spot[[1]]))
+            #     print("self.std_spot",self.std_spot,"self.std_spot_lateral",self.std_spot_lateral)
+            #     print("self.std_spot_all",torch.cat((self.std_spot[[0]], self.std_spot_lateral, self.std_spot[[1]])))
+            #     if len(obs)==2: 
+            #         # print("GCOSSSSS?????????",self.mu_spot, self.std_spot,self.mu_spot_lateral, self.std_spot_lateral)          
+            #         # print("GCOSSSSS?????????",(Normal(self.mu_spot, self.std_spot),Normal(self.mu_spot_lateral, self.std_spot_lateral),Normal(self.mu_titan, self.std_titan)))          
+            #         return Normal(self.mu_spot, self.std_spot),Normal(self.mu_spot_lateral, self.std_spot_lateral),Normal(self.mu_titan, self.std_titan)
+            
+            #     elif (int(ob[0][0]) == 0 and not len(obs)==2) and (args.heterogeneous or args.titanheads):    
+            #         # print("G1OSSSSS?????????",len(obs),Normal(self.mu_titan, self.std_titan));exit()        
+            #         return Normal(self.mu_titan, self.std_titan)
+            
+            #     elif (int(ob[0][0]) == 1 and not len(obs)==2) and (args.heterogeneous or args.titanheads):   
+            #         # print("f");exit()  
+            #         # print("GCOSSSSS?????????",self.mu_spot, self.std_spot,self.mu_spot_lateral, self.std_spot_lateral)
+            #         # print("G2OSSSSS?????????",Normal(self.mu_spot, self.std_spot), Normal(self.mu_spot_lateral, self.std_spot_lateral))      
+            #         return Normal(self.mu_spot, self.std_spot),Normal(self.mu_spot_lateral, self.std_spot_lateral)
+            # else:
+
+            # print("MU_SPOTS",self.mu_spot,"mu_spot_lateral",self.mu_spot_lateral)
+            # print("MMM", torch.cat((self.mu_spot[:, :1], self.mu_spot_lateral, self.mu_spot[:, 1:]), dim=1))
+            self.std_spot = torch.exp(self.log_std_spot)
+            self.std_titan = torch.exp(self.log_std_titan)
             if args.separate_node:
-                self.std_spot = torch.exp(self.log_std_spot)
                 self.std_spot_lateral = torch.exp(self.log_std_spot_lateral)
-                self.std_titan = torch.exp(self.log_std_titan)
-                # print("self.std_spot",self.std_spot,"self.std_spot_lateral",self.std_spot_lateral)
-                if len(obs)==2: 
-                    # print("GCOSSSSS?????????",self.mu_spot, self.std_spot,self.mu_spot_lateral, self.std_spot_lateral)          
-                    # print("GCOSSSSS?????????",(Normal(self.mu_spot, self.std_spot),Normal(self.mu_spot_lateral, self.std_spot_lateral),Normal(self.mu_titan, self.std_titan)))          
-                    return Normal(self.mu_spot, self.std_spot),Normal(self.mu_spot_lateral, self.std_spot_lateral),Normal(self.mu_titan, self.std_titan)
-            
-                elif (int(ob[0][0]) == 0 and not len(obs)==2) and (args.heterogeneous or args.titanheads):    
-                    # print("G1OSSSSS?????????",len(obs),Normal(self.mu_titan, self.std_titan));exit()        
-                    return Normal(self.mu_titan, self.std_titan)
-            
-                elif (int(ob[0][0]) == 1 and not len(obs)==2) and (args.heterogeneous or args.titanheads):   
-                    # print("f");exit()  
-                    # print("GCOSSSSS?????????",self.mu_spot, self.std_spot,self.mu_spot_lateral, self.std_spot_lateral)
-                    # print("G2OSSSSS?????????",Normal(self.mu_spot, self.std_spot), Normal(self.mu_spot_lateral, self.std_spot_lateral))      
-                    return Normal(self.mu_spot, self.std_spot),Normal(self.mu_spot_lateral, self.std_spot_lateral)
-            else:
-                self.std_spot = torch.exp(self.log_std_spot)
-                self.std_titan = torch.exp(self.log_std_titan)
-                if len(obs)==2: 
-                    # print("GCOSSSSS?????????",((Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan))))          
-                    return Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan)
-            
-                elif (int(ob[0][0]) == 0 and not len(obs)==2) and (args.heterogeneous or args.titanheads):    
-                    # print("G1OSSSSS?????????",len(obs),Normal(self.mu_titan, self.std_titan));exit()        
-                    return Normal(self.mu_titan, self.std_titan)
-            
-                elif (int(ob[0][0]) == 1 and not len(obs)==2) and (args.heterogeneous or args.titanheads):   
-                    # print("f");exit()  
-                    # print("G2OSSSSS?????????",Normal(self.mu_spot, self.std_spot));exit()       
-                    return Normal(self.mu_spot, self.std_spot)
+                self.std_spot_lateral.data = torch.tensor([args.std_lat])
+                # print("self.std_spot_lateral",self.std_spot_lateral)
+                self.std_spot = torch.cat((self.std_spot[[0]], self.std_spot_lateral, self.std_spot[[1]]))
+                self.mu_spot=torch.cat((self.mu_spot[:, :1], self.mu_spot_lateral, self.mu_spot[:, 1:]), dim=1)
+            # print("STD",self.std_spot,self.std_titan)
+            if len(obs)==2: 
+                # print("GCOSSSSS?????????",((Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan))))          
+                return Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan)
+        
+            elif (int(ob[0][0]) == 0 and not len(obs)==2) and (args.heterogeneous or args.titanheads):    
+                # print("G1OSSSSS?????????",len(obs),Normal(self.mu_titan, self.std_titan));exit()        
+                return Normal(self.mu_titan, self.std_titan)
+        
+            elif (int(ob[0][0]) == 1 and not len(obs)==2) and (args.heterogeneous or args.titanheads):   
+                # print("f");exit()  
+                # print("G2OSSSSS?????????",Normal(self.mu_spot, self.std_spot));exit()       
+                return Normal(self.mu_spot, self.std_spot)
         
         # elif len(obs)==2 and args.IHPPO:
         #     self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
@@ -739,12 +751,14 @@ class MLPActorCriticPerception(nn.Module):
         # print("lenlen",len(obs),len(im))
         # obs=obs[0]
         # pi = self.pi._distribution(obs, im)
-        if (args.heterogeneous or args.titanheads) and not args.separate_node:
+        if (args.heterogeneous or args.titanheads):
             pi_spot,pi_titan = self.pi._distribution(obs, im)
-        # elif args.IHPPO:
-        #     pi_dtr,pi_titan = self.pi._distribution(obs, im)
-        elif (args.heterogeneous or args.titanheads) and args.separate_node:
-            pi_spot,pi_spot_lateral,pi_titan = self.pi._distribution(obs, im)
+        # if (args.heterogeneous or args.titanheads) and not args.separate_node:
+        #     pi_spot,pi_titan = self.pi._distribution(obs, im)
+        # # elif args.IHPPO:
+        # #     pi_dtr,pi_titan = self.pi._distribution(obs, im)
+        # elif (args.heterogeneous or args.titanheads) and args.separate_node:
+        #     pi_spot,pi_spot_lateral,pi_titan = self.pi._distribution(obs, im)
         else:
             pi = self.pi._distribution(obs, im)
         # pi = self.pi._distribution_clipped(obs, im)
@@ -752,30 +766,36 @@ class MLPActorCriticPerception(nn.Module):
         # print(pi_spot,pi_titan);exit()
 
         if stochastic:
-            if (args.heterogeneous or args.titanheads) and not args.separate_node:
+            if (args.heterogeneous or args.titanheads):
                 a_spot = pi_spot.sample()
                 a_titan = pi_titan.sample()
-            # elif args.IHPPO:
-            #     a_dtr = pi_dtr.sample()
+            # if (args.heterogeneous or args.titanheads) and not args.separate_node:
+            #     a_spot = pi_spot.sample()
             #     a_titan = pi_titan.sample()
-            elif (args.heterogeneous or args.titanheads) and args.separate_node:
-                a_spot = pi_spot.sample()
-                a_spot_lateral = pi_spot_lateral.sample()
-                a_titan = pi_titan.sample()
+            # # elif args.IHPPO:
+            # #     a_dtr = pi_dtr.sample()
+            # #     a_titan = pi_titan.sample()
+            # elif (args.heterogeneous or args.titanheads) and args.separate_node:
+            #     a_spot = pi_spot.sample()
+            #     a_spot_lateral = pi_spot_lateral.sample()
+            #     a_titan = pi_titan.sample()
             else:
                 a = pi.sample()
             # print("STEPA",a);exit()
         else:
-            if (args.heterogeneous or args.titanheads) and not args.separate_node:
+            if (args.heterogeneous or args.titanheads):
                 a_spot = self.pi.mu_spot
                 a_titan = self.pi.mu_titan
-            elif (args.heterogeneous or args.titanheads) and args.separate_node:
-                a_spot = self.pi.mu_spot
-                a_spot_lateral = self.pi.mu_spot_lateral
-                a_titan = self.pi.mu_titan
-            # elif args.IHPPO:
-            #     a_dtr = self.pi.mu_dtr
+            # if (args.heterogeneous or args.titanheads) and not args.separate_node:
+            #     a_spot = self.pi.mu_spot
             #     a_titan = self.pi.mu_titan
+            # elif (args.heterogeneous or args.titanheads) and args.separate_node:
+            #     a_spot = self.pi.mu_spot
+            #     a_spot_lateral = self.pi.mu_spot_lateral
+            #     a_titan = self.pi.mu_titan
+            # # elif args.IHPPO:
+            # #     a_dtr = self.pi.mu_dtr
+            # #     a_titan = self.pi.mu_titan
             else:
                 a = self.pi.mu
             
@@ -790,16 +810,19 @@ class MLPActorCriticPerception(nn.Module):
         #     a=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
         # # print("policy_vel",a,type(a))
 
-        if (args.heterogeneous or args.titanheads) and not args.separate_node:
+        if (args.heterogeneous or args.titanheads):
             logp_a_spot = self.pi._log_prob_from_distribution(pi_spot, a_spot)
             logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
-        elif (args.heterogeneous or args.titanheads) and args.separate_node:
-            logp_a_spot = self.pi._log_prob_from_distribution(pi_spot, a_spot)
-            logp_a_spot_lateral = self.pi._log_prob_from_distribution(pi_spot_lateral, a_spot_lateral)
-            logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
-        # elif args.IHPPO:
-        #     logp_a_dtr = self.pi._log_prob_from_distribution(pi_dtr, a_dtr)
+        # if (args.heterogeneous or args.titanheads) and not args.separate_node:
+        #     logp_a_spot = self.pi._log_prob_from_distribution(pi_spot, a_spot)
         #     logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
+        # elif (args.heterogeneous or args.titanheads) and args.separate_node:
+        #     logp_a_spot = self.pi._log_prob_from_distribution(pi_spot, a_spot)
+        #     logp_a_spot_lateral = self.pi._log_prob_from_distribution(pi_spot_lateral, a_spot_lateral)
+        #     logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
+        # # elif args.IHPPO:
+        # #     logp_a_dtr = self.pi._log_prob_from_distribution(pi_dtr, a_dtr)
+        # #     logp_a_titan = self.pi._log_prob_from_distribution(pi_titan, a_titan)
         else:
             logp_a = self.pi._log_prob_from_distribution(pi, a)
         
@@ -821,33 +844,40 @@ class MLPActorCriticPerception(nn.Module):
         v_copy = v.cpu().detach().data.numpy().copy()
         # print("val",v_copy);exit()
 
-        if (args.heterogeneous or args.titanheads) and not args.separate_node:
+        if (args.heterogeneous or args.titanheads):
             a_copy_spot = a_spot.cpu().detach().data.numpy().copy()
             a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
             logp_a_copy_spot = logp_a_spot.cpu().detach().data.numpy().copy()
             logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
-        # elif args.IHPPO:
-        #     a_copy_dtr = a_dtr.cpu().detach().data.numpy().copy()
+        # if (args.heterogeneous or args.titanheads) and not args.separate_node:
+        #     a_copy_spot = a_spot.cpu().detach().data.numpy().copy()
         #     a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
-        #     logp_a_copy_dtr = logp_a_dtr.cpu().detach().data.numpy().copy()
+        #     logp_a_copy_spot = logp_a_spot.cpu().detach().data.numpy().copy()
         #     logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
-        elif (args.heterogeneous or args.titanheads) and args.separate_node:
-            a_copy_spot = a_spot.cpu().detach().data.numpy().copy()
-            a_copy_spot_lateral = a_spot_lateral.cpu().detach().data.numpy().copy()
-            a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
-            logp_a_copy_spot = logp_a_spot.cpu().detach().data.numpy().copy()
-            logp_a_copy_spot_lateral = logp_a_spot_lateral.cpu().detach().data.numpy().copy()
-            logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
+        # # elif args.IHPPO:
+        # #     a_copy_dtr = a_dtr.cpu().detach().data.numpy().copy()
+        # #     a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
+        # #     logp_a_copy_dtr = logp_a_dtr.cpu().detach().data.numpy().copy()
+        # #     logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
+        # elif (args.heterogeneous or args.titanheads) and args.separate_node:
+        #     a_copy_spot = a_spot.cpu().detach().data.numpy().copy()
+        #     a_copy_spot_lateral = a_spot_lateral.cpu().detach().data.numpy().copy()
+        #     a_copy_titan = a_titan.cpu().detach().data.numpy().copy()
+        #     logp_a_copy_spot = logp_a_spot.cpu().detach().data.numpy().copy()
+        #     logp_a_copy_spot_lateral = logp_a_spot_lateral.cpu().detach().data.numpy().copy()
+        #     logp_a_copy_titan = logp_a_titan.cpu().detach().data.numpy().copy()
         else:
             a_copy = a.cpu().detach().data.numpy().copy()
             logp_a_copy = logp_a.cpu().detach().data.numpy().copy()
         # print("val",v_copy);exit()
-        if (args.heterogeneous or args.titanheads) and not args.separate_node:
+        if (args.heterogeneous or args.titanheads):
             return a_copy_spot, a_copy_titan, v_copy, logp_a_copy_spot, logp_a_copy_titan
-        elif (args.heterogeneous or args.titanheads) and args.separate_node:
-            return a_copy_spot,a_copy_spot_lateral, a_copy_titan, v_copy, logp_a_copy_spot,logp_a_copy_spot_lateral, logp_a_copy_titan
-        # elif args.IHPPO:
-        #     return a_copy_dtr, a_copy_titan, v_copy, logp_a_copy_dtr, logp_a_copy_titan
+        # if (args.heterogeneous or args.titanheads) and not args.separate_node:
+        #     return a_copy_spot, a_copy_titan, v_copy, logp_a_copy_spot, logp_a_copy_titan
+        # elif (args.heterogeneous or args.titanheads) and args.separate_node:
+        #     return a_copy_spot,a_copy_spot_lateral, a_copy_titan, v_copy, logp_a_copy_spot,logp_a_copy_spot_lateral, logp_a_copy_titan
+        # # elif args.IHPPO:
+        # #     return a_copy_dtr, a_copy_titan, v_copy, logp_a_copy_dtr, logp_a_copy_titan
         else:
             return a_copy, v_copy, logp_a_copy
 
