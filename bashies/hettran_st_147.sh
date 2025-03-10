@@ -16,7 +16,7 @@ declare -a Experiments=(
 
 
 
-                      #Separate Node Transfer with Not Frozen Layers-- 1m Gap but Reward 27
+                      #Separate Node Transfer with Not Frozen Layers-- 1m Gap but Reward 27 
                       "400147/E1r32G1E1"
                       "400147/E2r32G1E1"
                       "400147/E3r32G1E1"

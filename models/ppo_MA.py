@@ -762,8 +762,24 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 if env.args.multi_titans or env.args.multi_spots:
                     writer.add_scalar("Stds/robot_" + str(num), np.mean(ac.pi.std.data.numpy()), epoch)
                 elif env.args.heterogeneous or env.args.titanheads:
-                    writer.add_scalar("Stds/spot_" + str(num), np.mean(ac.pi.std_spot.data.numpy()), epoch)
-                    writer.add_scalar("Stds/titan_" + str(num), np.mean(ac.pi.std_titan.data.numpy()), epoch)
+                    # print("AGEDEKH",ac.pi.std_spot)
+                    # if "titan" in str(env.robots[0]):
+                    #     print("titanAGEDEKH",ac.pi.std_spot)
+                    #     writer.add_scalar("Stds/spot_lin" + str(num), np.mean(ac.pi.std_spot[1][0].data.numpy()), epoch)
+                    #     writer.add_scalar("Stds/spot_ang" + str(num), np.mean(ac.pi.std_spot[1][1].data.numpy()), epoch)
+                    #     writer.add_scalar("Stds/spot_lat" + str(num), np.mean(ac.pi.std_spot[1][2].data.numpy()), epoch)
+                    #     writer.add_scalar("Stds/titan_lin" + str(num), np.mean(ac.pi.std_titan[0][0].data.numpy()), epoch)
+                    #     writer.add_scalar("Stds/titan_ang" + str(num), np.mean(ac.pi.std_titan[0][1].data.numpy()), epoch)
+                        
+                    # # elif ac_size==(3,2):
+                    # elif "spot" in str(env.robots[0]):
+                    #     print("SpotAGEDEKH",ac.pi.std_spot)
+                    writer.add_scalar("Stds/spot_lin" + str(num), np.mean(ac.pi.std_spot[0].data.numpy()), epoch)
+                    writer.add_scalar("Stds/spot_ang" + str(num), np.mean(ac.pi.std_spot[2].data.numpy()), epoch)
+                    writer.add_scalar("Stds/spot_lat" + str(num), np.mean(ac.pi.std_spot[1].data.numpy()), epoch)
+                    writer.add_scalar("Stds/titan_lin" + str(num), np.mean(ac.pi.std_titan[0].data.numpy()), epoch)
+                    writer.add_scalar("Stds/titan_ang" + str(num), np.mean(ac.pi.std_titan[1].data.numpy()), epoch)
+                        
                 # print("ac.pi.std_titan.data",ac.pi.std_titan.data,ac.pi.std_spot.data.numpy())
                 writer.add_scalar("RAM/robot_" + str(num), process.memory_info().rss/(1024.0 ** 3)*num_procs(), epoch)
                 writer.add_scalar("Lr_pi/robot_" + str(num), learning_rate_pi, epoch)

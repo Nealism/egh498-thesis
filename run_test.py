@@ -68,7 +68,6 @@ else:
 
     pol = torch.load(PATH + "/model.pt")
 
-
 start_time=time.time()
 
 # if args.num_robots>0:
@@ -181,6 +180,8 @@ def run(args):
     
 
     while True:
+        print("SP",pol.pi.std_spot, "T", pol.pi.std_titan)
+
         # print(len(im))
         # print(robot1_stop_duration,robot2_stop_duration)
         current_time = env.steps*1/10

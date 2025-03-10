@@ -271,6 +271,7 @@ class MLPGaussianActorPerception(ActorPerception):
                     self.titan_output_layer = output_layer(feature_shape,2)
                 else:
                     self.titan_output_layer = base.pi.mu_net[-2:]
+                    # print("CHECKING")
 
 
                 
@@ -546,12 +547,14 @@ class MLPGaussianActorPerception(ActorPerception):
             # print("MMM", torch.cat((self.mu_spot[:, :1], self.mu_spot_lateral, self.mu_spot[:, 1:]), dim=1))
             self.std_spot = torch.exp(self.log_std_spot)
             self.std_titan = torch.exp(self.log_std_titan)
+            # print("before_self.mu_spot",self.mu_spot)
             if args.separate_node:
                 self.std_spot_lateral = torch.exp(self.log_std_spot_lateral)
-                self.std_spot_lateral.data = torch.tensor([args.std_lat])
+                # self.std_spot_lateral.data = torch.tensor([args.std_lat])
                 # print("self.std_spot_lateral",self.std_spot_lateral)
-                self.std_spot = torch.cat((self.std_spot[[0]], self.std_spot_lateral, self.std_spot[[1]]))
-                self.mu_spot=torch.cat((self.mu_spot[:, :1], self.mu_spot_lateral, self.mu_spot[:, 1:]), dim=1)
+                self.std_spot = torch.concat((self.std_spot[[0]], self.std_spot_lateral, self.std_spot[[1]]))
+                self.mu_spot=torch.concat((self.mu_spot[:, :1], self.mu_spot_lateral, self.mu_spot[:, 1:]), dim=1)
+                # print("self.mu_spot",self.mu_spot)
             # print("STD",self.std_spot,self.std_titan)
             if len(obs)==2: 
                 # print("GCOSSSSS?????????",((Normal(self.mu_spot, self.std_spot),Normal(self.mu_titan, self.std_titan))))          

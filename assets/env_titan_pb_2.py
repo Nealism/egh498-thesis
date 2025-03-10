@@ -191,12 +191,12 @@ class Env(EnvBasePB):
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
         self.ep_reward_dict = {reward:0 for reward in self.reward_names}
 
-        if self.args.expert_curr or self.args.cur:
-            self.action_names = ["Action/Linear", "Action/Angular", "Prior_Action/Linear", "Prior_Action/Angular", "Policy_Action/Linear", "Policy_Action/Angular"]
-        else:
-            self.action_names = ["Action/Linear", "Action/Angular", "Policy_Action/Linear", "Policy_Action/Angular"]
-        self.action_dict = {action:deque(maxlen=100) for action in self.action_names} 
-        self.ep_action_dict = {action:0 for action in self.action_names}
+        # if self.args.expert_curr or self.args.cur:
+        #     self.action_names = ["Action/Linear", "Action/Angular", "Prior_Action/Linear", "Prior_Action/Angular", "Policy_Action/Linear", "Policy_Action/Angular"]
+        # else:
+        #     self.action_names = ["Action/Linear", "Action/Angular", "Policy_Action/Linear", "Policy_Action/Angular"]
+        # self.action_dict = {action:deque(maxlen=100) for action in self.action_names} 
+        # self.ep_action_dict = {action:0 for action in self.action_names}
 
         
     
@@ -314,7 +314,7 @@ class Env(EnvBasePB):
             return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "EC: Kp": self.Kp }
 
         return_dict.update(self.reward_dict)
-        return_dict.update(self.action_dict)
+        # return_dict.update(self.action_dict)
         return return_dict
 
     
@@ -350,9 +350,9 @@ class Env(EnvBasePB):
                 self.reward_dict[key].append(self.ep_reward_dict[key]/self.steps)
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
 
-        if self.steps > 0:
-            for key in self.action_dict:
-                self.action_dict[key].append(self.ep_action_dict[key])
+        # if self.steps > 0:
+        #     for key in self.action_dict:
+        #         self.action_dict[key].append(self.ep_action_dict[key])
         # self.ep_action_dict = {action:0 for action in self.action_names} 
 
         if self.episodes > -1:
@@ -1064,9 +1064,11 @@ class Env(EnvBasePB):
         # actions=[0.0,1.5]
         # actions=np.array([0,1.5])
         # print("motor action",actions,self)
+        
+        
         # print(self.max_gap_width-self.decrease_gap_width,self.final_gap_width)
-        self.ep_action_dict["Policy_Action/Linear"] += abs(actions[0])
-        self.ep_action_dict["Policy_Action/Angular"] += abs(actions[1])
+        # self.ep_action_dict["Policy_Action/Linear"] += abs(actions[0])
+        # self.ep_action_dict["Policy_Action/Angular"] += abs(actions[1])
         self.exp_actions = [0.0]*2
 
         if self.args.gap_avoidance and self.args.Pretrained_cur:
@@ -1788,8 +1790,8 @@ class Env(EnvBasePB):
                 # self.applied_actions=[0]*2
             # else:
 
-            self.ep_action_dict["Prior_Action/Linear"] += abs(self.exp_actions[0])
-            self.ep_action_dict["Prior_Action/Angular"] += abs(self.exp_actions[1])
+            # self.ep_action_dict["Prior_Action/Linear"] += abs(self.exp_actions[0])
+            # self.ep_action_dict["Prior_Action/Angular"] += abs(self.exp_actions[1])
             
             self.applied_actions = (self.Kp/self.initial_Kp) *np.array(self.exp_actions)
             
@@ -1834,9 +1836,9 @@ class Env(EnvBasePB):
 
         self.clipped_applied_actions=[clipped_linear_vel_command,clipped_angular_vel_command]
 
-        # print("clipped_applied_actions",self.clipped_applied_actions,self)
-        self.ep_action_dict["Action/Linear"] += abs(self.clipped_applied_actions[0]/0.75)
-        self.ep_action_dict["Action/Angular"] += abs(self.clipped_applied_actions[1]/0.75)
+        # # print("clipped_applied_actions",self.clipped_applied_actions,self)
+        # self.ep_action_dict["Action/Linear"] += abs(self.clipped_applied_actions[0]/0.75)
+        # self.ep_action_dict["Action/Angular"] += abs(self.clipped_applied_actions[1]/0.75)
         # print(self.clipped_applied_actions[0],self.ep_action_dict["Action/Linear"])
 
         if self.args.unclipped_vel:
