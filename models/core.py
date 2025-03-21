@@ -434,6 +434,7 @@ class MLPGaussianActorPerception(ActorPerception):
         # print("obs_before",obs,len(obs),im,len(im))
         # obs=obs[0]
         # print("core_obs",int(obs[1][0]))
+        
         if args.heterogeneous or args.titanheads:
             ob = obs
             self.obs_dim=6
@@ -453,7 +454,7 @@ class MLPGaussianActorPerception(ActorPerception):
         
         obs = torch.reshape(obs, [-1, self.obs_dim])
         # print("obs_after",obs,len(obs),im,len(im))
-
+        
         # z = self.z_net(im)
         # print("dis_im_1",im[0],len(im[0]))
         # z = self.z_net(im[0:1])
@@ -493,6 +494,7 @@ class MLPGaussianActorPerception(ActorPerception):
                 self.feature_extraction2 = self.feature_layers(torch.concat((obser[1], self.z_net(im[1])), -1))
             else:
                 # print("chcskdhasdjl")
+                
                 self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
             
             if args.spot_additional_layer:
@@ -625,9 +627,10 @@ class MLPGaussianActorPerception(ActorPerception):
         else:
             # print("GGCMING")
             # print("CHEKINGLOPP");exit()
+            # print("obs",torch.concat((obs, self.z_net(im)), -1), self.z_net(im).shape)
             self.mu = self.mu_net(torch.concat((obs, self.z_net(im)), -1))
             # print("self.log_std",self.log_std)
-
+            # print("mu",self.mu)
             # if args.transfer_learning:
             #     # self.std=self.base_model.pi.std
             #     self.std = torch.exp(self.log_std)
@@ -738,12 +741,15 @@ class MLPActorCriticPerception(nn.Module):
         #         self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_sp.shape[0], hidden_sizes, activation)
         # # # policy builder depends on action space
         
+
         if isinstance(action_space, Box):
             # print("core_shape",action_space,action_space.shape)
             # self.pi = MLPGaussianActorPerception(obs_dim, im_dim, action_space.shape[0], hidden_sizes, activation)
             self.pi = MLPGaussianActorPerception(base, obs_dim, im_dim, action_space.shape, hidden_sizes, activation)
             # print('attributes',dir(self.pi))
-        
+            # for name, param in self.pi.named_parameters():
+            #     if param.requires_grad:
+            #         print(name, param.data)
         # print("self.pi",self.pi)
         # build value function
         self.v  = MLPCriticPerception(base, obs_dim, hidden_sizes, activation, self.pi.z_net)
@@ -753,6 +759,7 @@ class MLPActorCriticPerception(nn.Module):
         # print("stepobs",obs.shape)
         # print("lenlen",len(obs),len(im))
         # obs=obs[0]
+        # print("obs",obs)
         # pi = self.pi._distribution(obs, im)
         if (args.heterogeneous or args.titanheads):
             pi_spot,pi_titan = self.pi._distribution(obs, im)
@@ -764,6 +771,7 @@ class MLPActorCriticPerception(nn.Module):
         #     pi_spot,pi_spot_lateral,pi_titan = self.pi._distribution(obs, im)
         else:
             pi = self.pi._distribution(obs, im)
+            
         # pi = self.pi._distribution_clipped(obs, im)
         
         # print(pi_spot,pi_titan);exit()

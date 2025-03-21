@@ -62,6 +62,11 @@ class Env(EnvBasePB):
             
                 self.ob_size = 16+2*(self.args.num_robots-1)
 
+            elif self.args.gap_avoidance and self.args.experiment_0 and  self.args.occupancy_map and self.args.use_perception:
+                
+                #print("owch")
+                self.ob_size = 4#+2 *(self.args.num_robots-1)
+
             elif self.args.gap_avoidance and self.args.experiment_1 and  self.args.occupancy_map and self.args.use_perception:
                 
                 #print("owch")
@@ -94,6 +99,7 @@ class Env(EnvBasePB):
         #Start Timer
         # self.Kp = 400
         self.Kp = self.args.initial_kp
+        self.w = self.args.clone_value
         self.initial_Kp = self.Kp
         self.time_to_goal=0
         self.time_to_gapwp1=0
@@ -102,6 +108,8 @@ class Env(EnvBasePB):
         self.opposite_angle=0
 
         self.start_time = time.time() 
+
+        self.gap_list=[]
 
 
         
@@ -116,7 +124,8 @@ class Env(EnvBasePB):
 
         #initialising collision likelihood curr (Not Needed) but else command is needed
         if self.args.gap_avoidance and self.args.num_robots>1 and self.args.collision_likelihood_curr:
-            self.increase_collision_rate=-2
+            # self.increase_collision_rate=-2
+            self.increase_collision_rate=0
         else:
             self.increase_collision_rate=0
             
@@ -136,7 +145,7 @@ class Env(EnvBasePB):
                 
                 
                 
-            elif self.args.gap_avoidance:
+            elif self.args.gap_avoidance and not self.args.gap_curr:
                 self.max_gap_width=1
                 self.decrease_gap_width=0
                 self.max_tunnel_depth = 0.2
@@ -149,6 +158,7 @@ class Env(EnvBasePB):
             if self.args.gap_avoidance  and self.args.gap_curr or self.args.cur:
                 #parameters for gap curr
                 self.max_gap_width=self.args.starting_gap_width
+                # self.max_gap_width=np.random.uniform(2,0,1)
                 self.decrease_gap_width=0
                 self.final_gap_width=self.args.final_gap_width
                 #parameters for tunnel curr
@@ -157,7 +167,7 @@ class Env(EnvBasePB):
                 self.max_gap_among_all_robots_individual_gap_width=self.max_gap_width
                 
                 
-            elif self.args.gap_avoidance:
+            elif self.args.gap_avoidance and not self.args.gap_curr:
                 self.max_gap_width=3
                 self.decrease_gap_width=0
                 self.max_tunnel_depth = 0.1
@@ -190,6 +200,11 @@ class Env(EnvBasePB):
         self.reward_names = ["Reward/goal", "Reward/heading", "Reward/heading_obs", "Reward/neg", "Reward/MA_colision", "Reward/collision","Reward/reach"]
         self.reward_dict = {reward:deque(maxlen=100) for reward in self.reward_names} 
         self.ep_reward_dict = {reward:0 for reward in self.reward_names}
+
+        # if self.args.gap_random:
+        #     self.gap_names = ["Gap_per_Reset"]
+        #     self.gap_dict = {gap:deque(maxlen=100) for gap in self.gap_names} 
+        #     self.ep_gap_dict = {gap:0 for gap in self.gap_names}
 
         # if self.args.expert_curr or self.args.cur:
         #     self.action_names = ["Action/Linear", "Action/Angular", "Prior_Action/Linear", "Prior_Action/Angular", "Policy_Action/Linear", "Policy_Action/Angular"]
@@ -306,14 +321,20 @@ class Env(EnvBasePB):
     def get_log_things(self):
         # Things we want to log each training step (print and add to tensorboard)
         # print("What the ", self.ep_goal_success); exit()
+        
         if self.args.obstacle_avoidance and self.args.gap_avoidance:
             return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "GC: Gap Width":self.max_gap_among_all_robots_individual_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth,"CLC: distance between obstacle and path": self.a-self.b, "EC: Kp": self.Kp }
         elif self.args.gap_avoidance:
+            # print("self.max_gap_among_all_robots_individual_gap_width",self.max_gap_among_all_robots_individual_gap_width);exit()
             return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "EC: Kp": self.Kp, "GC: Gap Width":self.max_gap_among_all_robots_individual_gap_width, "TC: Tunnel Width":self.increase_tunnel_depth,"Time_to_Goal":self.time_to_goal,"Time_to_gapwp1":self.time_to_gapwp1,"Time_gapwp1_gapwp2":self.time_to_gapwp2-self.time_to_gapwp1,"Time_gapwp2_goal":self.time_to_goal-self.time_to_gapwp2, "Collision_likelihood": self.increase_collision_rate}
         else:
             return_dict = {"Curriculum Success": self.cur_success, "Goal Success": self.ep_goal_success, "RC_Initial Distance to Goal": self.initial_goal_dist, "EC: Kp": self.Kp }
 
         return_dict.update(self.reward_dict)
+        # print("self.reward_dict",self.reward_dict)
+        # if self.args.gap_random:
+        #     return_dict.update(self.gap_dict)
+        #     print("self.gap_dict",self.gap_dict)
         # return_dict.update(self.action_dict)
         return return_dict
 
@@ -349,6 +370,13 @@ class Env(EnvBasePB):
             for key in self.reward_dict:
                 self.reward_dict[key].append(self.ep_reward_dict[key]/self.steps)
         self.ep_reward_dict = {reward:0 for reward in self.reward_names} 
+
+
+        # if self.args.gap_random:
+        #     if self.steps > 0:
+        #         for key in self.gap_dict:
+        #             self.gap_dict[key].append(self.ep_gap_dict[key])
+        #     self.ep_gap_dict = {gap:0 for gap in self.gap_names} 
 
         # if self.steps > 0:
         #     for key in self.action_dict:
@@ -740,13 +768,36 @@ class Env(EnvBasePB):
         self.action_saving2=[]
         self.scale_f_linear=[]
         self.scale_f_angular=[]
+        
 
         self.wall_length=1.7
 
         self.k=0
 
-        
+        if self.args.gap_random:
+            self.max_gap_width=np.random.uniform(2,0.8,1)
+            self.max_gap_width = np.round(self.max_gap_width / 0.2) * 0.2
 
+            self.gap_list.append(self.max_gap_width)
+
+            # with open('self.gap_list.txt', 'w') as file:
+            #     for item in self.gap_list:
+            #         file.write(f"{item}\n")
+
+        # if self.args.gap_random:
+        #     self.max_gap_width=np.random.uniform(2,1,1)
+        #     self.max_gap_width = np.round(self.max_gap_width / 0.05) * 0.05
+
+        #     self.gap_list.append(self.max_gap_width)
+
+        #     with open('self.gap_list.txt', 'w') as file:
+        #         for item in self.gap_list:
+        #             file.write(f"{item}\n")
+        # print("self.gap_list",self.gap_list)
+        #     self.ep_gap_dict["Gap_per_Reset"] = self.max_gap_width
+        # print("self.max_gap_width",self.max_gap_width)
+        # print("self.ep_gap_dict",self.ep_gap_dict)
+        # print("self.max_gap_among_all_robots_individual_gap_width",self.max_gap_among_all_robots_individual_gap_width)
         
 
         
@@ -1476,8 +1527,8 @@ class Env(EnvBasePB):
                         #     self.exp_actions[1] = 0
 
         ##THIS MA BOOTSTRAP IS THE BEST AND SAVED############################
-        # elif self.args.gap_avoidance and self.args.MA_bootstrap  and not self.Kp<5:
-        elif self.args.gap_avoidance and self.args.MA_bootstrap :
+        elif self.args.gap_avoidance and self.args.MA_bootstrap  and not self.Kp<5:
+        # elif self.args.gap_avoidance and self.args.MA_bootstrap :
         # ####################_______WAY_POINT_SYSTEM______#####
             #make sure to uncomment it when remove wall
             # if self.intersection_r1_gapwall1 or self.intersection_r1_gapwall2 or self.intersection_r1_r:
@@ -1792,13 +1843,17 @@ class Env(EnvBasePB):
 
             # self.ep_action_dict["Prior_Action/Linear"] += abs(self.exp_actions[0])
             # self.ep_action_dict["Prior_Action/Angular"] += abs(self.exp_actions[1])
-            
-            self.applied_actions = (self.Kp/self.initial_Kp) *np.array(self.exp_actions)
+            if self.args.behaviour_cloning:
+                self.applied_actions = self.w *np.array(self.exp_actions)
+            else:
+                self.applied_actions = (self.Kp/self.initial_Kp) *np.array(self.exp_actions)
             
             if not self.args.just_expert:
                 # print("actionssssss",actions,type(actions))
                 if self.args.Pretrained_cur:
                     self.applied_actions += self.action_multiplier*actions*(1-self.Kp/self.initial_Kp)
+                elif self.args.behaviour_cloning:
+                    self.applied_actions += self.action_multiplier*actions*(1-self.w)
                 else:
                     self.applied_actions += self.action_multiplier*actions
         else:
@@ -2164,6 +2219,10 @@ class Env(EnvBasePB):
         #Obstacle Avoidance Observations for Single Robot
         # elif (self.args.obstacle_avoidance and len(self.Other_Robots_pos_list)!= len([0]*1*(self.args.num_robots-1))) or (self.args.obstacle_avoidance and self.args.num_robots==1):
         #     return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + [0]*2*(self.args.num_robots-1) + self.obs_pos_robot+[self.obs_corner1[0],self.obs_corner1[1]]+ [self.obs_corner2[0],self.obs_corner2[1]]+ [self.obs_corner3[0],self.obs_corner3[1]]+ [self.obs_corner4[0],self.obs_corner4[1]])    
+        
+        elif self.args.gap_avoidance and self.args.occupancy_map and self.args.use_perception and self.args.experiment_0:
+            
+            return np.array(self.wp_pos_robot +[self.vx, self.yaw_vel])
         
         elif self.args.gap_avoidance and self.args.occupancy_map and self.args.use_perception and self.args.experiment_1:
             
@@ -7129,7 +7188,7 @@ class Env(EnvBasePB):
         self.ep_reward_dict["Reward/MA_colision"] += MA_colision
         self.ep_reward_dict["Reward/collision"] += collision
         self.ep_reward_dict["Reward/reach"] += reach
-        
+        # print("GOALREWW",self.ep_reward_dict)
         
         
         

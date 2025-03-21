@@ -102,6 +102,12 @@ class Env(EnvBasePB):
         elif self.args.obstacle_avoidance:
             self.ob_size = 16+2*(self.args.num_robots-1)
 
+
+        elif self.args.gap_avoidance and self.args.experiment_0 and self.args.occupancy_map and self.args.use_perception:
+            #print("owch")    
+            self.ob_size = 4#+2 *(self.args.num_robots-1)
+
+
         elif self.args.gap_avoidance and self.args.experiment_1 and self.args.occupancy_map and self.args.use_perception:
             #print("owch")    
             self.ob_size = 6#+2 *(self.args.num_robots-1)
@@ -427,7 +433,10 @@ class Env(EnvBasePB):
                 self.gap_walls_thickness.append(Robot.tunnel_depth)
 
         if self.args.num_robots>1 and self.args.gap_avoidance:
-            self.max_gap_among_all_robots_individual_gap_width=max(self.All_Robot_ID[0].gap_width,self.All_Robot_ID[1].gap_width)  
+            if self.args.gap_random:
+                self.max_gap_among_all_robots_individual_gap_width=min(self.All_Robot_ID[0].gap_width,self.All_Robot_ID[1].gap_width)  
+            else:
+                self.max_gap_among_all_robots_individual_gap_width=max(self.All_Robot_ID[0].gap_width,self.All_Robot_ID[1].gap_width)  
         elif self.args.num_robots==1 and self.args.gap_avoidance:
             self.max_gap_among_all_robots_individual_gap_width=self.All_Robot_ID[0].gap_width
 

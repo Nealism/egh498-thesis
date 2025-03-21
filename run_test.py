@@ -180,7 +180,7 @@ def run(args):
     
 
     while True:
-        print("SP",pol.pi.std_spot, "T", pol.pi.std_titan)
+        # print("SP",pol.pi.std_spot, "T", pol.pi.std_titan)
 
         # print(len(im))
         # print(robot1_stop_duration,robot2_stop_duration)
@@ -435,8 +435,8 @@ def run(args):
         r1_buffer_roll_obs.append(obs[0][2])
         r1_buffer_pitch_obs.append(obs[0][3])
 
-        r1_buffer_linear_obs.append(obs[0][4])
-        r1_buffer_angular_obs.append(obs[0][5])
+        # r1_buffer_linear_obs.append(obs[0][4])
+        # r1_buffer_angular_obs.append(obs[0][5])
 
         r1_poses_x.append(env.robots_pos[0][0])
         r1_poses_y.append(env.robots_pos[0][1])
@@ -451,8 +451,8 @@ def run(args):
             r2_buffer_roll_obs.append(obs[1][2])
             r2_buffer_pitch_obs.append(obs[1][3])
 
-            r2_buffer_linear_obs.append(obs[1][4])
-            r2_buffer_angular_obs.append(obs[1][5])
+            # r2_buffer_linear_obs.append(obs[1][4])
+            # r2_buffer_angular_obs.append(obs[1][5])
 
             r2_poses_x.append(env.robots_pos[1][0])
             r2_poses_y.append(env.robots_pos[1][1])

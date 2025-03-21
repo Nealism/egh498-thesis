@@ -115,6 +115,7 @@ def get_defaults():
     parser.add_argument('--regular_bootstrap', default=False, action="store_true")
     parser.add_argument('--MA_bootstrap', default=False, action="store_true")
     parser.add_argument('--MA_bootstrap_extreme', default=False, action="store_true")
+    parser.add_argument('--experiment_0', default=False, action="store_true")
     parser.add_argument('--experiment_1', default=False, action="store_true")
     parser.add_argument('--experiment_2', default=False, action="store_true")
     parser.add_argument('--experiment_3', default=False, action="store_true")
@@ -132,6 +133,9 @@ def get_defaults():
     parser.add_argument('--generalise', default=False, action="store_true")
     parser.add_argument('--generalise_cross', default=False, action="store_true")
     parser.add_argument('--combined_value', default=False, action="store_true")
+    parser.add_argument('--gap_random', default=False, action="store_true")
+    parser.add_argument('--behaviour_cloning', default=False, action="store_true")
+    parser.add_argument('--clone_value', type=float, default=1)
     # parser.add_argument('--std_lat', type=float, default=1.0)
 
 

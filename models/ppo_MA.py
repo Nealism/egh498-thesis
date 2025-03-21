@@ -529,15 +529,21 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     if use_perception:
         actor_critic=core.MLPActorCriticPerception
         im_size = env.im_size
+
+        
         
         if load_path != "":
             ac = torch.load(load_path)
             print("Loading saved weights: ", load_path)
+
+
+        
+                        
         elif env.args.transfer_learning:
             ac = actor_critic(base_model, env.observation_space, im_size, env.action_space, **ac_kwargs)
             # ac = torch.load(base_model_path)
             # print("ac",ac)
-
+            
             # print("self.pi",ac.pi.z_net)
             if not env.args.freezing_off:
                 for param in ac.pi.z_net.parameters():
@@ -572,6 +578,10 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         else:
             ac = actor_critic(None, env.observation_space, im_size, env.action_space, **ac_kwargs)
         # print("ac",ac);exit()
+        # for name, param in ac.pi.named_parameters():
+        #     if param.requires_grad:
+        #         print(name, param.data)
+            
         train_pi_iters = 10
         train_v_iters = 10
     else:    
@@ -584,6 +594,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         else:
             ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
 
+
+        
             # print("AC",ac);exit()
         train_pi_iters = 100
         train_v_iters = 100
@@ -745,6 +757,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     def print_results(env, writer, num, logger, data, epoch, local_rew, local_len, rewbuffer, lenbuffer, learning_rate_pi, learning_rate_vf, t1):
             
             update(data,epoch, logger)
+            print("local",local_len)
             lrlocal = (local_rew, local_len) # local values
             listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal) # list of tuples
             rews, lens = map(flatten_lists, zip(*listoflrpairs))
