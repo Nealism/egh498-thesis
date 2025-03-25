@@ -570,7 +570,10 @@ class Env(EnvBasePB):
                 # else:
                     # self.All_Robot_ID[0].decrease_gap_width += self.All_Robot_ID[0].args.gap_decrease			
                     # self.All_Robot_ID[1].decrease_gap_width += self.All_Robot_ID[1].args.gap_decrease
-                    self.decrease_gap_width += self.args.gap_decrease			
+                    if self.args.rand_gap_cur:
+                        self.decrease_gap_width += np.random.choice([0,self.args.gap_decrease])   
+                    else:
+                        self.decrease_gap_width += self.args.gap_decrease			
                     #print("TOTTOOTOTOTO")
 
                     self.cur_success = deque([0.0], maxlen=5)
@@ -775,14 +778,17 @@ class Env(EnvBasePB):
         self.k=0
 
         if self.args.gap_random:
-            self.max_gap_width=np.random.uniform(2,0.8,1)
-            self.max_gap_width = np.round(self.max_gap_width / 0.2) * 0.2
+            # self.max_gap_width=np.random.uniform(2,0.8,1)
+            self.max_gap_width=np.random.uniform(4,1,1)
+            # self.max_gap_width = np.round(self.max_gap_width / 0.2) * 0.2
+            # self.max_gap_width = np.round(self.max_gap_width / 1) * 1
 
-            self.gap_list.append(self.max_gap_width)
+            # self.gap_list.append(self.max_gap_width)
 
             # with open('self.gap_list.txt', 'w') as file:
             #     for item in self.gap_list:
             #         file.write(f"{item}\n")
+            
 
         # if self.args.gap_random:
         #     self.max_gap_width=np.random.uniform(2,1,1)

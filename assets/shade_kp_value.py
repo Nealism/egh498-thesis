@@ -70,24 +70,31 @@ def plot_performance(epochs_list, means_list, stds_list, labels, colors):
     plt.xlabel('Epoch', fontsize=30)
     plt.ylabel('Goal Reaching Success Rate (%)', fontsize=30)
     plt.ylim(0, 100)  # Set y-axis limit to 100 for percentages
+    plt.xlim(left=0, right=690)  # Set x-axis from 0 to 700
+
     # Explicitly setting the axes limits
     plt.xlim(left=0)  # Start x-axis at 0
     plt.ylim(bottom=0)  # Start y-axis at 0
-    plt.xticks(range(0, max(epochs_list[-1]) + 1, 100),fontsize=30)
+    # plt.xticks(range(0, max(epochs_list[-1]) + 1, 100),fontsize=30)
+    plt.xticks(range(0, 700, 100),fontsize=30)
     plt.yticks(fontsize=30)
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend(loc='upper left', fontsize=25)
 
     plt.tight_layout()
-    plt.savefig('comparison_performance_plot2.png')  # Save the plot as a PNG file
+    plt.savefig('comparison_KP_Tuning_Performance.png')  # Save the plot as a PNG file
     plt.show()
 
 def main():
     # Directories containing CSV files for each method
-    directories = ['/home/kom018/titan_results_data_tensorboard/accuracy/boot_Gap/', '/home/kom018/titan_results_data_tensorboard/accuracy/Gap_only/', '/home/kom018/titan_results_data_tensorboard/accuracy/End_to_End/']
-    labels = ['MA_Bootstrap+Gap Cur', 'Gap Cur Only', 'End-to-End Learning']
-    colors = ['green', 'blue', 'red']  # darkorange for dark yellow
-    
+    directories = ['/home/kom018/titan_results_data_tensorboard/KP_Tuning_ob6/600/','/home/kom018/titan_results_data_tensorboard/KP_Tuning_ob6/500/','/home/kom018/titan_results_data_tensorboard/KP_Tuning_ob6/400/','/home/kom018/titan_results_data_tensorboard/KP_Tuning_ob6/300/','/home/kom018/titan_results_data_tensorboard/KP_Tuning_ob6/200/','/home/kom018/titan_results_data_tensorboard/KP_Tuning_ob6/100/','/home/kom018/titan_results_data_tensorboard/KP_Tuning_ob6/75/','/home/kom018/titan_results_data_tensorboard/KP_Tuning_ob6/50/','/home/kom018/titan_results_data_tensorboard/KP_Tuning_ob6/25/']
+    labels = ['600','500','400','300','200','100','75','50','25']
+    # colors = ['Magenta', 'Cyan', 'Yellow', 'Purple', 'Orange', 'Grey', 'Teal', 'Brown', 'Pink']  # darkorange for dark yellow
+    # colors = ['#ADD8E6', '#87CEFA', '#4682B4', '#4169E1', '#0000FF', '#0000CD', '#00008B', '#000080', '#191970']
+    colors = ['Indigo', 'Blue', 'Green', 'Yellow', 'Orange', 'Pink', 'Teal', 'Brown', 'Violet']
+    # colors = ['Blue', 'Blue', 'Blue', 'Blue', 'Blue', 'Blue', 'Blue', 'Blue', 'Blue']
+
+
     epochs_list = []
     means_list = []
     stds_list = []
