@@ -136,6 +136,8 @@ def get_defaults():
     parser.add_argument('--gap_random', default=False, action="store_true")
     parser.add_argument('--rand_gap_cur', default=False, action="store_true")
     parser.add_argument('--behaviour_cloning', default=False, action="store_true")
+    parser.add_argument('--cloning', default=False, action="store_true")
+    parser.add_argument('--Dagger', default=False, action="store_true")
     parser.add_argument('--clone_value', type=float, default=1)
     # parser.add_argument('--std_lat', type=float, default=1.0)
 

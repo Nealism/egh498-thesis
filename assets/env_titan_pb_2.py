@@ -341,7 +341,7 @@ class Env(EnvBasePB):
     
 
     def get_success(self):
-        dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
+        # dist_to_goal = math.sqrt(((self.pos[0] - self.state_goal[0]) ** 2 + (self.pos[1] - self.state_goal[1]) ** 2))
         
         if self.args.cur_succ==0:
             #print("self.distance_to_goal",dist_to_goal,self.distance_to_goal)
@@ -387,6 +387,8 @@ class Env(EnvBasePB):
 
             self.success.append(self.get_success())
             #print("SUCCESS________________________________________",self.success)
+            # print("distanc-to_wp", self.dist_to_wp)
+
             self.ep_success = self.get_success()
             #print("Episdoe_Succ", self.ep_success)			
             self.cur_success.append(self.ep_success)
@@ -504,12 +506,17 @@ class Env(EnvBasePB):
         
 
         if (self.args.cur or self.args.expert_curr) and self.Kp > 0 and self.check_for_success():
-            self.Kp = 0.75*self.Kp
-            if self.Kp < 5:
-                self.Kp = 0
-            self.cur_success = deque([0.0], maxlen=5) 
-        
-            # print(self.Kp)
+
+            if self.args.cloning:
+                self.Kp = 0.75*self.Kp
+                self.cur_success = deque([0.0], maxlen=5) 
+            else:
+                self.Kp = 0.75*self.Kp
+                if self.Kp < 5:
+                    self.Kp = 0
+                self.cur_success = deque([0.0], maxlen=5) 
+            
+                # print(self.Kp)
 
         
                
@@ -779,7 +786,7 @@ class Env(EnvBasePB):
 
         if self.args.gap_random:
             # self.max_gap_width=np.random.uniform(2,0.8,1)
-            self.max_gap_width=np.random.uniform(4,1,1)
+            self.max_gap_width=np.random.uniform(2,0.85,1)
             # self.max_gap_width = np.round(self.max_gap_width / 0.2) * 0.2
             # self.max_gap_width = np.round(self.max_gap_width / 1) * 1
 
@@ -1533,7 +1540,7 @@ class Env(EnvBasePB):
                         #     self.exp_actions[1] = 0
 
         ##THIS MA BOOTSTRAP IS THE BEST AND SAVED############################
-        elif self.args.gap_avoidance and self.args.MA_bootstrap  and not self.Kp<5:
+        elif self.args.gap_avoidance and self.args.MA_bootstrap:
         # elif self.args.gap_avoidance and self.args.MA_bootstrap :
         # ####################_______WAY_POINT_SYSTEM______#####
             #make sure to uncomment it when remove wall
@@ -1828,9 +1835,9 @@ class Env(EnvBasePB):
         else:
             self.exp_actions=self.exp_actions*np.array([35,70])
         # print("self.exp_actions_afer",self.exp_actions)
+        # print("expeeee",type(self.exp_actions),type(actions))
 
-
-        
+        self.expertise_actions=self.exp_actions.tolist()
         # actions=[0.1,0.1]
         if self.args.just_expert or (self.args.cur or self.args.expert_curr) and self.goal_moved==False:
             # print(self.goal_moved,"goal_moved")
@@ -8090,7 +8097,7 @@ class Env(EnvBasePB):
 
 
     def get_observation(self):
-
+        # print("BOOT",self.exp_actions)
         #self.opposite_angle += 180
         #print(self.Goals_pos)
         self.body_xyz, orn = p.getBasePositionAndOrientation(self.Id)
@@ -8181,7 +8188,7 @@ class Env(EnvBasePB):
         self.heading_error, self.target_angle = self.calc_angle_error(self.state_goal, self.pos, self.yaw)
         #print("heading_error", self.heading_error)
         self.dist_to_wp = math.sqrt(self.wp_pos_robot[0]**2 + self.wp_pos_robot[1]**2)
-        #print("distanc-to_wp", self.dist_to_wp)
+        # print("distanc-to_wp", self.dist_to_wp)
 
         rot_speed = np.array(
         [[np.cos(-self.target_angle), -np.sin(-self.target_angle), 0],

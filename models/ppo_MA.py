@@ -16,6 +16,7 @@ import pandas as pd
 import default_arguments
 import cv2
 from gym import spaces
+import torch.nn as nn
 
 
 from scipy.ndimage import label, generate_binary_structure
@@ -46,10 +47,12 @@ class PPOBufferPerception:
         self.ret_buf = np.zeros(size, dtype=np.float32)
         self.val_buf = np.zeros(size, dtype=np.float32)
         self.logp_buf = np.zeros(size, dtype=np.float32)
+        if argus.cloning:
+            self.exp_buf = np.zeros(core.combined_shape(size, ac_size), dtype=np.float32)
         self.gamma, self.lam = gamma, lam
         self.ptr, self.path_start_idx, self.max_size = 0, 0, size
 
-    def store(self, obs, im, act, rew, val, logp):
+    def store(self, obs, im, act, rew, val, logp, exp=0):
         """
         Append one timestep of agent-environment interaction to the buffer.
         """
@@ -57,12 +60,16 @@ class PPOBufferPerception:
         #print("store_im",im)
         # print("PPO_STORE!",self.act_buf[self.ptr] )
         # print("PPO_Store_act",act)
+        # print("act",type(act),act)
+        # print("exp",type(exp),exp)
         self.obs_buf[self.ptr] = obs
         self.im_buf[self.ptr] = im
         self.act_buf[self.ptr] = act
         self.rew_buf[self.ptr] = rew
         self.val_buf[self.ptr] = val
         self.logp_buf[self.ptr] = logp
+        if argus.cloning:
+            self.exp_buf[self.ptr] = exp
         self.ptr += 1
 
     def finish_path(self, last_val=0):
@@ -105,8 +112,14 @@ class PPOBufferPerception:
         # the next two lines implement the advantage normalization trick
         adv_mean, adv_std = mpi_statistics_scalar(self.adv_buf)
         self.adv_buf = (self.adv_buf - adv_mean) / adv_std
-        data = dict(obs=self.obs_buf, im=self.im_buf, act=self.act_buf, ret=self.ret_buf,
-                    adv=self.adv_buf, logp=self.logp_buf)
+
+        if argus.cloning:
+            data = dict(obs=self.obs_buf, im=self.im_buf, act=self.act_buf, ret=self.ret_buf,
+                        adv=self.adv_buf, logp=self.logp_buf,exp=self.exp_buf)
+            
+        else:
+            data = dict(obs=self.obs_buf, im=self.im_buf, act=self.act_buf, ret=self.ret_buf,
+                        adv=self.adv_buf, logp=self.logp_buf)
         return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in data.items()}
 
 
@@ -198,7 +211,11 @@ class PPOBuffer:
         # the next two lines implement the advantage normalization trick
         adv_mean, adv_std = mpi_statistics_scalar(self.adv_buf)
         self.adv_buf = (self.adv_buf - adv_mean) / adv_std
+
+
         #print("get",self,self.obs_buf,self.act_buf,self.ret_buf,self.adv_buf,self.logp_buf)
+
+        
         data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf,
                     adv=self.adv_buf, logp=self.logp_buf)
         #print("data",data)
@@ -301,7 +318,7 @@ class MA_PPOBufferPerception:
             # # print("b",tuple(self.buffers), type(self.buffers))
             
             
-        def store(self, obs,im, acts, rews, vals, logps):
+        def store(self, obs,im, acts, rews, vals, logps, exps=[]):
             
             #num_robots=tuple(range(num_robots))
             #print(num_robots,type(num_robots))
@@ -309,7 +326,13 @@ class MA_PPOBufferPerception:
             #robot_id_number=tuple(range(num_robots))
             # print("check",len((obs)),len((im)),len((acts)),len((rews)),len((vals.tolist())),len((logps)),(rews[1]))
             # # for buffer, ob,im, act,rew,val,logp in zip(self.buffers, tuple(obs[1]),tuple(im[1]),tuple(acts[1]),tuple(rews[1]),tuple(vals.tolist()[1]),tuple(logps[1])):
-            for buffer, ob,im, act,rew,val,logp in zip(self.buffers, tuple(obs),tuple(im),tuple(acts),tuple(rews),tuple(vals.tolist()),tuple(logps)):
+            if argus.cloning:
+                for buffer, ob,im, act,rew,val,logp,exp in zip(self.buffers, tuple(obs),tuple(im),tuple(acts),tuple(rews),tuple(vals.tolist()),tuple(logps),exps):
+                    buffer.store(ob,im,act,rew,val,logp,exp)
+            else:
+            
+                for buffer, ob,im, act,rew,val,logp in zip(self.buffers, tuple(obs),tuple(im),tuple(acts),tuple(rews),tuple(vals.tolist()),tuple(logps)):
+                    buffer.store(ob,im,act,rew,val,logp)
                     #self.ptr += 1
                 # km= buffer, ob,im, act,rew,val,logp
                 # print("store_arguments", buffer, ob,im, act,rew,val,logp,len(km))
@@ -320,7 +343,7 @@ class MA_PPOBufferPerception:
                 #print("buffer store",buffer.store(ob,act,rew,val,logp))
                 #print("ob_size_mabuf",len(tuple(obs)))
 
-                buffer.store(ob,im,act,rew,val,logp)
+                
             # self.buffers[0].store(obs[1],im[1],acts[1],rews[1],vals[1],logps[1])
             
             
@@ -621,10 +644,21 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     #print("buf",buf)
     # Set up function for computing PPO policy loss
     def compute_loss_pi(data):
-        if use_perception:
-            obs, im, act, adv, logp_old = data['obs'], data['im'], data['act'], data['adv'], data['logp']
+
+        if env.args.cloning:
+            if use_perception:
+                obs, im, act, adv, logp_old,exp= data['obs'], data['im'], data['act'], data['adv'], data['logp'],data['exp']
+            else:
+                obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
+            # print("EXP",len(exp),len(act))
         else:
-            obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
+            if use_perception:
+                obs, im, act, adv, logp_old= data['obs'], data['im'], data['act'], data['adv'], data['logp']
+            else:
+                obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
+
+        # exps=data['exp']
+        
         # print( " data['act']",data['act']);exit()
         # Policy loss
         # ac_space=spaces.Box(-10000.0, 10000.0, (len(act[0]),))
@@ -650,7 +684,9 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             # pi_spot,pi_titan, logp_spot,logp_titan = ac.pi(obs, im, act)
         else:
             pi, logp = ac.pi(obs, act)
-        # print("AC.PI",ac.pi)
+
+        
+        # print("AC.PI",pi)
         # if isinstance(logp, list):
         #     # print(type(logp),type(logp_old))
         #     ratio_linang = torch.exp(logp[0] - logp_old)
@@ -675,12 +711,27 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         #     clipfrac_lat = torch.as_tensor(clipped_lat, dtype=torch.float32).mean().item()
         #     clipfrac = (clipfrac_linang + clipfrac_lat) / 2
         #     pi_info = dict(kl=approx_kl, ent=ent, cf=clipfrac)
+        if env.args.cloning:
+            predicted_action_deterministic = ac.pi.mu
+            # print("predicted_action_deterministic",predicted_action_deterministic)
+            criterion = nn.MSELoss()
+            # print("EXP",exp,act)
+            loss_clone = criterion(predicted_action_deterministic, exp)
+            # print("lc",((predicted_action_deterministic - exp)**2).mean(),loss_clone)
+            # mse_loss = loss_clone / (loss_clone.detach().mean() + 1e-6)  # Normalise
 
-
+            # print("MSE", mse_loss)
         # else:
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1-clip_ratio, 1+clip_ratio) * adv
-        loss_pi = -(torch.min(ratio * adv, clip_adv)).mean()
+        
+        if env.args.cloning:
+            loss_pi=loss_clone
+        else:
+            
+            loss_pi = -(torch.min(ratio * adv, clip_adv)).mean()
+
+
         # print("loss",loss_pi)
         # Useful extra info
         approx_kl = (logp_old - logp).mean().item()
@@ -695,6 +746,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     def compute_loss_v(data):
         if use_perception:
             obs, im, ret = data['obs'], data['im'], data['ret']
+            # print("critic_loss",((ac.v(obs, im) - ret)**2).mean())
             return ((ac.v(obs, im) - ret)**2).mean()
         else: 
             obs, ret = data['obs'], data['ret']
@@ -757,19 +809,27 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     def print_results(env, writer, num, logger, data, epoch, local_rew, local_len, rewbuffer, lenbuffer, learning_rate_pi, learning_rate_vf, t1):
             
             update(data,epoch, logger)
-            print("local",local_len)
+            # print("local",local_len)
             lrlocal = (local_rew, local_len) # local values
             listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal) # list of tuples
             rews, lens = map(flatten_lists, zip(*listoflrpairs))
             rewbuffer.extend(rews)
             lenbuffer.extend(lens)
             process = psutil.Process(os.getpid())
-
-
+            
+            # if not env.args.Dagger:
+            #     test_success = run_test(env, PATH + "model.pt", use_perception=use_perception)
             if proc_id() == 0:
                 # print()
                 # print("Robot ", num)
                 # print("="*20)
+
+                
+            #     
+            #         print("Test success:", test_success)
+                # if not env.args.Dagger:
+                #     writer.add_scalar("SuccessTest"+ str(num), np.mean(test_success[0]), epoch)
+                #     writer.add_scalar("SuccessTest"+ str(num), np.mean(test_success[1]), epoch)
                 writer.add_scalar("ARews/robot_" + str(num), np.mean(rewbuffer), epoch)
                 writer.add_scalar("ALens/robot_" + str(num), np.mean(lenbuffer), epoch)
                 if env.args.multi_titans or env.args.multi_spots:
@@ -864,7 +924,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             if use_perception:
                 # print(o)
 
-                if (env.args.heterogeneous or env.args.titanheads):
+                if (env.args.heterogeneous or env.args.titanheads) and not env.args.cloning:
                     
                     a_spot,a_titan, v, logp_spot, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                 
@@ -877,6 +937,10 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 #     a_spot,a_spot_lateral, a_titan, v, logp_spot,logp_spot_lateral, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                 # elif env.args.IHPPO:
                 #     a_dtr,a_titan, v, logp_dtr, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
+                
+                elif env.args.cloning:
+                    a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)
+                
                 else:
                     a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                 
@@ -989,7 +1053,17 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             # print(a)
             tt=time.time()
             # if env.args.Pretrained_cur:
-            next_o, r, d,termination, _ = env.step(a,sp_ac)
+
+            if env.args.cloning:
+                next_o, r, d,termination, _,exps = env.step(a,sp_ac)
+                # exps = np.vstack(exps)
+                # print("exp_before",exps)
+                # exps=exps[0][0],exps[0][1],exps[1][0],exps[1][1]
+                # print("exp_after",exps)
+                # print("EXXXX",type(exps),type(a))
+            else:
+                next_o, r, d,termination, _ = env.step(a,sp_ac)
+            # print("ch",exps,r)
             # else:
             #     next_o, r, d,termination, _ = env.step(a,0)
             # print("td", time.time()-tt)
@@ -1229,13 +1303,21 @@ def ppo(env, ac_kwargs=dict(), seed=0,
 
             #print(len(r_list), r_list)
             
-
+            # print("obse",o,exps[0][0])
             # save and log
             # print("STORE_O",o)
-            if use_perception:
-                buf.store(o, im, a, r, v, logp)
+            if env.args.cloning:
+                # print('actions',a,'ex',exps)
+                if use_perception:
+                    buf.store(o, im, a, r, v, logp,exps)
+                else:
+                    buf.store(o, a, r, v, logp,exps)
+
             else:
-                buf.store(o, a, r, v, logp)
+                if use_perception:
+                    buf.store(o, im, a, r, v, logp)
+                else:
+                    buf.store(o, a, r, v, logp)
 
             #_,_,_,j,_,_=buf.store(o, a, r, v, logp, robot_number)
             
@@ -1291,7 +1373,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 #if (timeout or epoch_ended) and not all(d):
                 if (timeout or epoch_ended) and not (all(d) or ( argus.single_done and any(d))):
                     if use_perception:
-                        if (env.args.heterogeneous or env.args.titanheads or env.args.IHPPO):
+                        if (env.args.heterogeneous or env.args.titanheads or env.args.IHPPO) and not env.args.cloning:
                         
                             _,_, v,_, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
 
@@ -1303,6 +1385,9 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                         
                         #     _,_,_, v,_,_, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                         
+                        
+                        elif env.args.cloning:
+                           _, v, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)
                         else:
                             _, v, _ = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                     else:
@@ -1411,6 +1496,7 @@ def run_test(env, model, use_perception=False):
     env.args.disturbances = False
     env.args.record_sim = False
     ob = env.reset()
+    sp_ac=np.array([[0., 0.],[0., 0.]])
     if use_perception:
         im = env.get_image()
     done = False
@@ -1419,15 +1505,24 @@ def run_test(env, model, use_perception=False):
             act, _, _ = ac.step(torch.as_tensor(ob, dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)
         else:
             act, _, _ = ac.step(torch.as_tensor(ob, dtype=torch.float32), stochastic=False)
-        ob, rew, done, _ = env.step(act)
+        # ob, rew, done, _= env.step(act,sp_ac)
+        if env.args.cloning:
+            ob, rew, done, termination, _,exp= env.step(act,sp_ac)
+        else:
+            ob, rew, done, termination, _= env.step(act,sp_ac)
         if use_perception:
             im = env.get_image()
         if done or env.steps > env.args.max_ep_len:
             break
-    success = env.get_success()
-    successes = MPI.COMM_WORLD.allgather(success)
+    # success = env.get_success()
+    success = env.success_list
+    # print("success",success)
+    # success=[0,0]
+    successes1 = MPI.COMM_WORLD.allgather(success[0])
+    successes2 = MPI.COMM_WORLD.allgather(success[1])
     env.args.record_sim = True
-    return successes
+    # return successes
+    return successes1,successes2
 
 def flatten_lists(listoflists):
         return [el for list_ in listoflists for el in list_]

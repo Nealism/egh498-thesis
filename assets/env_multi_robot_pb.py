@@ -206,6 +206,7 @@ class Env(EnvBasePB):
         self.robots_orn=[]
         self.robots_pos_with_IDx=[]
         self.Goals_pos=[]
+        self.exoert_actions=[]
         self.initial_goal_distances=[]
         self.gap_walls_thickness=[]
         #self.gap_walls_length=[]
@@ -233,6 +234,7 @@ class Env(EnvBasePB):
         self.buffer_angular_obs=[]
 
         self.buffer_time=[]
+        self.success_list=[]
 
         self.random_robot_init=np.random.choice([6,8,9,10])
         
@@ -254,6 +256,7 @@ class Env(EnvBasePB):
         for Robot in self.robots:
             self.initial_goal_distances.append(Robot.initial_goal_dist)
             self.All_Robot_ID.append(Robot)
+            self.success_list.append(Robot.success)
             
             
             # 
@@ -515,6 +518,7 @@ class Env(EnvBasePB):
         terminations=[]
         self.Both_Robots_stuck=[]
         self.turn_both=False
+        self.expert_actions=[]
         # print("MA_AC",actions)
         # self.ob_dicts=[]
         # actions=[[0.0,1.5]]
@@ -746,10 +750,19 @@ class Env(EnvBasePB):
         # print()
         self.steps += 1
         self.get_observation()
+        # print("LIST?",type(Robot.expertise_actions))
+        if self.args.cloning:
+            for action,Robot in zip(actions,self.robots):
+                self.expert_actions.append(Robot.exp_actions)
 
+            self.expert_actions=(np.array([self.expert_actions[0][0], self.expert_actions[0][1]]), np.array([self.expert_actions[1][0], self.expert_actions[1][1]]))
+            # print("eacccccccc",self.expert_actions)
         # print("obs_multi_env",obs)
-
-        return obs, rews, dones, terminations, self.ob_dict
+        # print("self.expert_actions",self.expert_actions,"Robot.exp_actions",Robot.exp_actions)
+        if self.args.cloning:
+            return obs, rews, dones, terminations, self.ob_dict, self.expert_actions
+        else:
+            return obs, rews, dones, terminations, self.ob_dict
     
     def get_image(self):
         
@@ -900,6 +913,7 @@ class Env(EnvBasePB):
         self.robots_orn=[]
         
         self.Goals_pos=[]
+        self.expert_actions=[]
         self.Obstacles_pos=[self.raondom_pos]*self.args.num_robots
         self.robots_pos_with_IDx=[]
         self.wall1_corners=[]
@@ -947,7 +961,11 @@ class Env(EnvBasePB):
             self.robots_pos.append(Robot.pos)
             self.robots_orn.append(Robot.yaw)
             # print(self.robots_pos,self.robots)
+            # print("ROBOT",Robot)'
+            # if self.args.MA_bootstrap:
+            #     self.expert_actions.append(Robot.exp_actions)
             self.Goals_pos.append(Robot.state_goal)
+            # 
             # self.Obstacles_pos.append(self.raondom_pos)
             # self.wall1_corners.append(Robot.gap[0])
             # self.wall2_corners.append(Robot.gap[1])
