@@ -391,7 +391,7 @@ class MA_PPOBufferPerception:
                 # return getting
 
 
-
+#changed save freq 10 to 1 to save at each epoch
 def ppo(env, ac_kwargs=dict(), seed=0, 
         steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
         vf_lr=1e-3, train_pi_iters=100, train_v_iters=100, lam=0.97, max_ep_len=2048, local_epoch_len=2048,
@@ -498,7 +498,8 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             the current policy and value function.
 
     """
-
+    if env.args.cloning:
+        save_freq=1
     # Special function to avoid certain slowdowns from PyTorch + MPI combo.
     setup_pytorch_for_mpi()
 
@@ -1438,8 +1439,22 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                     im = env.get_image()
         if (epoch % save_freq == 0) or (epoch == epochs-1):
             if proc_id() == 0:
-                print("Saving model")
-                torch.save(ac, PATH + "model.pt")
+                
+
+                if env.args.cloning and not env.args.Dagger:
+                    print("Saving model_checkpoint",epoch)
+                    
+                    model_state = {
+                        'epoch': epoch,
+                        'model': ac,
+                        'state_dict': ac.state_dict(),
+                        'optimizer': pi_optimizer.state_dict()
+                    }
+                    torch.save(model_state, PATH + f'model_{epoch}.pt')
+
+                else:
+                    print("Saving model")
+                    torch.save(ac, PATH + "model.pt")
             # Wait for all processes before doing an update
             comm.Barrier()
             # Currently runnning a test shuts the physics server for PyBullet, unsure why
