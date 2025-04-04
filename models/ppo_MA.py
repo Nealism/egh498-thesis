@@ -1441,20 +1441,20 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             if proc_id() == 0:
                 
 
-                if env.args.cloning and not env.args.Dagger:
-                    print("Saving model_checkpoint",epoch)
-                    
-                    model_state = {
-                        'epoch': epoch,
-                        'model': ac,
-                        'state_dict': ac.state_dict(),
-                        'optimizer': pi_optimizer.state_dict()
-                    }
-                    torch.save(model_state, PATH + f'model_{epoch}.pt')
+                # if env.args.cloning and not env.args.Dagger:
+                print("Saving model_checkpoint",epoch)
+                
+                model_state = {
+                    'epoch': epoch,
+                    'model': ac,
+                    'state_dict': ac.state_dict(),
+                    'optimizer': pi_optimizer.state_dict()
+                }
+                torch.save(model_state, PATH + f'model_{epoch}.pt')
 
-                else:
-                    print("Saving model")
-                    torch.save(ac, PATH + "model.pt")
+                # else:
+                #     print("Saving model")
+                #     torch.save(ac, PATH + "model.pt")
             # Wait for all processes before doing an update
             comm.Barrier()
             # Currently runnning a test shuts the physics server for PyBullet, unsure why

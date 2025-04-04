@@ -16,6 +16,12 @@ import os
 import pandas as pd
 from assets.env_multi_robot_pb import Env
 from models import core
+import matplotlib.pyplot as plt
+
+
+success_robot1 = []
+success_robot2 = []
+epochs = []
 
 home = str(Path.home())
 
@@ -51,7 +57,7 @@ else:
 PATH = path_home + latest_folder
 
 Env, args = default_arguments.get_env(args)   
-args.render = True
+args.render = False
 # args.render = False
 # if args.figure:
 #     args.render = False
@@ -61,7 +67,9 @@ actor_critic=core.MLPActorCriticPerception(None, env.observation_space, env.im_s
 
 
 # epoch_number=0
-checkpoint_dir="/scratch3/kom018/results/multi_robot_pb/test/2025_04_04_01_52_15/"
+# checkpoint_dir="/scratch3/kom018/results/multi_robot_pb/test/2025_04_04_01_52_15/"
+# checkpoint_dir="/hpc-scratch/kom018/results/multi_robot_pb/200203/E1r32G1E1/2025_04_04_04_19_17/"
+checkpoint_dir="/hpc-scratch/kom018/results/multi_robot_pb/200203/E10r32G1E1/2025_04_04_05_08_36/"
 checkpoint_files = sorted([f for f in os.listdir(checkpoint_dir) if f.endswith('.pt')], key=lambda x: int(x.split('_')[1].split('.')[0]))
    
 for filename in checkpoint_files:
@@ -102,6 +110,32 @@ for filename in checkpoint_files:
             success = env.success_list
             # print("success",success)
             print("rob",env.robots[0].ep_goal_success,env.robots[1].ep_goal_success,epoch_number)
+            success_robot1.append(env.robots[0].ep_goal_success)
+            success_robot2.append(env.robots[1].ep_goal_success)
+            epochs.append(epoch_number)
             break
+
+
+plt.figure(figsize=(14, 6))
+
+# Plot for Robot 1
+plt.subplot(1, 2, 1)  # 1 row, 2 columns, first subplot
+plt.plot(epochs, success_robot1, marker='o', linestyle='-', color='blue')
+plt.title('Success Rate of Robot 1 per Epoch')
+plt.xlabel('Epoch')
+plt.ylabel('Success Rate')
+plt.grid(True)
+
+# Plot for Robot 2
+plt.subplot(1, 2, 2)  # 1 row, 2 columns, second subplot
+plt.plot(epochs, success_robot2, marker='o', linestyle='-', color='red')
+plt.title('Success Rate of Robot 2 per Epoch')
+plt.xlabel('Epoch')
+plt.ylabel('Success Rate')
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
+
         
             
