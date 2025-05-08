@@ -786,10 +786,11 @@ class Env(EnvBasePB):
 
         if self.args.gap_random:
             # self.max_gap_width=np.random.uniform(2,0.8,1)
-            self.max_gap_width=np.random.uniform(2,0.85,1)
-            # self.max_gap_width = np.round(self.max_gap_width / 0.2) * 0.2
+            # self.max_gap_width=np.random.uniform(2,0.85,0.1)
+            self.max_gap_width=np.random.uniform(self.args.starting_gap_width,self.args.final_gap_width,1)
+            self.max_gap_width = (self.max_gap_width /0.05) * 0.05
             # self.max_gap_width = np.round(self.max_gap_width / 1) * 1
-
+            # print('t_w',self.max_gap_width)
             # self.gap_list.append(self.max_gap_width)
 
             # with open('self.gap_list.txt', 'w') as file:
@@ -1834,10 +1835,11 @@ class Env(EnvBasePB):
             
         else:
             self.exp_actions=self.exp_actions*np.array([35,70])
+            self.expertise_actions=self.exp_actions.tolist()
         # print("self.exp_actions_afer",self.exp_actions)
         # print("expeeee",type(self.exp_actions),type(actions))
 
-        self.expertise_actions=self.exp_actions.tolist()
+        
         # actions=[0.1,0.1]
         if self.args.just_expert or (self.args.cur or self.args.expert_curr) and self.goal_moved==False:
             # print(self.goal_moved,"goal_moved")

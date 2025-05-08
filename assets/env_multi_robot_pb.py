@@ -437,6 +437,7 @@ class Env(EnvBasePB):
 
         if self.args.num_robots>1 and self.args.gap_avoidance:
             if self.args.gap_random:
+                # print('Aw',self.All_Robot_ID[0].gap_width,self.All_Robot_ID[1].gap_width)
                 self.max_gap_among_all_robots_individual_gap_width=min(self.All_Robot_ID[0].gap_width,self.All_Robot_ID[1].gap_width) 
 
             elif self.args.rand_gap_cur:
@@ -449,7 +450,7 @@ class Env(EnvBasePB):
             self.max_gap_among_all_robots_individual_gap_width=self.All_Robot_ID[0].gap_width
 
 
-        
+        # print('M_w',self.max_gap_among_all_robots_individual_gap_width)
         #print("GP_MA",self.max_gap_among_all_robots_individual_gap_width,self.All_Robot_ID[0].gap_width,self.All_Robot_ID[1].gap_width)
 
         if self.args.gap_avoidance and self.args.insert_wall:

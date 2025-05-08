@@ -777,7 +777,7 @@ class MLPActorCriticPerception(nn.Module):
         # print(pi_spot,pi_titan);exit()
 
         if stochastic:
-            if (args.heterogeneous or args.titanheads):
+            if (args.heterogeneous or args.titanheads) and not args.titan_off:
                 a_spot = pi_spot.sample()
                 a_titan = pi_titan.sample()
             # if (args.heterogeneous or args.titanheads) and not args.separate_node:
@@ -790,6 +790,10 @@ class MLPActorCriticPerception(nn.Module):
             #     a_spot = pi_spot.sample()
             #     a_spot_lateral = pi_spot_lateral.sample()
             #     a_titan = pi_titan.sample()
+
+            elif (args.heterogeneous or args.titanheads) and  args.titan_off:
+                a_spot = pi_spot.sample()
+                a_titan = self.pi.mu_titan
             else:
                 a = pi.sample()
             # print("STEPA",a);exit()

@@ -65,6 +65,7 @@ def get_defaults():
     parser.add_argument('--indexed_policy', default=False, action="store_true")
     parser.add_argument('--unindexed_policy', default=False, action="store_true")
     parser.add_argument('--spot_frozen_layer', default=False, action="store_true")
+    parser.add_argument('--titan_off', default=False, action="store_true")
     
     parser.add_argument('--cur', default=False, action="store_true")
     parser.add_argument('--hpc', default=False, action="store_true")
@@ -213,7 +214,7 @@ def get_defaults():
     parser.add_argument('--cmd_scaling', type=float, default=1.0)
     parser.add_argument('--load_path', default="")
     parser.add_argument('--detect_distance', type=float, default=4)
-    parser.add_argument('--gap_decrease', default=0.5, type=float)
+    parser.add_argument('--gap_decrease', default=0.0, type=float)
     parser.add_argument('--starting_gap_width', default=10, type=float)
     parser.add_argument('--final_gap_width', default=3, type=float)
     parser.add_argument('--ray_wall_type', type=int, default=1)

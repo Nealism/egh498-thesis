@@ -75,6 +75,12 @@ class Env(EnvBasePB):
             
                 self.ob_size = 16+2*(self.args.num_robots-1)
 
+
+            elif self.args.gap_avoidance and self.args.experiment_0 and  self.args.occupancy_map and self.args.use_perception:
+                
+                #print("owch")
+                self.ob_size = 4#+2 *(self.args.num_robots-1)
+
             elif self.args.gap_avoidance and self.args.experiment_1 and  self.args.occupancy_map and self.args.use_perception:
                 
                 #print("owch")
@@ -913,6 +919,13 @@ class Env(EnvBasePB):
         self.total_return = 0
 
         self.commands = np.zeros(3)
+
+        if self.args.gap_random:
+            # self.max_gap_width=np.random.uniform(2,0.8,1)
+            # self.max_gap_width=np.random.uniform(2,0.85,0.1)
+            self.max_gap_width=np.random.uniform(self.args.starting_gap_width,self.args.final_gap_width,1)
+            self.max_gap_width = (self.max_gap_width / .05) * 0.05
+            # print('g_w',self.max_gap_width)
 
         # self.actions_walk_model = np.zeros(self.ac_size_walk_model)
         # self.prev_actions_walk_model = self.actions_walk_model
@@ -2622,6 +2635,10 @@ class Env(EnvBasePB):
         #Obstacle Avoidance Observations for Single Robot
         # elif (self.args.obstacle_avoidance and len(self.Other_Robots_pos_list)!= len([0]*1*(self.args.num_robots-1))) or (self.args.obstacle_avoidance and self.args.num_robots==1):
         #     return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + [0]*2*(self.args.num_robots-1) + self.obs_pos_robot+[self.obs_corner1[0],self.obs_corner1[1]]+ [self.obs_corner2[0],self.obs_corner2[1]]+ [self.obs_corner3[0],self.obs_corner3[1]]+ [self.obs_corner4[0],self.obs_corner4[1]])    
+        
+        elif self.args.gap_avoidance and self.args.occupancy_map and self.args.use_perception and self.args.experiment_0:
+            
+            return np.array(self.wp_pos_robot +[self.vx, self.yaw_vel])
         
         elif self.args.gap_avoidance and self.args.occupancy_map and self.args.use_perception and self.args.experiment_1:
             

@@ -15,6 +15,10 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+
 home = str(Path.home())
 
 args = default_arguments.get_defaults()
@@ -67,7 +71,8 @@ if args.jit_model:
 else:
 
     pol = torch.load(PATH + "/model.pt")
-
+# checkpoint = pol
+# pol = checkpoint['model']
 start_time=time.time()
 
 # if args.num_robots>0:
@@ -104,6 +109,14 @@ if args.num_robots==2:
 
     r2_poses_x=[]
     r2_poses_y=[]
+
+    action_per_second=[]
+    actionr1x_per_second=[]
+    actionr1y_per_second=[]
+    Goal1_x_list=[]
+    Goal1_y_list=[]
+    Goal2_x_list=[]
+    Goal2_y_list=[]
 
 
 def run(args): 
@@ -173,7 +186,7 @@ def run(args):
     st=time.time()
     action_saving1=[]
     action_saving2=[]
-    save_time=11
+    save_time=20
     robot1_stop_duration = np.random.uniform(0, 6)  # Random time between 1-3 seconds for robot 1
         # robot1_stop_duration = np.random.uniform(3.5, 4)  # Random time between 1-3 seconds for robot 2
     robot2_stop_duration = np.random.uniform(0, 6)  # Random time between 1-3 seconds for robot 2
@@ -203,10 +216,12 @@ def run(args):
         #     action[1] = [0.8, -0.2]  # Robot 1 stops
 
 
-        ##__Cooperative_Backward
-        # # if current_time > 3 and current_time < 8:
+        ###__Cooperative_Backward
+        # if current_time > 3 and current_time < 8:
         #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
-        #     action[0] = [-0.2, 0.0]  # Robot 1 moves backward
+        #     # action[1] = [-0.2, 0.0, 0.0]  # Robot 1 moves backward
+        #     action[1] = [0.0, -0.075, 0.0]  # Robot 1 moves backward
+        
 
 
         ##__GIVEWAY__EXTENTION_5s
@@ -256,7 +271,12 @@ def run(args):
         #         else:
         #             action[1] = action_rl2  # Robot 2 resumes movement
         # else:
-        # print("obs",len(obs),obs)
+            # print("obs",len(obs),obs)
+            #------------------------------------------------------------
+
+
+
+
         if args.use_perception and not args.jit_model:
             # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
             if args.heterogeneous or args.titanheads:
@@ -276,6 +296,18 @@ def run(args):
                 elif "spot" in str(env.robots[0]):
                     action=a_spot[0],a_titan[1]
                     logp=[logp_spot[0],logp_titan[1]]
+
+        
+                
+                # actionr1x_per_second.append(action[0][0])
+                # actionr1y_per_second.append(action[0][1])
+                # print("auncti",actionr1x_per_second)
+
+
+
+
+
+            #------------------------------------------------------------        
             # print(pol)
             # if not args.titanheads or not args.heterogeneous:
             #     action_rl1 = pol.step(torch.as_tensor(np.array(obs[0]), dtype=torch.float32), torch.as_tensor(im[0], dtype=torch.float32), stochastic=False)[0]
@@ -440,6 +472,11 @@ def run(args):
 
         r1_poses_x.append(env.robots_pos[0][0])
         r1_poses_y.append(env.robots_pos[0][1])
+        # print("posss",[env.robots_pos[0][0],env.robots_pos[0][1]])
+
+        Goal1_x_list.append(env.Goals_pos[0][0])
+        Goal1_y_list.append(env.Goals_pos[0][1])
+        
 
         if args.num_robots==2:
             r2_buffer_linear_action.append(action[1][0])
@@ -456,12 +493,15 @@ def run(args):
 
             r2_poses_x.append(env.robots_pos[1][0])
             r2_poses_y.append(env.robots_pos[1][1])
+
+            Goal2_x_list.append(env.Goals_pos[1][0])
+            Goal2_y_list.append(env.Goals_pos[1][1])
         
         
         if args.figure and current_time>save_time:
             
             
-
+            
             # # print("TIME",time.time()-t1,R3.buffer_time,"ac")
             
             # output_dir_occupancy ="/home/kom018/behaviour_rl/Saved_models/titan/L3r39G1E1/2024_07_23_02_22_51/R1\'s_Occupancy.png"
@@ -841,13 +881,15 @@ def run(args):
                 plt.plot(r1_poses_x, r1_poses_y, label='Robot 1 Trajectory', marker='o', markersize=5, linestyle='-', color='blue')
                 # Annotate the first trajectory with time points
                 for i in range(0, len(buffer_time), 10):  # Annotate every 10th buffer_time step
-                    plt.annotate(f't={buffer_time[i]:.1f}', (r1_poses_x[i], r1_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
+                    # plt.annotate(f't={buffer_time[i]:.1f}', (r1_poses_x[i], r1_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
+                    plt.annotate(f't={int(buffer_time[i])}', (r1_poses_x[i], r1_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
 
                 # Plot the second trajectory
                 plt.plot(r2_poses_x, r2_poses_y, label='Robot 2 Trajectory', marker='o', markersize=5, linestyle='-', color='orange')
                 # Annotate the second trajectory with buffer_time points
                 for i in range(0, len(buffer_time), 10):  # Annotate every 10th buffer_time step
-                    plt.annotate(f't={buffer_time[i]:.1f}', (r2_poses_x[i], r2_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
+                    # plt.annotate(f't={buffer_time[i]:.1f}', (r2_poses_x[i], r2_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
+                    plt.annotate(f't={int(buffer_time[i])}', (r2_poses_x[i], r2_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
 
                 # Labels and title
                 plt.xlabel('X position')
@@ -855,7 +897,7 @@ def run(args):
                 plt.title('Two Robot Trajectories Over Time')
                 plt.legend()
                 plt.grid(True)
-                plt.savefig(os.path.join(output_dir, 'Merged_trajectory.png'))
+                plt.savefig(os.path.join(output_dir, 'AMerged_trajectory.png'))
 
 
                 # data = {
@@ -871,10 +913,359 @@ def run(args):
                 # df = pd.DataFrame(r2_modified_occupancy_map)
                 # csv_path = os.path.join(output_dir, 'r2_occu.csv')
                 # df.to_csv(csv_path, index=False)
+
+
+                # grid_x = np.linspace(1, 25, 25)
+                # grid_y = np.linspace(1, 25, 25)
+
+                grid_x = np.linspace(Goal1_x_list[0]-9, Goal1_x_list[0]+1, 25)
+                grid_y = np.linspace(Goal1_y_list[0]-5, Goal2_y_list[0]+5, 25)
+
+                # grid_x = np.linspace(1, 10, 1)
+                # grid_y = np.linspace(1, 10, 1)
+
+                # start_A = [env.Goals_pos[1][0]-8,env.Goals_pos[1][1]]
+                
+                # start_B = [env.Goals_pos[0][0]-8,env.Goals_pos[0][1]]
+
+
+                start_A = [Goal2_x_list[0]-8,Goal2_y_list[0]]
+                
+                start_B = [Goal1_x_list[0]-8,Goal1_y_list[0]]
+
+                # goal_A = env.Goals_pos[0][0:2]
+                # goal_B = env.Goals_pos[1][0:2]
+
+                goal_A = [Goal1_x_list[0],Goal1_y_list[0]]
+                goal_B = [Goal2_x_list[0],Goal2_y_list[0]]
+            
+                for i in range(0, len(buffer_time), 1):
+                    
+                    fig, ax = plt.subplots(figsize=(10, 10))
+
+                    for x in grid_x:
+                        for y in grid_y:
+                            # # pos_B = [r2_poses_x[i], r2_poses_y[i]]
+                            # # ax.arrow(x, y, r1_buffer_linear_action[i] * 0.5, r1_buffer_angular_action[i] * 0.5,
+                            # #         head_width=0.1, color='red', alpha=0.5)
+
+                            ##______________
+                            # is_reverse = r1_buffer_linear_action[i] < 0 #or r1_buffer_angular_action[i] < 0
+                            # arrow_color = 'red' if is_reverse else 'green'
+                            
+                            # ax.arrow(x, y, r1_buffer_linear_action[i] * 0.5, r1_buffer_angular_action[i] * 0.5,
+                            #         head_width=0.1, color=arrow_color, alpha=0.5)
+                            
+                            #-------------------------------------------------------------------------
+                            # is_reverse = r1_buffer_linear_action[i] < 0
+                            # arrow_color = 'red' if is_reverse else 'green'
+                            
+                            # # Calculate magnitude for scaling arrow size
+                            # # Using absolute values to get proper scaling regardless of direction
+                            # linear_magnitude = abs(r1_buffer_linear_action[i])
+                            # angular_magnitude = abs(r1_buffer_angular_action[i])
+                            
+                            # # Scale factor can be adjusted as needed
+                            # scale_factor = 0.5
+                            
+                            # # Arrow size/length based on magnitude
+                            # dx = r1_buffer_linear_action[i] * scale_factor
+                            # dy = r1_buffer_angular_action[i] * scale_factor
+                            
+                            # # Draw the arrow
+
+                            # ax.arrow(x, y, dx, dy, head_width=0.1, color=arrow_color, alpha=0.5)
+                            # # ax.arrow(x, y, dx, dy, head_width=0.1, color=arrow_color, alpha=0.5)
+                            
+                            # # # Add text to display velocities - formatting to 2 decimal places
+                            # # vel_text = f"lin: {r1_buffer_linear_action[i]:.2f}\nang: {r1_buffer_angular_action[i]:.2f}"
+                            # # ax.text(x + dx, y + dy, vel_text, fontsize=8)
+
+                            #------------------------------------------------------------------
+
+                            # Determine if movement is reverse based on linear velocity
+                            is_reverse = r1_buffer_linear_action[i] < 0
+                            arrow_color = 'red' if is_reverse else 'green'
+
+                            # Scale factor can be adjusted as needed
+                            scale_factor = 0.5
+                            
+                            # Linear velocity determines arrow length in x-direction
+                            dx = r1_buffer_linear_action[i] * scale_factor
+                            
+                            # We don't use angular velocity for arrow displacement
+                            dy = 0
+                            
+                            # Arrow width can represent angular velocity
+                            angular_magnitude = abs(r1_buffer_angular_action[i])
+                            width = 0.05 + 0.1 * angular_magnitude  # Adjust multiplier as needed
+                            
+                            # Draw the arrow for linear velocity
+                            ax.arrow(x, y, dx, dy, head_width=width, color=arrow_color, alpha=0.5)
+                            
+                            # Optionally, add a circular marker to show direction of rotation
+                            if abs(r1_buffer_angular_action[i]) > 0.001:
+                                rotation_color = 'purple' if r1_buffer_angular_action[i] < 0 else 'orange'
+                                rotation_size = 30 * angular_magnitude
+                                ax.scatter(x, y, s=rotation_size, color=rotation_color, alpha=0.3)
+                            
+
+
+
+                    pos_B = [r2_poses_x[i], r2_poses_y[i]]
+                    ax.plot(*pos_B, marker='s', color='blue', markersize=20)
+                    ax.text(pos_B[0] + 0.1, pos_B[1], "Robot B", color='blue', fontsize=10)
+
+                    # Determine if movement is reverse based on linear velocity only
+        
+
+                    # # Obstacles
+                    # ax.plot([env.Goals_pos[1][0]-4, env.Goals_pos[1][0]-4],
+                    #         [env.Goals_pos[0][1]+0.3, env.Goals_pos[0][1]-0.3], 'k-', linewidth=8)
+                    # ax.plot([env.Goals_pos[1][0]-4, env.Goals_pos[1][0]-4],
+                    #         [env.Goals_pos[1][1]-0.3, env.Goals_pos[1][1]+0.3], 'k-', linewidth=8)
+                    
+
+                     # Obstacles
+                    ax.plot([Goal2_x_list[0]-4, Goal2_x_list[0]-4],
+                            [Goal1_y_list[0]+0.65, Goal1_y_list[0]-0.65], 'k-', linewidth=8)
+                    ax.plot([Goal2_x_list[0]-4, Goal2_x_list[0]-4],
+                            [Goal2_y_list[0]-0.65, Goal2_y_list[0]+0.65], 'k-', linewidth=8)
+
+                    # Start/Goal markers
+                    ax.plot(*start_A, marker='>', color='red', markersize=14, label='Start A')
+                    ax.plot(*start_B, marker='>', color='blue', markersize=14, label='Start B')
+                    ax.plot(*goal_A, marker='o', color='red', markersize=16, label='Goal A')
+                    ax.plot(*goal_B, marker='o', color='blue', markersize=16, label='Goal B')
+
+                    # Legend
+                    handles = [
+                        Line2D([], [], marker='>', color='red', linestyle='None', markersize=10, label='Start A'),
+                        Line2D([], [], marker='>', color='blue', linestyle='None', markersize=10, label='Start B'),
+                        Line2D([], [], marker='o', color='red', linestyle='None', markersize=10, label='Goal A'),
+                        Line2D([], [], marker='o', color='blue', linestyle='None', markersize=10, label='Goal B'),
+                        Line2D([], [], marker='s', color='blue', linestyle='None', markersize=10, label='Robot B'),
+                        Line2D([], [], color='black', linewidth=8, label='Obstacle'),
+                        Line2D([], [], color='red', linewidth=2, marker='>', markersize=10, label='Vector Field A'),
+                    ]
+                    ax.legend(handles=handles, loc='upper right')
+                    ax.set_title(f"Robot A Vector Field with Robot B Position at t={buffer_time[i]:.1f}s and lin: {r1_buffer_linear_action[i]:.2f}\nang: {r1_buffer_angular_action[i]:.2f}")
+                    ax.axis("equal")
+                    ax.set_xlim(Goal1_x_list[0]-9, Goal1_x_list[0]+1)
+                    # ax.set_ylim(Goal1_y_list[0], Goal2_y_list[0])
+                    ax.set_ylim(Goal1_y_list[0], Goal2_y_list[0])
+                    ax.grid(True)
+                    plt.tight_layout()
+
+                    output_dir = "/home/kom018/behaviour_rl/Results_plots/pybullet_excels/vector_fields/"
+                    filename = os.path.join(output_dir, f"robot1_field_{i:03d}.png")
+                    plt.savefig(filename)
+                    # plt.close()
+
+                
+                #-------------------------------------------------------------------------------
+                #Compute Vector Field Robot 1
+
+                # time_range = np.arange(0, save_time)
+
+                # print("gg")
+                # dt = 0.5
+                # # grid_x = np.linspace(1, 9, 9)
+                # # grid_y = np.linspace(1, 11, 9)
+
+                # grid_x = np.linspace(1, 25, 25)
+                # grid_y = np.linspace(1, 25, 25)
+
+                # # start_A = np.array([0, 3])
+                
+                # # start_B = np.array([0, -3])
+
+                # start_A = [env.Goals_pos[1][0]-8,env.Goals_pos[1][1]]
+                
+                # start_B = [env.Goals_pos[0][0]-8,env.Goals_pos[0][1]]
+
+                # # obstacle_A = [env.Goals_pos[1][0]-4,env.Goals_pos[1][1]]
+                
+                # # obstacle_B = [env.Goals_pos[0][0]-4,env.Goals_pos[0][1]]
+
+                # # goal_A = np.array([6, 9])
+                # # goal_B = np.array([3, 9])
+
+                # goal_A = env.Goals_pos[0][0:2]
+                # goal_B = env.Goals_pos[1][0:2]
+                # # print("gp",goal_A,goal_B)
+                # pos_A = [r1_poses_x[0],r1_poses_y[0]]
+                # # pos_B = np.array([6, 3])
+                # pos_B = [r2_poses_x[0],r2_poses_y[0]]
+                # # positions = {0: (start_A.copy())}
+
+                # # for t in range(1, max(time_range) + 1):
+                # #     # Simple linear interpolation for this example 
+                # #     # (you could use your original movement logic instead)
+                # #     alpha = min(t / 20.0, 1.0)  # Normalized time from 0 to 1
+                    
+                # #     # Linear interpolation between start and goal
+                # #     # pos_A = start_A + alpha * (goal_A - start_A)
+                # #     pos_B = start_B + alpha * (goal_B - start_B)
+                # #     actn = start_B + alpha * (goal_B - start_B)
+                    
+                # #     positions[t] = (pos_B)
+
+
+                # # for i, t in enumerate(time_range):
+                # for i in range(0, len(buffer_time), 10):
+                #     fig, ax = plt.subplots(figsize=(10, 10))
+                #     # print("GOAL",env.Goals_pos);exit()
+                #     for x in grid_x:
+                #         for y in grid_y:
+                #             # pos_B = [env.robots_pos[1][0],env.robots_pos[1][1]]
+                #             pos_B=[r2_poses_x[i], r2_poses_y[i]]
+                #             # pos_B=positions[t]
+                #             # action_robot0=action[0]
+                #             # print("actions",action_robot0,pos_B)
+                #             # ax.arrow(x, y, action_robot0[0]*0.5, action_robot0[1]*0.5, head_width=0.1, color='red', alpha=0.5)
+                #             ax.arrow(x, y, r1_buffer_linear_action[i]*0.5, r1_buffer_angular_action[i]*0.5, head_width=0.1, color='red', alpha=0.5)
+
+                #     # ax.plot(*pos_A, marker='s', color='red', markersize=20)
+                #     ax.plot(*pos_B, marker='s', color='blue', markersize=20)
+
+                #     # ax.text(pos_A[0] + 0.1, pos_A[1], "Robot A", color='red', fontsize=10)
+                #     ax.text(pos_B[0] + 0.1, pos_B[1], "Robot B", color='blue', fontsize=10)
+
+                #     # ax.plot([2, 4.5], [5, 5], 'k-', linewidth=8)
+                #     # ax.plot([5.5, 8], [5, 5], 'k-', linewidth=8)
+
+                #     # ax.plot([2, 10], [4.5, 4.5], 'k-', linewidth=8)
+                #     # ax.plot([5.5, 8], [5, 5], 'k-', linewidth=8)
+
+                # ax.plot([env.Goals_pos[1][0]-4, env.Goals_pos[1][0]-4], [env.Goals_pos[0][1]+0.3, env.Goals_pos[0][1]-0.3], 'k-', linewidth=8)
+                # ax.plot([env.Goals_pos[1][0]-4, env.Goals_pos[1][0]-4], [env.Goals_pos[1][1]-0.3, env.Goals_pos[1][1]+0.3], 'k-', linewidth=8)
+                # # ax.plot([env.Goals_pos[0][0]-4, env.Goals_pos[0][0]-4], [0, 1], 'k-', linewidth=8)
+
+                # # ax.plot(obstacle_A, 'k-', linewidth=1)
+                # # ax.plot(obstacle_B, 'k-', linewidth=1)
+
+                # ax.plot(*start_A, marker='>', color='red', markersize=14, label='Start A')
+                # ax.plot(*start_B, marker='>', color='blue', markersize=14, label='Start B')
+                # ax.plot(*goal_A, marker='o', color='red', markersize=16, label='Goal A')
+                # ax.plot(*goal_B, marker='o', color='blue', markersize=16, label='Goal B')
+
+                # handles = [
+                #     Line2D([], [], marker='>', color='red', linestyle='None', markersize=10, label='Start A'),
+                #     Line2D([], [], marker='>', color='blue', linestyle='None', markersize=10, label='Start B'),
+                #     Line2D([], [], marker='o', color='red', linestyle='None', markersize=10, label='Goal A'),
+                #     Line2D([], [], marker='o', color='blue', linestyle='None', markersize=10, label='Goal B'),
+                #     # Line2D([], [], marker='s', color='red', linestyle='None', markersize=10, label='Robot A'),
+                #     Line2D([], [], marker='s', color='blue', linestyle='None', markersize=10, label='Robot B'),
+                #     Line2D([], [], color='black', linewidth=8, label='Obstacle'),
+                #     Line2D([], [], color='red', linewidth=2, marker='>', markersize=10, label='Vector Field A'),
+                # ]
+
+                # ax.legend(handles=handles, loc='upper right')
+                # ax.set_title("Robot A Vector Field with Robot B Position")
+                # ax.axis("equal")
+                # # ax.set_xlim(0.5, 9.5)
+                # # ax.set_ylim(0.5, 11.5)
+
+                # ax.set_xlim(-3, 20)
+                # ax.set_ylim(-3, 20)
+                # ax.grid(True)
+
+                # plt.tight_layout()
+                # # plt.savefig("FINALLY_robot1_vector_field_simple.png")
+                # # plt.show()
+                # output_dir="/home/kom018/behaviour_rl/Results_plots/pybullet_excels/vector_fields/"
+                # filename = os.path.join(output_dir, f"robot1_field_{i:03d}.png")  # Uses counter i with padding
+                # plt.savefig(filename)
+
+
+
+
+
+
+                #-----------------------------------------------
+                # dt = 0.5
+                # grid_x = np.linspace(1, 9, 9)
+                # grid_y = np.linspace(1, 11, 9)
+
+                # start_A = np.array([3, 1])
+                # goal_A = np.array([6, 9])
+                # start_B = np.array([6, 1])
+                # goal_B = np.array([3, 9])
+
+                # pos_A = np.array([3, 3])
+                # # pos_B = np.array([6, 3])
+                # pos_B = [r1_poses_x,r1_poses_y]
+                # positions = {0: (start_A.copy())}
+
+                # for t in range(1, max(time_range) + 1):
+                #     # Simple linear interpolation for this example 
+                #     # (you could use your original movement logic instead)
+                #     alpha = min(t / 20.0, 1.0)  # Normalized time from 0 to 1
+                    
+                #     # Linear interpolation between start and goal
+                #     # pos_A = start_A + alpha * (goal_A - start_A)
+                #     pos_B = start_B + alpha * (goal_B - start_B)
+                #     actn = start_B + alpha * (goal_B - start_B)
+                    
+                #     positions[t] = (pos_B)
+
+
+                # for i, t in enumerate(time_range):
+
+                #     fig, ax = plt.subplots(figsize=(10, 10))
+
+                #     for x in grid_x:
+                #         for y in grid_y:
+                #             # pos = [env.robots_pos[0][0],env.robots_pos[0][1]]
+                #             # pos_B=[r1_poses_x[t], r1_poses_y[t]]
+                #             pos_B=positions[t]
+                #             action_robot1=action[0]
+                #             print("actions",action_robot1,pos_B,t)
+                #             ax.arrow(x, y, action_robot1[0]*0.5, action_robot1[1]*0.5, head_width=0.1, color='red', alpha=0.5)
+
+                #     # ax.plot(*pos_A, marker='s', color='red', markersize=20)
+                #     ax.plot(*pos_B, marker='s', color='blue', markersize=20)
+
+                #     # ax.text(pos_A[0] + 0.1, pos_A[1], "Robot A", color='red', fontsize=10)
+                #     ax.text(pos_B[0] + 0.1, pos_B[1], "Robot B", color='blue', fontsize=10)
+
+                #     ax.plot([2, 4.5], [5, 5], 'k-', linewidth=8)
+                #     ax.plot([5.5, 8], [5, 5], 'k-', linewidth=8)
+
+                #     ax.plot(*start_A, marker='^', color='red', markersize=14, label='Start A')
+                #     ax.plot(*start_B, marker='^', color='blue', markersize=14, label='Start B')
+                #     ax.plot(*goal_A, marker='o', color='red', markersize=16, label='Goal A')
+                #     ax.plot(*goal_B, marker='o', color='blue', markersize=16, label='Goal B')
+
+                #     handles = [
+                #         Line2D([], [], marker='^', color='red', linestyle='None', markersize=10, label='Start A'),
+                #         Line2D([], [], marker='^', color='blue', linestyle='None', markersize=10, label='Start B'),
+                #         Line2D([], [], marker='o', color='red', linestyle='None', markersize=10, label='Goal A'),
+                #         Line2D([], [], marker='o', color='blue', linestyle='None', markersize=10, label='Goal B'),
+                #         # Line2D([], [], marker='s', color='red', linestyle='None', markersize=10, label='Robot A'),
+                #         Line2D([], [], marker='s', color='blue', linestyle='None', markersize=10, label='Robot B'),
+                #         Line2D([], [], color='black', linewidth=8, label='Obstacle'),
+                #         Line2D([], [], color='red', linewidth=2, marker='>', markersize=10, label='Vector Field A'),
+                #     ]
+
+                #     ax.legend(handles=handles, loc='upper right')
+                #     ax.set_title("Robot A Vector Field with Robot B Position")
+                #     ax.axis("equal")
+                #     ax.set_xlim(0.5, 9.5)
+                #     ax.set_ylim(0.5, 11.5)
+                #     ax.grid(True)
+
+                #     plt.tight_layout()
+                #     # plt.savefig("FINALLY_robot1_vector_field_simple.png")
+                #     # plt.show()
+                #     filename = os.path.join(output_dir, f"robot_field_{i:03d}.png")  # Uses counter i with padding
+                #     plt.savefig(filename)
                 
             
             
             # # print("overal",time.time()-R3.t1)
+            print("TIMES",current_time,save_time)
             if current_time>save_time:
                 print("THAM");exit()
 
