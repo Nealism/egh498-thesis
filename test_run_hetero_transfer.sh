@@ -13,7 +13,7 @@
 
 args="--env multi_robot_pb --num_robots 2  --cur_succ 0   --gap_avoidance --epochs 8400 
 --max_ep_len 250 --local_epoch_len 3000  --insert_wall --exp Saved_models/Spot_Titan/
---folder 104 --reward_fn 27      --occupancy_map --use_perception  
+--folder 104 --reward_fn 32      --occupancy_map --use_perception  
 --experiment_1 --home --gap_curr --starting_gap_width 0.85 --randomness 1 --heterogeneous 
 --turtle_titan --figure"
 # --map_show_function

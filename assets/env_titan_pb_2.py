@@ -665,6 +665,12 @@ class Env(EnvBasePB):
                     # Assuming there's only one value in the angles list for simplicity
                     self.robot_own_pos = own_pos
                     break
+
+            for robot, initial_pos in self.initial_robots_pos:
+                if robot == self:
+                    # Assuming there's only one value in the angles list for simplicity
+                    self.initial_pos = initial_pos
+                    break
                 # else:
                 #     # If the robot_name is not found, handle it accordingly
                 #     print(f"Robot {self} not found in pos.")
@@ -708,8 +714,11 @@ class Env(EnvBasePB):
             
 
             #print("reset self.robottogoal_angle",self.robottogoal_angle)
+            if self.args.randomness==4:
+                self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
+            else:
             
-            self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
+                self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
         else:
             self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
         
@@ -938,6 +947,7 @@ class Env(EnvBasePB):
         #state_object=[np.random.uniform(-7, 7), np.random.uniform(-8, -6), 0.00]
         #print("self.external_goals_states",self.external_goals_states)
         robot1_pos=(initial_x, initial_y)
+        initial_pos=(initial_x, initial_y)
         
         
         # if self.args.gap_avoidance:
@@ -947,7 +957,10 @@ class Env(EnvBasePB):
         # state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, random.randint(0, 360))
         if self.args.gap_avoidance:
             
-            state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, robottogoal_angle)
+            if self.args.randomness==4:
+                state_object=self.find_position_B(initial_pos, self.initial_goal_dist, robottogoal_angle)
+            else:
+                state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, robottogoal_angle)
             #print(self.robottogoal_angle);exit()
             # print("goal_pos",state_object)
             dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
@@ -8856,6 +8869,9 @@ class Env(EnvBasePB):
     
     def set_external_robots_pos(self, list_of_external_robots_pos):
         self.external_robots_pos=list_of_external_robots_pos
+
+    def set_initial_robots_pos(self, list_of_initial_robots_pos):
+        self.initial_robots_pos=list_of_initial_robots_pos
 
     def set_all_goal_poses(self, list_of_goals_pos):
         self.Goals_pos=list_of_goals_pos
