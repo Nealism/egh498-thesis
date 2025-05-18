@@ -191,7 +191,7 @@ class Env(EnvBasePB):
             #if self.args.use_perception:
             self.im_size = [1,self.local_map.shape[0],self.local_map.shape[1]]
             # print("Im",self.im_size,"local",self.local_map.shape);exit()
-    def reset(self):
+    def reset(self,loading_poses=None):
         res = []
         if self.args.map_noise:
             self.noise=0.3#np.random.choice([0.0,0.3])
@@ -246,12 +246,25 @@ class Env(EnvBasePB):
         else:
             self.gap_offset=0
         # self.gap_offset=-1.5
+
+        if self.args.randomness==4:
+            
+            if loading_poses is not None:
+                self.loading_x = loading_poses[0]
+                self.loading_y = loading_poses[1]
+        # print("self.loading_x",self.loading_x,"self.loading_y",self.loading_y)
+            # else:
+            #     self.initial_positions = [0,0]
+
+            # wherever your code loads/spawns the robot, use self.initial_positions[i] for robot i
+
         
 
         bodies_to_remove = [self.rectangle_id1, self.rectangle_id2]
         
         # random_0_10=random.uniform(0,10),random.uniform(0,10),self.z_position
-        random_0_10=[0,0,0.031]
+        random_0_10=[2,1,0.031]
+        initial_random_0_10=[0,0,0.031]
         # print("random_0_10",random_0_10)
 
         for Robot in self.robots:
@@ -315,7 +328,7 @@ class Env(EnvBasePB):
                 # self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*7.5),(self.robots[1],self.robot_goal_synchroniser*-7.5)]
                 
                 if self.args.randomness==4:
-                    self.robottogoal_angles=[(self.robots[0],10),(self.robots[1],-10)]
+                    self.robottogoal_angles=[(self.robots[0],18),(self.robots[1],-18)]
                 else:
                     self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*goal_offset),(self.robots[1],self.robot_goal_synchroniser*-goal_offset)]
                 
@@ -331,11 +344,11 @@ class Env(EnvBasePB):
             elif self.args.randomness==3:
                 self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.choice([-1,1]),list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
             elif self.args.randomness==4:
-                self.external_robots_pos=[(self.robots[0],list((random_0_10))),(self.robots[1],[list(random_0_10)[0],list(random_0_10)[1]+1.2,self.z_position])]
-                self.initial_robots_pos=[(self.robots[0],list((random_0_10))),(self.robots[1],[list(random_0_10)[0]+2,list(random_0_10)[1]+1.2,self.z_position])]
+                self.external_robots_pos=[(self.robots[0],list((random_0_10))),(self.robots[1],[list(initial_random_0_10)[0]+self.loading_x,list(initial_random_0_10)[1]+self.loading_y,self.z_position])]
+                self.initial_robots_pos=[(self.robots[0],list((initial_random_0_10))),(self.robots[1],[list(initial_random_0_10)[0],list(initial_random_0_10)[1]+2.5,self.z_position])]
             # self.external_robots_pos=[(self.robots[0],[0,0,self.z_position]),(self.robots[1],[-2,-1.5,self.z_position])]
             # print("list(random_0_10)[1]-2",list(random_0_10)[1]-2)
-                print("self.external_robots_pos,self.initial_robots_pos",self.external_robots_pos,self.initial_robots_pos)
+                # print("self.external_robots_pos,self.initial_robots_pos",self.external_robots_pos,self.initial_robots_pos)
 
             if self.args.randomness==4:
             #     self.external_goals_states=[(8,0,0),(8,2,0)]
@@ -450,6 +463,7 @@ class Env(EnvBasePB):
             Robot.set_external_goals_state(self.external_goals_states_with_IDx)
             Robot.set_all_goal_poses(self.Goals_pos)
             Robot.set_external_robots_pos(self.external_robots_pos)
+            Robot.set_initial_robots_pos(self.initial_robots_pos)
             Robot.set_robottogoal_angle(self.robottogoal_angles)
             Robot.set_wall1_corners(self.wall1_corners)
             Robot.set_wall1_corners(self.wall2_corners)
@@ -720,6 +734,7 @@ class Env(EnvBasePB):
             Robot.set_all_goal_poses(self.Goals_pos)
             Robot.set_robottogoal_angle(self.robottogoal_angles)
             Robot.set_external_robots_pos(self.external_robots_pos)
+            Robot.set_initial_robots_pos(self.initial_robots_pos)
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
 

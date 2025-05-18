@@ -684,6 +684,7 @@ class Env(EnvBasePB):
         # self.robottogoal_angle=None
         self.external_goals_states=[]
         self.external_robots_states=[]
+        self.initial_robots_states=[]
         
         for robot,goal in self.external_goals_states_with_IDx:
             self.external_goals_states.append(goal)
@@ -691,12 +692,18 @@ class Env(EnvBasePB):
         for robot,r_position in self.external_robots_pos:
             self.external_robots_states.append(r_position)
 
+        for robot,i_position in self.initial_robots_pos:
+            self.initial_robots_states.append(i_position)
+        # print("sdfsbdfkhfdksbdfasdkb",self.external_robots_states,self.initial_robots_pos)
         self.mid_point_of_goals=self.calculate_midpoint(self.external_goals_states[0],self.external_goals_states[-1])
         # self.mid_point_of_goals=(self.mid_point_of_goals[0],self.mid_point_of_goals[1],self.mid_point_of_goals[2])
         # print(self.mid_point_of_goals)
         # self.mid_point_of_goals= (self.mid_point_of_goals[0],self.mid_point_of_goals[1])
+        if self.args.randomness==4:
+            self.mid_point_of_robots=self.calculate_midpoint(self.initial_robots_states[0],self.initial_robots_states[-1])
 
-        self.mid_point_of_robots=self.calculate_midpoint(self.external_robots_states[0],self.external_robots_states[-1])
+        else:
+            self.mid_point_of_robots=self.calculate_midpoint(self.external_robots_states[0],self.external_robots_states[-1])
         # self.mid_point_of_robots_offsetting=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-1.2,1.2))
         # self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]-1.2)
         # self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-3,3))
@@ -715,7 +722,7 @@ class Env(EnvBasePB):
 
             #print("reset self.robottogoal_angle",self.robottogoal_angle)
             if self.args.randomness==4:
-                self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
+                self.move_goal_and_static_robot(initial_x=self.initial_pos[0], initial_y=self.initial_pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
             else:
             
                 self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
@@ -986,6 +993,9 @@ class Env(EnvBasePB):
         #print(self.time_to_target)
         
         if self.args.gap_avoidance:
+
+
+            
                 #Equation of the line trajectory from moving robot to goal
             if (mid_point_robots[0]-mid_point_goals[0])==0:
                 mid_point_robots[0]=mid_point_goals[0]+0.01
