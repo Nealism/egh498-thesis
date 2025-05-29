@@ -66,6 +66,7 @@ def get_defaults():
     parser.add_argument('--unindexed_policy', default=False, action="store_true")
     parser.add_argument('--spot_frozen_layer', default=False, action="store_true")
     parser.add_argument('--titan_off', default=False, action="store_true")
+    parser.add_argument('--Vector_behaviour', default=False, action="store_true")
     
     parser.add_argument('--cur', default=False, action="store_true")
     parser.add_argument('--hpc', default=False, action="store_true")

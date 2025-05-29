@@ -191,7 +191,7 @@ class Env(EnvBasePB):
             #if self.args.use_perception:
             self.im_size = [1,self.local_map.shape[0],self.local_map.shape[1]]
             # print("Im",self.im_size,"local",self.local_map.shape);exit()
-    def reset(self,loading_poses=None):
+    def reset(self,r1_loading_poses=None,r2_loading_poses=None):
         res = []
         if self.args.map_noise:
             self.noise=0.3#np.random.choice([0.0,0.3])
@@ -249,9 +249,13 @@ class Env(EnvBasePB):
 
         if self.args.randomness==4:
             
-            if loading_poses is not None:
-                self.loading_x = loading_poses[0]
-                self.loading_y = loading_poses[1]
+            if r2_loading_poses is not None:
+                self.r2_loading_x = r2_loading_poses[0]
+                self.r2_loading_y = r2_loading_poses[1]
+
+            if r1_loading_poses is not None:
+                self.r1_loading_x = r1_loading_poses[0]
+                self.r1_loading_y = r1_loading_poses[1]
         # print("self.loading_x",self.loading_x,"self.loading_y",self.loading_y)
             # else:
             #     self.initial_positions = [0,0]
@@ -263,8 +267,13 @@ class Env(EnvBasePB):
         bodies_to_remove = [self.rectangle_id1, self.rectangle_id2]
         
         # random_0_10=random.uniform(0,10),random.uniform(0,10),self.z_position
-        random_0_10=[2,1,0.031]
-        initial_random_0_10=[0,0,0.031]
+
+        if self.args.randomness==4:
+            random_0_10=[self.r1_loading_x,self.r1_loading_y,0.031]
+            initial_random_0_10=[0,0,0.031]
+
+        else:
+            random_0_10=random.uniform(0,10),random.uniform(0,10),self.z_position
         # print("random_0_10",random_0_10)
 
         for Robot in self.robots:
@@ -304,10 +313,12 @@ class Env(EnvBasePB):
                 self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
                 self.external_goals_states.append(self.external_goal_state)
                 self.external_goals_states_with_IDx.append((Robot,self.external_goal_state))
+        
         elif self.args.num_robots ==2:
             
             # synchoniser_value=np.random.uniform(1.5, 2.5)
             synchoniser_value=2.5
+            # synchoniser_value=1.2
             if self.args.generalise:
                 goal_offset_cross=np.random.uniform(7.0, 8.0)
                 
@@ -328,7 +339,8 @@ class Env(EnvBasePB):
                 # self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*7.5),(self.robots[1],self.robot_goal_synchroniser*-7.5)]
                 
                 if self.args.randomness==4:
-                    self.robottogoal_angles=[(self.robots[0],18),(self.robots[1],-18)]
+                    # self.robottogoal_angles=[(self.robots[0],18),(self.robots[1],-18)]
+                    self.robottogoal_angles=[(self.robots[0],8.64),(self.robots[1],-8.64)]
                 else:
                     self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*goal_offset),(self.robots[1],self.robot_goal_synchroniser*-goal_offset)]
                 
@@ -344,8 +356,8 @@ class Env(EnvBasePB):
             elif self.args.randomness==3:
                 self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.choice([-1,1]),list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
             elif self.args.randomness==4:
-                self.external_robots_pos=[(self.robots[0],list((random_0_10))),(self.robots[1],[list(initial_random_0_10)[0]+self.loading_x,list(initial_random_0_10)[1]+self.loading_y,self.z_position])]
-                self.initial_robots_pos=[(self.robots[0],list((initial_random_0_10))),(self.robots[1],[list(initial_random_0_10)[0],list(initial_random_0_10)[1]+2.5,self.z_position])]
+                self.external_robots_pos=[(self.robots[0],list((random_0_10))),(self.robots[1],[list(initial_random_0_10)[0]+self.r2_loading_x,list(initial_random_0_10)[1]+self.r2_loading_y,self.z_position])]
+                self.initial_robots_pos=[(self.robots[0],list((initial_random_0_10))),(self.robots[1],[list(initial_random_0_10)[0],list(initial_random_0_10)[1]+1.2,self.z_position])]
             # self.external_robots_pos=[(self.robots[0],[0,0,self.z_position]),(self.robots[1],[-2,-1.5,self.z_position])]
             # print("list(random_0_10)[1]-2",list(random_0_10)[1]-2)
                 # print("self.external_robots_pos,self.initial_robots_pos",self.external_robots_pos,self.initial_robots_pos)
@@ -463,7 +475,8 @@ class Env(EnvBasePB):
             Robot.set_external_goals_state(self.external_goals_states_with_IDx)
             Robot.set_all_goal_poses(self.Goals_pos)
             Robot.set_external_robots_pos(self.external_robots_pos)
-            Robot.set_initial_robots_pos(self.initial_robots_pos)
+            if self.args.randomness==4:
+                Robot.set_initial_robots_pos(self.initial_robots_pos)
             Robot.set_robottogoal_angle(self.robottogoal_angles)
             Robot.set_wall1_corners(self.wall1_corners)
             Robot.set_wall1_corners(self.wall2_corners)
@@ -734,7 +747,8 @@ class Env(EnvBasePB):
             Robot.set_all_goal_poses(self.Goals_pos)
             Robot.set_robottogoal_angle(self.robottogoal_angles)
             Robot.set_external_robots_pos(self.external_robots_pos)
-            Robot.set_initial_robots_pos(self.initial_robots_pos)
+            if self.args.randomness==4:
+                Robot.set_initial_robots_pos(self.initial_robots_pos)
             if self.args.obstacle_avoidance:
                 Robot.set_obstacles(self.obstacles)
 
@@ -1315,12 +1329,42 @@ class Env(EnvBasePB):
                 # x_min[i]:x_max[i],
                 # y_min[i]:y_max[i],] = heightmap_images[i]
 
+
                 if heightmap_images[i].shape == (80, 80, 3):
-                    global_map_image[
+                    target_slice = global_map_image[
                         x_min[i]:x_max[i],
-                        y_min[i]:y_max[i],:] = heightmap_images[i]
+                        y_min[i]:y_max[i],
+                        :
+                    ]
+
+                    h_img, w_img, _ = heightmap_images[i].shape
+                    h_tgt, w_tgt, _ = target_slice.shape
+
+                    # Take minimum common shape
+                    h_common = min(h_img, h_tgt)
+                    w_common = min(w_img, w_tgt)
+
+                    # print("GM target:", target_slice.shape, "IMG:", heightmap_images[i].shape)
+
+                    global_map_image[
+                        x_min[i]:x_min[i]+h_common,
+                        y_min[i]:y_min[i]+w_common,
+                        :
+                    ] = heightmap_images[i][:h_common, :w_common, :]
+
                 else:
                     print("Skipping assignment due to shape mismatch.")
+
+
+                # if heightmap_images[i].shape == (80, 80, 3):
+                #     print("GM",global_map_image[
+                #         x_min[i]:x_max[i],
+                #         y_min[i]:y_max[i],:].shape,heightmap_images[i].shape)
+                #     global_map_image[
+                #         x_min[i]:x_max[i],
+                #         y_min[i]:y_max[i],:] = heightmap_images[i]
+                # else:
+                #     print("Skipping assignment due to shape mismatch.")
 
 
                 # # Calculate padding
@@ -1723,8 +1767,14 @@ class Env(EnvBasePB):
 
             # Overlay the obstacles on the local heightmap
             obstacle_indices = np.where(local_region == 1.0)
+            # for f, g in zip(obstacle_indices[0], obstacle_indices[1]):
+            #     heightmap_image[f, g] = (0, 0, 255)  # Red color for obstacles
+            h, w = heightmap_image.shape[:2]
+
             for f, g in zip(obstacle_indices[0], obstacle_indices[1]):
-                heightmap_image[f, g] = (0, 0, 255)  # Red color for obstacles
+                if f < h and g < w:  # Ensure index is within bounds
+                    heightmap_image[f, g] = (0, 0, 255)  # Red color for obstacles
+
 
             heightmap_images.append(heightmap_image)
 

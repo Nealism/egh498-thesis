@@ -665,12 +665,12 @@ class Env(EnvBasePB):
                     # Assuming there's only one value in the angles list for simplicity
                     self.robot_own_pos = own_pos
                     break
-
-            for robot, initial_pos in self.initial_robots_pos:
-                if robot == self:
-                    # Assuming there's only one value in the angles list for simplicity
-                    self.initial_pos = initial_pos
-                    break
+            if self.args.randomness==4:
+                for robot, initial_pos in self.initial_robots_pos:
+                    if robot == self:
+                        # Assuming there's only one value in the angles list for simplicity
+                        self.initial_pos = initial_pos
+                        break
                 # else:
                 #     # If the robot_name is not found, handle it accordingly
                 #     print(f"Robot {self} not found in pos.")
@@ -691,9 +691,9 @@ class Env(EnvBasePB):
         
         for robot,r_position in self.external_robots_pos:
             self.external_robots_states.append(r_position)
-
-        for robot,i_position in self.initial_robots_pos:
-            self.initial_robots_states.append(i_position)
+        if self.args.randomness==4:
+            for robot,i_position in self.initial_robots_pos:
+                self.initial_robots_states.append(i_position)
         # print("sdfsbdfkhfdksbdfasdkb",self.external_robots_states,self.initial_robots_pos)
         self.mid_point_of_goals=self.calculate_midpoint(self.external_goals_states[0],self.external_goals_states[-1])
         # self.mid_point_of_goals=(self.mid_point_of_goals[0],self.mid_point_of_goals[1],self.mid_point_of_goals[2])
@@ -1927,6 +1927,9 @@ class Env(EnvBasePB):
         clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.5, 0.75)
         clipped_angular_vel_command=np.clip(self.applied_actions[1], -0.75, 0.75)
 
+        # clipped_linear_vel_command=np.clip(self.applied_actions[0], -0.001, 0.001)
+        # clipped_angular_vel_command=np.clip(self.applied_actions[1], -0.00, 0.00)
+        
         self.clipped_applied_actions=[clipped_linear_vel_command,clipped_angular_vel_command]
 
         # # print("clipped_applied_actions",self.clipped_applied_actions,self)
