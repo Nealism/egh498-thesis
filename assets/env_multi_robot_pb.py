@@ -317,8 +317,8 @@ class Env(EnvBasePB):
         elif self.args.num_robots ==2:
             
             # synchoniser_value=np.random.uniform(1.5, 2.5)
-            synchoniser_value=2.5
-            # synchoniser_value=1.2
+            # synchoniser_value=2.5
+            synchoniser_value=1.2
             if self.args.generalise:
                 goal_offset_cross=np.random.uniform(7.0, 8.0)
                 
@@ -339,8 +339,8 @@ class Env(EnvBasePB):
                 # self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*7.5),(self.robots[1],self.robot_goal_synchroniser*-7.5)]
                 
                 if self.args.randomness==4:
-                    # self.robottogoal_angles=[(self.robots[0],18),(self.robots[1],-18)]
-                    self.robottogoal_angles=[(self.robots[0],8.64),(self.robots[1],-8.64)]
+                    self.robottogoal_angles=[(self.robots[0],18),(self.robots[1],-18)]
+                    # self.robottogoal_angles=[(self.robots[0],8.64),(self.robots[1],-8.64)]
                 else:
                     self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*goal_offset),(self.robots[1],self.robot_goal_synchroniser*-goal_offset)]
                 
@@ -357,7 +357,7 @@ class Env(EnvBasePB):
                 self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.choice([-1,1]),list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
             elif self.args.randomness==4:
                 self.external_robots_pos=[(self.robots[0],list((random_0_10))),(self.robots[1],[list(initial_random_0_10)[0]+self.r2_loading_x,list(initial_random_0_10)[1]+self.r2_loading_y,self.z_position])]
-                self.initial_robots_pos=[(self.robots[0],list((initial_random_0_10))),(self.robots[1],[list(initial_random_0_10)[0],list(initial_random_0_10)[1]+1.2,self.z_position])]
+                self.initial_robots_pos=[(self.robots[0],list((initial_random_0_10))),(self.robots[1],[list(initial_random_0_10)[0],list(initial_random_0_10)[1]+synchoniser_value,self.z_position])]
             # self.external_robots_pos=[(self.robots[0],[0,0,self.z_position]),(self.robots[1],[-2,-1.5,self.z_position])]
             # print("list(random_0_10)[1]-2",list(random_0_10)[1]-2)
                 # print("self.external_robots_pos,self.initial_robots_pos",self.external_robots_pos,self.initial_robots_pos)

@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 import matplotlib.transforms as transforms
+# import numpy as np
 from itertools import product
 home = str(Path.home())
 
@@ -33,12 +34,15 @@ elif args.home:
 else:
     path_home = "/scratch3/" + home.split("/")[-1]
 
+
 if args.home:
     path_home += "/behaviour_rl/" +  args.exp + "/"
+
 else:
     path_home += "/results/" + args.env + "/" + args.exp + "/"
 
 if args.folder == "":
+    # Get latest experiment (eg: latest model inside test folder)
     folders = [folder.split("/")[-2] for folder in glob.glob(path_home + "*/")]
     latest_folder = "1900_01_01_01_01_01"
     latest_date_key = time.strptime(latest_folder, "%Y_%m_%d_%H_%M_%S")
@@ -53,44 +57,80 @@ else:
 PATH = path_home + latest_folder
 
 Env, args = default_arguments.get_env(args)   
-args.render = False
+args.render = True
+
+# args.render = False
+# if args.figure:
+#     args.render = False
 args.record_sim = False
 
+env = Env(PATH=PATH, args=args)
+# # print("chd");exit()
+# x_range = np.linspace(1, 7, num=7)       # 7 values: 1.0, 2.0, ..., 7.0
+# y_range = np.linspace(1.2, 2.5, num=6)   # 6 values: 1.2, 1.48, ..., 2.5
+# loading_poses=[[0,0]]
+
+
+# for x, y in product(x_range, y_range):
+#     env = Env(PATH=PATH, args=args)
+#     env.reset(loading_poses=[[x, y]])
+
+
+
+
+
+
+
+
 if args.jit_model:
+    # model_mu=torch.load("Saved_models/JIT_models/mu_net.jit")
+    # model_z=torch.load("Saved_models/JIT_models/z_net.jit")
     model_mu=torch.load("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/FC/mu_net.jit")
     model_z=torch.load("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/FC/z_net.jit")
+    
+    
 else:
-    pol = torch.load(PATH + "/model.pt")
 
+    pol = torch.load(PATH + "/model.pt")
+# checkpoint = pol
+# pol = checkpoint['model']
 start_time=time.time()
 
-# Initialize buffers
+# if args.num_robots>0:
+
 r1_buffer_linear_action=[]
 r1_buffer_angular_action=[]
+
 r1_buffer_ego_pos_x_obs=[]
 r1_buffer_ego_pos_y_obs=[]
+
 r1_buffer_roll_obs=[]
 r1_buffer_pitch_obs=[]
+
 r1_buffer_linear_obs=[]
 r1_buffer_angular_obs=[]
+
 buffer_time=[]
+
 r1_poses_x=[]
 r1_poses_y=[]
-
-if args.heterogeneous or args.titanheads:
-    r1_buffer_lateral_action=[]
 
 if args.num_robots==2:
     r2_buffer_linear_action=[]
     r2_buffer_angular_action=[]
+
     r2_buffer_ego_pos_x_obs=[]
     r2_buffer_ego_pos_y_obs=[]
+
     r2_buffer_roll_obs=[]
     r2_buffer_pitch_obs=[]
+
     r2_buffer_linear_obs=[]
     r2_buffer_angular_obs=[]
+
     r2_poses_x=[]
     r2_poses_y=[]
+
     action_per_second=[]
     actionr1x_per_second=[]
     actionr1y_per_second=[]
@@ -101,484 +141,2076 @@ if args.num_robots==2:
     if args.heterogeneous or args.titanheads:
         r2_buffer_lateral_action=[]
 
-def run(args): 
-    # p=2
-    # q=0.6
 
+def run(args,env): 
 
-    # Conservative approach - use the larger dimension (length) for safety
-    min_distance = 1.2 + 0.5  # Robot length + safety buffer = 1.7m
-
-    # More precise approach - diagonal distance
-    robot_diagonal = np.sqrt(1.2**2 + 0.78**2)  # ≈ 1.426m
-    min_distance = robot_diagonal + 0.3  # Add safety buffer = ~1.726m
-
-    # Fixed obstacle and goal positions
-    start_A = [0, 0]
-    start_B = [0, 1.2]
-    goal_A = [8, 1.2]
-    goal_B = [8, 0]
-    gap_center = [3.8,0.6]  # Fixed gap coordinate
     
-    # Calculate obstacle boundaries based on fixed positions
-    mid_x = gap_center[0]
-    mid_y = gap_center[1]
-    gap = 0.85
-    half_gap = gap / 2
-    obs_height = 0.75
     
-    top_y_bottom = mid_y + half_gap 
-    top_y_top = top_y_bottom + obs_height
-    bot_y_top = mid_y - half_gap
-    bot_y_bottom = bot_y_top - obs_height 
-    horizontal_length = 0.1
     
-    # Obstacle boundaries
-    obs_x_min = mid_x - horizontal_length
-    obs_x_max = mid_x + horizontal_length
-    upper_obs_y_min = top_y_bottom
-    upper_obs_y_max = top_y_top
-    lower_obs_y_min = bot_y_bottom
-    lower_obs_y_max = bot_y_top
+    n=0
+    counting_step=0
+    # print(pol)
+
+    obs = env.reset()
+    
+    if env.args.heterogeneous or env.args.titanheads:
+        # if ac_size==(2,3):
+        if "titan" in str(env.robots[0]):
+            # print("O_before",len(o[0]),o)
+            obs[0] = np.insert(obs[0], 0, 0)
+            obs[1] = np.insert(obs[1], 0, 1)
+            # print("O_after",len(obs[0]),o)
+        # elif ac_size==(3,2):
+        elif "spot" in str(env.robots[0]):
+            # print("O_before",len(obs[0]),o)
+            obs[0] = np.insert(obs[0], 0, 1)
+            obs[1] = np.insert(obs[1], 0, 0)
+    
+    # print("ob_reset",obs,len(obs[0]),len(obs[1]))
+    if args.use_perception:
+        im = env.get_image()
+        # print(im,type(im),im[0][0][1].shape)
+    # obs=[[obs[0],obs[0]]]
+    # im=[im[0],im[0]]
+    # obs=obs[0][0]
+    # im=im[0]
+    # print("im",im,im[0],im.shape)
+    # print("OBS",obs,np.array(obs).shape)
+
+
+    # print(pol)
+    time_saving=[]
+    action_saving1=[]
+    action_saving2=[]
+
+    # model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
+    # traced_script_module1 = torch.jit.script(model1)
+    # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
+    # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_simul.jit")
+
+    # model2 = copy.deepcopy(pol.pi.z_net).to('cpu')
+    # traced_script_module2 = torch.jit.script(model2)
+    # # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
+    # traced_script_module2.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/z_net_simul.jit")
+
+    # model3 = copy.deepcopy(pol.v.v_net).to('cpu')
+    # traced_script_module3 = torch.jit.script(model3)
+    # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
+    # traced_script_module3.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/v_net_simul.jit")
+
+    # model4 = copy.deepcopy(pol.v.z_net).to('cpu')
+    # traced_script_module4 = torch.jit.script(model4)
+    # # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
+    # traced_script_module4.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/vz_net_simul.jit")
+
+
+    # print("traced_script_module1",traced_script_module1)
+    # print("traced_script_module2",traced_script_module2)
+    st=time.time()
+    action_saving1=[]
+    action_saving2=[]
+    save_time=18
+    robot1_stop_duration = np.random.uniform(0, 6)  # Random time between 1-3 seconds for robot 1
+        # robot1_stop_duration = np.random.uniform(3.5, 4)  # Random time between 1-3 seconds for robot 2
+    robot2_stop_duration = np.random.uniform(0, 6)  # Random time between 1-3 seconds for robot 2
     
 
-    ##for quick ccheck
-    # for g in np.arange(0.53,0.54, 0.01):
-    #     for h in np.arange(0.69, 0.7, 0.01):
-    # Collect ALL arrow data before plotting
-    
-    ### For Stopping Point Detection
-    # for g in np.arange(0.45,0.7, 0.01):
-    #     for h in np.arange(0.55, 0.75, 0.01):
+    while True:
+        print("POSES",obs)
+        # print("SP",pol.pi.std_spot, "T", pol.pi.std_titan)
+
+        # print(len(im))
+        # print(robot1_stop_duration,robot2_stop_duration)
+        current_time = env.steps*1/10
+        # Initialize random stop durations for each robot
+        
+        # print(env)
+        # if  current_time < 100:
+        # # if current_time > 3 and current_time < 8:
+        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+        #     action[0] = [0, 0]  # Robot 1 stops
+        #     action[1] = [0, 0]  # Robot 1 stops
+
+        # ##CLOSECALL with forward behaviour do need to code, only run 2 robot side by side withing 1m distance between them
+        # ###____GAP_ALIGNMENT_________
+        # if  current_time < 1.5:
+        # # if current_time > 3 and current_time < 8:
+        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+        #     action[0] = [0.75,0, 0.2]  # Robot 1 stops
+        #     action[1] = [0.75,0, -0.2]  # Robot 1 stops
 
 
-    # p=2
-    # q=0.6
-    # g=-1.5
-    # h=0.6
-    ## For Regular 1.2m 
-    for p in np.arange(0,6, 0.5):
-        for q in np.arange(0, 1.5, 0.3):
-            all_arrows_data = []
-            for g in np.arange(-2,6, 0.2):
-                for h in np.arange(0, 1.4, 0.2):
+        # # #____Cooperative_Turn_________Attempt_Only
+        # if  current_time < 2:
+        # # if current_time > 3 and current_time < 8:
+        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+        #     action[0] = [0.1, -0.2]  # Robot 1 stops
+        #     # action[1] = [0.8, -0.2]  # Robot 1 stops
 
 
-    # ## For Observerd Velocity Based Vector Difference Check
-    # for r in np.arange(-0.75,0.75, 0.25):
-    #     for s in np.arange(-0.75, 0.75, 0.25):
+        # # # ##__Cooperative_Backward
+        # if current_time > 4 and current_time < 9:
+        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+        #     # print("action",action)
+        #     # action[1] = [-0.2, 0.0, 0.0]  # Robot 1 moves backward
+        #     #action[1] = [0.0, -0.075, 0.0]  # Robot 1 moves backward
+        #     action[0] = [-0.2, 0.0]  # Robot 1 moves backward
+        #     # action[0] = [-0.2, 0.0,0.0]  # Robot 1 moves backward
+
+
+        # # ##__LATERAL SIDE SWIPE
+        if current_time > 3 and current_time < 8:
+            action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            # print("action",action)
+            # action[1] = [-0.2, 0.0, 0.0]  # Robot 1 moves backward
+            action[1] = [0.0, -0.075, 0.0]  # Robot 1 moves Lateral
+            # action[0] = [-0.2, 0.0]  # Robot 1 moves backward
+            # action[0] = [-0.2, 0.0,0.0]  # Robot 1 moves backward
+        
+
+
+        # ########__GIVEWAY__EXTENTION_5s
+        # if current_time > 3 and current_time < 8:
+        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+        #     # action[0] = [-0.2, 0.0,0.0]  # Robot 1 stops
+        #     # action[0] = [0.0, 0.0]  # Robot 1 stops
+        #     action[0] = [0.0, 0.0,0.0]  # Robot 1 stops
+        
+
+
+        # elif current_time > 3 and current_time < 5:
+        #     action[0] = [0, 0]  # Robot 1 stops
+        #     action[1] = [0, 0]  # Robot 1 stops
+        # elif current_time > 8 and current_time < 10:
+        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+        #     # action=[[-1,0],[-1,0]]
+        
+        ####___RULE_BASED_TEST______
+        # N=80
+        # mid_x = N // 2
+        # if np.any(im[0][0][:, mid_x:N] == 1):
+        #     print("KOMOILLAA")
+        # if current_time <1:
+        #     # print(im.shape)
+        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+        #     # action = [[0, 0], [0, 0]]  # Default both robots to stop
+        #     action = [[-0.2, 0], [-0.2, 0]]  # Default both robots to stop
+        # #     # action=[[-1,0],[-1,0]]
+        # #Second condition: Stop robots individually for a random time after 2 seconds
+        # if current_time < 0 + robot1_stop_duration or current_time < 2 + robot2_stop_duration:
+        #     # action = [[0, 0], [0, 0]]  # Default both robots to stop
+        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
             
-    #         for t in np.arange(-0.75,0.75, 0.25):
-    #             for u in np.arange(-0.75, 0.75, 0.25):
-                    # Check if robots would overlap
-                    distance = np.sqrt((g - p)**2 + (h - q)**2)
-                    min_safe_distance = 1.2  # 1.2 + 0.5 safety buffer
-                    
-                    if distance < min_safe_distance:
-                        continue  # Skip this position combination
-
-                    # Check robot-obstacle collision
-                    robot_half_length = 1.2 / 2  # 0.6
-                    robot_half_width = 0.78 / 2  # 0.39
-                    # safety_buffer = 0.1
-                    safety_buffer = 0
-                    
-                    # Robot B's boundaries
-                    robot_x_min = g - robot_half_length - safety_buffer
-                    robot_x_max = g + robot_half_length + safety_buffer
-                    robot_y_min = h - robot_half_width - safety_buffer
-                    robot_y_max = h + robot_half_width + safety_buffer
-                    
-                    # Check if robot overlaps with upper obstacle
-                    upper_overlap = (robot_x_min < obs_x_max and robot_x_max > obs_x_min and
-                                robot_y_min < upper_obs_y_max and robot_y_max > upper_obs_y_min)
-                    
-                    # Check if robot overlaps with lower obstacle
-                    lower_overlap = (robot_x_min < obs_x_max and robot_x_max > obs_x_min and
-                                robot_y_min < lower_obs_y_max and robot_y_max > lower_obs_y_min)
-                    
-                    if upper_overlap or lower_overlap:
-                        continue  # Skip this position
-
-
-                    print("AAALLCHECKX",p,q,g,h)
-                    env = Env(PATH=PATH, args=args)
-                    env.reset(r1_loading_poses=[p,q],r2_loading_poses=[g,h])
+        #     action_rl1 = pol.step(torch.as_tensor(np.array(obs[0]), dtype=torch.float32), torch.as_tensor(im[0], dtype=torch.float32), stochastic=False)[0]
             
-                    n=0
-                    counting_step=0
-                    obs = env.reset()
-                    # obs = [np.array([obs[0][0],obs[0][1],0,0,r,t]),np.array([obs[1][0],obs[1][1],0,0,s,u])]
+        #     # print(action_rl)
+        #     # Check if robot 1 should stop or continue moving
+        #     if current_time < 0 + robot1_stop_duration:
+        #         action[0] = [0, 0]  # Robot 1 stops
+        #     else:
+        #         action[0] = action_rl1  # Robot 1 resumes movement
+            
+        #     if args.num_robots==2:
+        #         action_rl2 = pol.step(torch.as_tensor(np.array(obs[1]), dtype=torch.float32), torch.as_tensor(im[1], dtype=torch.float32), stochastic=False)[0]
+        #         # Check if robot 2 should stop or continue moving
+        #         if current_time < 0 + robot2_stop_duration:
+        #             action[1] = [0, 0]  # Robot 2 stops
+        #         else:
+        #             action[1] = action_rl2  # Robot 2 resumes movement
+        else:
+            # print("obs",len(obs),obs)
+            #------------------------------------------------------------
 
-                    if env.args.heterogeneous or env.args.titanheads:
-                        if "titan" in str(env.robots[0]):
-                            obs[0] = np.insert(obs[0], 0, 0)
-                            obs[1] = np.insert(obs[1], 0, 1)
-                        elif "spot" in str(env.robots[0]):
-                            obs[0] = np.insert(obs[0], 0, 1)
-                            obs[1] = np.insert(obs[1], 0, 0)
+
+
+
+            if args.use_perception and not args.jit_model:
+                # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
+                if args.heterogeneous or args.titanheads:
+                    a_spot,a_titan, v, logp_spot, logp_titan =pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)
+                else:
+                    action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+                # print(a_spot,a_titan,len(a_spot),len(a_titan))
+                # print(pol)
+
+                    # r1_clipped_linear_vel_command=np.clip(action[0][0], -0.75, 0.75)
+                    # r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
+                    # r2_clipped_linear_vel_command=np.clip(action[1][0], -0.75, 0.75)
+                    # r2_clipped_angular_vel_command=np.clip(action[1][1], -0.75, 0.75)
+
+
+                if env.args.heterogeneous or env.args.titanheads:
+                    # if ac_size==(2,3):
+                    if "titan" in str(env.robots[0]):
+                        action=a_titan[0],a_spot[1]
+                        logp=[logp_titan[0],logp_spot[1]]
+                    # elif ac_size==(3,2):
+                    elif "spot" in str(env.robots[0]):
+                        action=a_spot[0],a_titan[1]
+                    logp=[logp_spot[0],logp_titan[1]]
+
+
+        r1_clipped_linear_vel_command=np.clip(action[0][0], -0.75, 0.75)
+        r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
+        if env.args.heterogeneous or env.args.titanheads:
+            if env.robots[1].body_xyz[2] < 0.4 or (abs(np.array([env.robots[1].pitch, env.robots[1].roll])) > 0.8).any() or (np.array(env.robots[1].leg_contacts)).any():
+                # print("poregse---------------------")
+                r2_clipped_linear_vel_command=np.clip(action[1][0], -0.1, 0.5)
+                r2_clipped_lateral_vel_command=np.clip(action[1][1], -0.05, 0.05)
+                r2_clipped_angular_vel_command=np.clip(action[1][2], -0.5, 0.5)
+
+            else:
+                r2_clipped_linear_vel_command=np.clip(action[1][0], -0.3, 0.75)
+                r2_clipped_lateral_vel_command=np.clip(action[1][1], -0.3, 0.3)
+                r2_clipped_angular_vel_command=np.clip(action[1][2], -0.75, 0.75)
+        else:
+            r2_clipped_linear_vel_command=np.clip(action[1][0], -0.75, 0.75)
+            
+            r2_clipped_angular_vel_command=np.clip(action[1][1], -0.75, 0.75)
+
+        # r1_clipped_linear_vel_command=np.clip(action[0][0], -0.75, 0.75)
+        # # r1_clipped_linear_vel_command=np.clip(action[0][0], -0.001, 0.001)
+        # r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
+        # r2_clipped_linear_vel_command=np.clip(action[1][0], -0.75, 0.75)
+        # # r2_clipped_linear_vel_command=np.clip(action[1][0], -0.001, 0.001)
+        # r2_clipped_angular_vel_command=np.clip(action[1][1], -0.75, 0.75)
+
+        
+                
+                # actionr1x_per_second.append(action[0][0])
+                # actionr1y_per_second.append(action[0][1])
+                # print("auncti",actionr1x_per_second)
+
+
+
+
+
+            #------------------------------------------------------------        
+            # print(pol)
+            # if not args.titanheads or not args.heterogeneous:
+            #     action_rl1 = pol.step(torch.as_tensor(np.array(obs[0]), dtype=torch.float32), torch.as_tensor(im[0], dtype=torch.float32), stochastic=False)[0]
+            #     action[0] = action_rl1 
+                
+            #     if args.num_robots==2:
+            #         action_rl2 = pol.step(torch.as_tensor(np.array(obs[1]), dtype=torch.float32), torch.as_tensor(im[1], dtype=torch.float32), stochastic=False)[0]
+                
+                
+            #         action[1] = action_rl2
+
+        # elif args.use_perception and args.jit_model:
+        #     a_r1=torch.as_tensor(np.array([obs[0]]), dtype=torch.float32).unsqueeze(dim=0)
+        #     b_r1=model_z(torch.as_tensor(im[0], dtype=torch.float32))
+        #     # print(a_r1[0],"br1",b_r1)
+        #     # print(np.array(a_r1[0].detach().numpy()).shape,np.array(b_r1.detach().numpy()).shape)
+        #     concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
+        #     action_r1 = model_mu(concatenate_part_r1)
+
+        #     if args.num_robots==2:
+        #         a_r2=torch.as_tensor(np.array([obs[1]]), dtype=torch.float32).unsqueeze(dim=0)
+        #         b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
+        #         # print(a_r2[0],"br2",b_r2)
+        #         # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
+        #         concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
+        #         action_r2 = model_mu(concatenate_part_r2)
+        #         # print("ar1",action_r1,"ar2",action_r2)
+        # else:
+        #     action = pol.step(torch.tensor(np.array(obs).astype(np.float32)), stochastic=False)[0]
+        #     # print ("action_before", action,type(action))
+        # if not args.unclipped_vel and args.jit_model:
+        #     r1_clipped_linear_vel_command=np.clip(action_r1[0][0].detach().numpy(), -0.5, 1)
+        #     r1_clipped_angular_vel_command=np.clip(action_r1[0][1].detach().numpy(), -1.5, 1.5)
+        #     action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
+
+        #     if args.num_robots==2:
+        #         r2_clipped_linear_vel_command=np.clip(action_r2[0][0].detach().numpy(), -0.5, 1)
+        #         r2_clipped_angular_vel_command=np.clip(action_r2[0][1].detach().numpy(), -1.5, 1.5)
+
+        #         # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
+        #         # action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+        #         action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+        
+        # elif not args.unclipped_vel and not args.jit_model:
+        #     # print("action",action,action[0][0],action[0][1])
+        #     r1_clipped_linear_vel_command=np.clip(action[0][0], -0.5, 1)
+        #     r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
+        #     action_r=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
+            
+        #     if args.num_robots==2:
+
+        #         r2_clipped_linear_vel_command=np.clip(action[1][0], -0.5, 1)
+        #         r2_clipped_angular_vel_command=np.clip(action[1][1], -1.5, 1.5)
+
+        #         # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
+        #         action_r=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+        #     # print(action_r)
+        # # print ("action", action)#;exit()
+        # # start_time=time.time()
+        # # current_time=0
+        
+        # # time_saving.append(current_time)
+
+        # action=action_r
+        # print(action)
+        if env.args.Pretrained_cur:
+            # obs = MUL.reset()
+            # im = MUL.get_image()
+            model_mu=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/mu_net_simul.jit")
+            model_z=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/z_net_simul.jit")
+            if env.args.multi_titans or env.args.multi_spots:
+                a_r1=torch.as_tensor(np.array([obs[0]]), dtype=torch.float32).unsqueeze(dim=0)
+            elif env.args.heterogeneous:
+                a_r1=torch.as_tensor(np.array([obs[0][1:]]), dtype=torch.float32).unsqueeze(dim=0)
+            b_r1=model_z(torch.as_tensor(im[0], dtype=torch.float32))
+            # print(a_r1[0],"br1",b_r1)
+            # print(np.array(a_r1[0].detach().numpy()).shape,np.array(b_r1.detach().numpy()).shape)
+            concatenate_part_r1=torch.concat((a_r1[0],b_r1),-1)        
+            action_r1 = model_mu(concatenate_part_r1)
+
+            if env.args.num_robots==2:
+
+                if env.args.multi_titans or env.args.multi_spots:
+                    a_r2=torch.as_tensor(np.array([obs[1]]), dtype=torch.float32).unsqueeze(dim=0)
+                elif env.args.heterogeneous:
+                    a_r2=torch.as_tensor(np.array([obs[1][1:]]), dtype=torch.float32).unsqueeze(dim=0)
+                # a_r2=torch.as_tensor(np.array([o[1]]), dtype=torch.float32).unsqueeze(dim=0)
+                b_r2=model_z(torch.as_tensor(im[1], dtype=torch.float32))
+                # print(a_r2[0],"br2",b_r2)
+                # print(np.array(a_r2[0].detach().numpy()).shape,np.array(b_r2.detach().numpy()).shape)
+                concatenate_part_r2=torch.concat((a_r2[0],b_r2),-1)        
+                action_r2 = model_mu(concatenate_part_r2)
+                # print("ar1",action_r1,"ar2",action_r2)
+            
+            r1_clipped_linear_vel_command=np.clip(action_r1[0][0].detach().numpy(), -0.75, 0.75)
+            r1_clipped_angular_vel_command=np.clip(action_r1[0][1].detach().numpy(), -0.75, 0.75)
+            action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command]])
+
+            if env.args.num_robots==2:
+                r2_clipped_linear_vel_command=np.clip(action_r2[0][0].detach().numpy(), -0.75, 0.75)
+                r2_clipped_angular_vel_command=np.clip(action_r2[0][1].detach().numpy(), -0.75, 0.75)
+
+                # action=[[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]]
+                # action=np.array([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+                action_r=torch.tensor([[r1_clipped_linear_vel_command,r1_clipped_angular_vel_command],[r2_clipped_linear_vel_command,r2_clipped_angular_vel_command]])
+            # pol=torch.load("/home/kom018/behaviour_rl/Saved_models/Turtle_titan/choosen_models/E4r32G1E1_387_0.85_noised_best/2024_09_10_07_14_17/model.pt")
+            # sp_ac = pol.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            sp_ac=action_r
+            # print("sp_ac",sp_ac)
+        else: 
+            sp_ac=np.array([[0., 0.],[0., 0.]])
+        obs, _, done,termination, _ = env.step(action,sp_ac)
+
+
+        # print(obs[0],"obs?")
+        if args.use_perception:
+                im = env.get_image()
+                # print(im,type(im),im[0][0][1].shape)
+
+        if env.args.heterogeneous or env.args.titanheads:
+        # if ac_size==(2,3):
+            if "titan" in str(env.robots[0]):
+                # print("O_before",len(o[0]),o)
+                obs[0] = np.insert(obs[0], 0, 0)
+                obs[1] = np.insert(obs[1], 0, 1)
+                # print("O_after",len(obs[0]),o)
+            # elif ac_size==(3,2):
+            elif "spot" in str(env.robots[0]):
+                # print("O_before",len(obs[0]),o)
+                obs[0] = np.insert(obs[0], 0, 1)
+                obs[1] = np.insert(obs[1], 0, 0)
+        counting_step+=1
+        # action_saving1.append(action[0][0])
+        # action_saving2.append(action[0][1])
+        # accc1=pd.DataFrame(action_saving1)
+        # accc2=pd.DataFrame(action_saving2)
+        # accc = pd.concat([accc1, accc2], axis=1)
+        # # print(accc,type(accc))
+        # accc.to_csv("action_test.csv")
+        # current_time = time.time() - start_time
+        
+
+
+
+
+        print("LENOB",len(obs[0]),len(obs[1]))
+        # print(env.steps*1/10)
+        st=time.time()
+        buffer_time.append(current_time)
+
+        r1_buffer_linear_action.append(r1_clipped_linear_vel_command)
+        r1_buffer_angular_action.append(r1_clipped_angular_vel_command)
+
+        
+
+        r1_poses_x.append(env.robots_pos[0][0])
+        r1_poses_y.append(env.robots_pos[0][1])
+        # print("posss",[env.robots_pos[0][0],env.robots_pos[0][1]])
+
+        Goal1_x_list.append(env.Goals_pos[0][0])
+        Goal1_y_list.append(env.Goals_pos[0][1])
+
+        if env.args.heterogeneous or env.args.titanheads:
+            r1_buffer_ego_pos_x_obs.append(obs[0][1])
+            r1_buffer_ego_pos_y_obs.append(obs[0][2])
+
+            
+            r1_buffer_roll_obs.append(obs[0][3])
+            r1_buffer_pitch_obs.append(obs[0][4])
+
+
+            
+
+            r1_buffer_linear_obs.append(obs[0][5])
+            r1_buffer_angular_obs.append(obs[0][6])
+        else:
+            r1_buffer_ego_pos_x_obs.append(obs[0][0])
+            r1_buffer_ego_pos_y_obs.append(obs[0][1])
+
+            
+            r1_buffer_roll_obs.append(obs[0][2])
+            r1_buffer_pitch_obs.append(obs[0][3])
+
+
+            
+
+            r1_buffer_linear_obs.append(obs[0][4])
+            r1_buffer_angular_obs.append(obs[0][5])
+            # print("OBSERVER",obs[0][5],obs[0][6],r1_buffer_linear_obs)
+        
+
+        if args.num_robots==2:
+            r2_buffer_linear_action.append(r2_clipped_linear_vel_command)
+            r2_buffer_angular_action.append(r2_clipped_angular_vel_command)
+
+            
+
+            r2_poses_x.append(env.robots_pos[1][0])
+            r2_poses_y.append(env.robots_pos[1][1])
+
+            Goal2_x_list.append(env.Goals_pos[1][0])
+            Goal2_y_list.append(env.Goals_pos[1][1])
+            if env.args.heterogeneous or env.args.titanheads:
+                r2_buffer_lateral_action.append(r2_clipped_lateral_vel_command)
+
+                r2_buffer_ego_pos_x_obs.append(obs[1][1])
+                r2_buffer_ego_pos_y_obs.append(obs[1][2])
+
+                r2_buffer_roll_obs.append(obs[1][3])
+                r2_buffer_pitch_obs.append(obs[1][4])
+
+                r2_buffer_linear_obs.append(obs[1][5])
+                r2_buffer_angular_obs.append(obs[1][6])
+
+            else:
+                r2_buffer_ego_pos_x_obs.append(obs[1][0])
+                r2_buffer_ego_pos_y_obs.append(obs[1][1])
+
+                r2_buffer_roll_obs.append(obs[1][2])
+                r2_buffer_pitch_obs.append(obs[1][3])
+
+                r2_buffer_linear_obs.append(obs[1][4])
+                r2_buffer_angular_obs.append(obs[1][5])
+        
+        
+        if args.figure and current_time>save_time:
+            
+            
+            
+            # # print("TIME",time.time()-t1,R3.buffer_time,"ac")
+            
+            # output_dir_occupancy ="/home/kom018/behaviour_rl/Saved_models/titan/L3r39G1E1/2024_07_23_02_22_51/R1\'s_Occupancy.png"
+            
+            # r1_occupancy_map=im[0, 0, :, :]
+
+            # # Create a new array for the modified occupancy map
+            # # Function to find connected components and mark edge cells
+            # # Function to find connected components and mark edge cells
+            # def mark_edge_cells(occupancy_map):
+            #     # Define a structure for connected components (8-connected neighborhood)
+            #     structure = generate_binary_structure(2, 1)
+                
+            #     # Label connected components
+            #     labeled_map, num_labels = label(occupancy_map, structure)
+                
+            #     # Find the unique labels (excluding background label 0)
+            #     unique_labels = np.unique(labeled_map)[1:]
+                
+            #     # Create a new array for the modified occupancy map
+            #     modified_occupancy_map = np.zeros_like(occupancy_map)
+                
+            #     # Iterate over each unique label (connected component)
+            #     for labela in unique_labels:
+            #         # Extract the mask for the current connected component
+            #         component_mask = (labeled_map == labela).astype(np.uint8)
                     
-                    print("ob_reset",obs)
-                    if args.use_perception:
-                        im = env.get_image()
-
-                    time_saving=[]
-                    action_saving1=[]
-                    action_saving2=[]
-                    st=time.time()
-                    save_time=00.00
-                    robot1_stop_duration = np.random.uniform(0, 6)
-                    robot2_stop_duration = np.random.uniform(0, 6)
+            #         # Find edge cells that are adjacent to unoccupied cells (0)
+            #         edge_mask = np.zeros_like(component_mask)
+            #         edge_mask[1:-1, 1:-1] = (component_mask[1:-1, 1:-1] > 0) & \
+            #                                 ((component_mask[:-2, 1:-1] == 0) | (component_mask[2:, 1:-1] == 0) | \
+            #                                 (component_mask[1:-1, :-2] == 0) | (component_mask[1:-1, 2:] == 0))
                     
-                    current_time = env.steps*1/10
+            #         # Mark edge cells as 2 in the modified map
+            #         modified_occupancy_map[edge_mask > 0] = 1
+                    
+            #     return modified_occupancy_map
 
-                    if args.use_perception and not args.jit_model:
-                        if args.heterogeneous or args.titanheads:
-                            a_spot,a_titan, v, logp_spot, logp_titan =pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)
-                        else:
-                            action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            # # Get the modified occupancy map
+            # r1_modified_occupancy_map = mark_edge_cells(r1_occupancy_map)
+            # # print(r1_modified_occupancy_map)
+            # # Plotting the modified occupancy map
+            # plt.figure(figsize=(30, 30))
+            # plt.imshow(r1_modified_occupancy_map, cmap='Reds', origin='upper')
+
+            # # Annotating the cells with thkeir values
+            # for i in range(r1_modified_occupancy_map.shape[0]):
+            #     for j in range(r1_modified_occupancy_map.shape[1]):
+            #         cell_value = int(r1_modified_occupancy_map[i, j])
+            #         color = 'Purple' if cell_value == 2 else 'white' if cell_value == 1 else 'black'
+            #         plt.text(j, i, cell_value, ha='center', va='center', color=color)
+
+            # # Customizing the plot
+            # plt.xticks(np.arange(r1_modified_occupancy_map.shape[1]))
+            # plt.yticks(np.arange(r1_modified_occupancy_map.shape[0]))
+            # plt.grid(True, which='both', color='black', linestyle='-', linewidth=0.5)
+            # plt.gca().set_xticks(np.arange(-0.5, r1_modified_occupancy_map.shape[1], 1), minor=True)
+            # plt.gca().set_yticks(np.arange(-0.5, r1_modified_occupancy_map.shape[0], 1), minor=True)
+            # plt.gca().grid(which='minor', color='black', linestyle='-', linewidth=0.5)
+            # plt.gca().tick_params(which='minor', size=0)
 
 
 
-                        r1_clipped_linear_vel_command=np.clip(action[0][0], -0.75, 0.75)
-                        r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
-                        r2_clipped_linear_vel_command=np.clip(action[1][0], -0.75, 0.75)
-                        r2_clipped_angular_vel_command=np.clip(action[1][1], -0.75, 0.75)
+            # # Save the plot to a file
+            # plt.savefig(output_dir_occupancy, bbox_inches='tight')
+
+            # if args.num_robots==2:
+            #     r2_output_dir_occupancy ="/home/kom018/behaviour_rl/Saved_models/titan/L3r39G1E1/2024_07_23_02_22_51/R2\'s_Occupancy.png"
+            
+            #     r2_occupancy_map=im[1, 0, :, :]
+
+            #     # Create a new array for the modified occupancy map
+                
+                
+            #     # Get the modified occupancy map
+            #     r2_modified_occupancy_map = mark_edge_cells(r2_occupancy_map)
+            #     # print(r2_modified_occupancy_map)
+            #     # Plotting the modified occupancy map
+            #     plt.figure(figsize=(30, 30))
+            #     plt.imshow(r2_modified_occupancy_map, cmap='oranges', origin='upper')
+
+            #     # Annotating the cells with thkeir values
+            #     for i in range(r2_modified_occupancy_map.shape[0]):
+            #         for j in range(r2_modified_occupancy_map.shape[1]):
+            #             cell_value = int(r2_modified_occupancy_map[i, j])
+            #             color = 'Purple' if cell_value == 2 else 'white' if cell_value == 1 else 'black'
+            #             plt.text(j, i, cell_value, ha='center', va='center', color=color)
+
+            #     # Customizing the plot
+            #     plt.xticks(np.arange(r2_modified_occupancy_map.shape[1]))
+            #     plt.yticks(np.arange(r2_modified_occupancy_map.shape[0]))
+            #     plt.grid(True, which='both', color='black', linestyle='-', linewidth=0.5)
+            #     plt.gca().set_xticks(np.arange(-0.5, r2_modified_occupancy_map.shape[1], 1), minor=True)
+            #     plt.gca().set_yticks(np.arange(-0.5, r2_modified_occupancy_map.shape[0], 1), minor=True)
+            #     plt.gca().grid(which='minor', color='black', linestyle='-', linewidth=0.5)
+            #     plt.gca().tick_params(which='minor', size=0)
+
+            #     # Save the plot to a file
+            #     plt.savefig(r2_output_dir_occupancy, bbox_inches='tight')
 
 
-                        if env.args.heterogeneous or env.args.titanheads:
-                            if "titan" in str(env.robots[0]):
-                                action=a_titan[0],a_spot[1]
-                                logp=[logp_titan[0],logp_spot[1]]
 
-                                r1_clipped_linear_vel_command=np.clip(action[0][0], -0.75, 0.75)
-                                r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
+            #     r_output_dir_occupancy ="/home/kom018/behaviour_rl/Saved_models/titan/L3r39G1E1/2024_07_23_02_22_51/Merged_Occupancy.png"
+            #     # Get the modified occupancy maps
+            #     modified_r1_occupancy_map = mark_edge_cells(r1_occupancy_map)
+            #     modified_r2_occupancy_map = mark_edge_cells(r2_occupancy_map)
 
-                                
-                            elif "spot" in str(env.robots[0]):
-                                action=a_spot[0],a_titan[1]
-                                logp=[logp_spot[0],logp_titan[1]]
+            #     # Create a figure with two subplots
+            #     fig, axes = plt.subplots(1, 2, figsize=(30, 15))
 
-                                if env.robots[0].body_xyz[2] < 0.4 or (abs(np.array([env.robots[0].pitch, env.robots[0].roll])) > 0.8).any() or (np.array(env.robots[0].leg_contacts)).any():
-                                    # print("poregse---------------------")
-                                    r2_clipped_linear_vel_command=np.clip(action[1][0], -0.1, 0.5)
-                                    r2_clipped_lateral_vel_command=np.clip(action[1][1], -0.05, 0.05)
-                                    r2_clipped_angular_vel_command=np.clip(action[1][2], -0.5, 0.5)
+            #     # Plotting the modified occupancy map for Robot 1
+            #     axes[0].imshow(modified_r1_occupancy_map, cmap='Reds', origin='upper')
+            #     axes[0].set_title("Robot 1 Occupancy Map")
+
+            #     for i in range(modified_r1_occupancy_map.shape[0]):
+            #         for j in range(modified_r1_occupancy_map.shape[1]):
+            #             cell_value = int(modified_r1_occupancy_map[i, j])
+            #             color = 'blue' if cell_value == 2 else 'red' if cell_value == 1 else 'black'
+            #             axes[0].text(j, i, cell_value, ha='center', va='center', color=color)
+
+            #     # Customizing the subplot for Robot 1
+            #     axes[0].set_xticks(np.arange(modified_r1_occupancy_map.shape[1]))
+            #     axes[0].set_yticks(np.arange(modified_r1_occupancy_map.shape[0]))
+            #     axes[0].grid(True, which='both', color='black', linestyle='-', linewidth=0.5)
+            #     axes[0].set_xticks(np.arange(-0.5, modified_r1_occupancy_map.shape[1], 1), minor=True)
+            #     axes[0].set_yticks(np.arange(-0.5, modified_r1_occupancy_map.shape[0], 1), minor=True)
+            #     axes[0].grid(which='minor', color='black', linestyle='-', linewidth=0.5)
+            #     axes[0].tick_params(which='minor', size=0)
+
+            #     # Plotting the modified occupancy map for Robot 2
+            #     axes[1].imshow(modified_r2_occupancy_map, cmap='oranges', origin='upper')
+            #     axes[1].set_title("Robot 2 Occupancy Map")
+
+            #     for i in range(modified_r2_occupancy_map.shape[0]):
+            #         for j in range(modified_r2_occupancy_map.shape[1]):
+            #             cell_value = int(modified_r2_occupancy_map[i, j])
+            #             color = 'blue' if cell_value == 2 else 'red' if cell_value == 1 else 'black'
+            #             axes[1].text(j, i, cell_value, ha='center', va='center', color=color)
+
+            #     # Customizing the subplot for Robot 2
+            #     axes[1].set_xticks(np.arange(modified_r2_occupancy_map.shape[1]))
+            #     axes[1].set_yticks(np.arange(modified_r2_occupancy_map.shape[0]))
+            #     axes[1].grid(True, which='both', color='black', linestyle='-', linewidth=0.5)
+            #     axes[1].set_xticks(np.arange(-0.5, modified_r2_occupancy_map.shape[1], 1), minor=True)
+            #     axes[1].set_yticks(np.arange(-0.5, modified_r2_occupancy_map.shape[0], 1), minor=True)
+            #     axes[1].grid(which='minor', color='black', linestyle='-', linewidth=0.5)
+            #     axes[1].tick_params(which='minor', size=0)
+
+            #     plt.savefig(r_output_dir_occupancy, bbox_inches='tight')
+            # # plt.savefig(os.path.join(output_dir, 'R1\'s_Occupancy.png'))
+            # # output_dir ="/refarm/src/multi_robot_rl/scripts"
+
+            # # if np.array(R3.buffer_time).shape != np.array(R3.buffer_linear_obs).shape:
+            # #     R3.buffer_linear_obs = np.zeros_like(R3.buffer_time)
+
+            # # output_dir ="/refarm/src/multi_robot_rl/scripts"
+            # # print("R3.buffer_linear_obs",R3.buffer_linear_obs,R3.buffer_time)
+
+            # output_dir ="/home/kom018/behaviour_rl/Saved_models/titan/L3r39G1E1/2024_07_23_02_22_51"
+
+            # plt.figure()
+            # plt.plot(buffer_time, r1_buffer_ego_pos_x_obs, label='Robot1\'s Ego Pos X')
+            # plt.xlabel('Time (s)')
+            # plt.ylabel('Robot1\'s Ego Pos X')
+            # plt.title('Robot1\'s Ego Pos X over Time')
+            # plt.legend()
+            # plt.grid(True)
+            # plt.savefig(os.path.join(output_dir, 'Robot1\'s_Ego_Pos_X_plot.png'))
+
+            # plt.figure()
+            # plt.plot(buffer_time, r1_buffer_ego_pos_y_obs, label='Robot1\'s Ego Pos Y')
+            # plt.xlabel('Time (s)')
+            # plt.ylabel('Robot1\'s Ego Pos Y')
+            # plt.title('Robot1\'s Ego Pos Y over Time')
+            # plt.legend()
+            # plt.grid(True)
+            # plt.savefig(os.path.join(output_dir, 'Robot1\'s_Ego_Pos_Y_plot.png'))
+
+
+            # plt.figure()
+            # plt.plot(buffer_time, r1_buffer_roll_obs, label='Robot1\'s Roll')
+            # plt.xlabel('Time (s)')
+            # plt.ylabel('Robot1\'s Roll')
+            # plt.title('Robot1\'s Roll over Time')
+            # plt.legend()
+            # plt.grid(True)
+            # plt.savefig(os.path.join(output_dir, 'Robot1\'s_Roll_plot.png'))
+
+
+            # plt.figure()
+            # plt.plot(buffer_time, r1_buffer_pitch_obs, label='Robot1\'s Pitch')
+            # plt.xlabel('Time (s)')
+            # plt.ylabel('Robot1\'s Pitch')
+            # plt.title('Robot1\'s Pitch over Time')
+            # plt.legend()
+            # plt.grid(True)
+            # plt.savefig(os.path.join(output_dir, 'Robot1\'s_Pitch_plot.png'))
+
+
+            # plt.figure()
+            # plt.plot(buffer_time, r1_buffer_linear_obs, label='Robot1\'s Linear Velocity')
+            # plt.xlabel('Time (s)')
+            # plt.ylabel('Robot1\'s Linear Velocity')
+            # plt.title('Robot1\'s Linear Velocity over Time')
+            # plt.legend()
+            # plt.grid(True)
+            # plt.savefig(os.path.join(output_dir, 'R1\'s_Linear_Velocity_plot.png'))
+
+            # # Plot the angular velocity actions over time
+            # plt.figure()
+            # plt.plot(buffer_time, r1_buffer_angular_obs, label='Robot1\'s Angular Velocity')
+            # plt.xlabel('Time (s)')
+            # plt.ylabel('Robot1\'s Angular Velocity')
+            # plt.title('Robot1\'s Angular Velocity over Time')
+            # plt.legend()
+            # plt.grid(True)
+            # plt.savefig(os.path.join(output_dir, 'R1\'s_Angular_Velocity_plot.png'))
+
+            # plt.figure()
+            # plt.plot(buffer_time, r1_buffer_linear_action, label='Command Linear Velocity')
+            # plt.xlabel('Time (s)')
+            # plt.ylabel('Command Linear Velocity')
+            # plt.title('Robot1\'s Command Linear Velocity over Time')
+            # plt.legend()
+            # plt.grid(True)
+            # plt.savefig(os.path.join(output_dir, 'R1_Command_Linear_Velocity_plot.png'))
+
+            # # Plot the angular velocity actions over time
+            # plt.figure()
+            # plt.plot(buffer_time, r1_buffer_angular_action, label='Command Angular Velocity')
+            # plt.xlabel('Time (s)')
+            # plt.ylabel('Command Angular Velocity')
+            # plt.title('Robot1\'s Command Angular Velocity over Time')
+            # plt.legend()
+            # plt.grid(True)
+            # plt.savefig(os.path.join(output_dir, 'R1_Command_angular_velocity_plot.png'))
+
+
+
+            # # Plot the trajectory
+            # plt.figure(figsize=(10, 6))
+            # plt.plot(r1_poses_x, r1_poses_y, label='Trajectory', marker='o', markersize=5, linestyle='-')
+
+            # # Annotate with time points
+            # for i in range(0, len(buffer_time), 10):  # Annotate every 10th current_time step
+            #     plt.annotate(f't={buffer_time[i]:.1f}', (r1_poses_x[i], r1_poses_y[i]), textcoords="offset points", xytext=(10,-10), ha='center')
+
+            # # Labels and title
+            # plt.xlabel('X position')
+            # plt.ylabel('Y position')
+            # plt.title('Robot1 Trajectory Over current_time')
+            # plt.legend()
+            # plt.grid(True)
+            # plt.savefig(os.path.join(output_dir, 'R1_trajectory.png'))
+
+
+            # # # Save plot to a file
+            # # output_directory = 'plots'
+            # # os.makedirs(output_directory, exist_ok=True)
+            # # file_path = os.path.join(output_directory, 'robot_trajectory.png')
+            # # plt.savefig(file_path)
+
+            # data = {
+            # "Time": buffer_time,
+            # "Command Linear Velocity": r1_buffer_linear_action,
+            # "Command Angular Velocity": r1_buffer_angular_action,
+            # "Robot's Linear Velocity": r1_buffer_linear_obs,
+            # "Robot's Angular Velocity": r1_buffer_angular_obs
+            # }
+            # df = pd.DataFrame(data)
+            # csv_path = os.path.join(output_dir, 'r1_actions_data.csv')
+            # df.to_csv(csv_path, index=False)
+            # df = pd.DataFrame(r1_modified_occupancy_map)
+            # csv_path = os.path.join(output_dir, 'r1_occu.csv')
+            # df.to_csv(csv_path, index=False)
+
+            if args.num_robots==2:
+
+
+            #     plt.figure()
+            #     plt.plot(buffer_time, r2_buffer_ego_pos_x_obs, label='Robot2\'s Ego Pos X')
+            #     plt.xlabel('Time (s)')
+            #     plt.ylabel('Robot2\'s Ego Pos X')
+            #     plt.title('Robot2\'s Ego Pos X over Time')
+            #     plt.legend()
+            #     plt.grid(True)
+            #     plt.savefig(os.path.join(output_dir, 'Robot2\'s_Ego_Pos_X_plot.png'))
+
+            #     plt.figure()
+            #     plt.plot(buffer_time, r2_buffer_ego_pos_y_obs, label='Robot2\'s Ego Pos Y')
+            #     plt.xlabel('Time (s)')
+            #     plt.ylabel('Robot2\'s Ego Pos Y')
+            #     plt.title('Robot2\'s Ego Pos Y over Time')
+            #     plt.legend()
+            #     plt.grid(True)
+            #     plt.savefig(os.path.join(output_dir, 'Robot2\'s_Ego_Pos_Y_plot.png'))
+
+
+            #     plt.figure()
+            #     plt.plot(buffer_time, r2_buffer_roll_obs, label='Robot2\'s Roll')
+            #     plt.xlabel('Time (s)')
+            #     plt.ylabel('Robot2\'s Roll')
+            #     plt.title('Robot2\'s Roll over Time')
+            #     plt.legend()
+            #     plt.grid(True)
+            #     plt.savefig(os.path.join(output_dir, 'Robot2\'s_Roll_plot.png'))
+
+
+            #     plt.figure()
+            #     plt.plot(buffer_time, r2_buffer_pitch_obs, label='Robot2\'s Pitch')
+            #     plt.xlabel('Time (s)')
+            #     plt.ylabel('Robot2\'s Pitch')
+            #     plt.title('Robot2\'s Pitch over Time')
+            #     plt.legend()
+            #     plt.grid(True)
+            #     plt.savefig(os.path.join(output_dir, 'Robot2\'s_Pitch_plot.png'))
+
+                
+            #     plt.figure()
+            #     plt.plot(buffer_time, r2_buffer_linear_obs, label='Robot2\'s Linear Velocity')
+            #     plt.xlabel('Time (s)')
+            #     plt.ylabel('Robot2\'s Linear Velocity')
+            #     plt.title('Robot2\'s Linear Velocity over Time')
+            #     plt.legend()
+            #     plt.grid(True)
+            #     plt.savefig(os.path.join(output_dir, 'R2\'s_Linear_Velocity_plot.png'))
+
+            #     # Plot the angular velocity actions over time
+            #     plt.figure()
+            #     plt.plot(buffer_time, r2_buffer_angular_obs, label='Robot2\'s Angular Velocity')
+            #     plt.xlabel('Time (s)')
+            #     plt.ylabel('Robot2\'s Angular Velocity')
+            #     plt.title('Robot2\'s Angular Velocity over Time')
+            #     plt.legend()
+            #     plt.grid(True)
+            #     plt.savefig(os.path.join(output_dir, 'R2\'s_Angular_Velocity_plot.png'))
+
+            #     plt.figure()
+            #     plt.plot(buffer_time, r2_buffer_linear_action, label='Command Linear Velocity')
+            #     plt.xlabel('Time (s)')
+            #     plt.ylabel('Command Linear Velocity')
+            #     plt.title('Robot2\'s Command Linear Velocity over Time')
+            #     plt.legend()
+            #     plt.grid(True)
+            #     plt.savefig(os.path.join(output_dir, 'R2_Command_Linear_Velocity_plot.png'))
+
+            #     # Plot the angular velocity actions over time
+            #     plt.figure()
+            #     plt.plot(buffer_time, r2_buffer_angular_action, label='Command Angular Velocity')
+            #     plt.xlabel('Time (s)')
+            #     plt.ylabel('Command Angular Velocity')
+            #     plt.title('Robot2\'s Command Angular Velocity over Time')
+            #     plt.legend()
+            #     plt.grid(True)
+            #     plt.savefig(os.path.join(output_dir, 'R2_Command_angular_velocity_plot.png'))
+
+
+            #     # Plot the trajectory
+            #     plt.figure(figsize=(10, 6))
+            #     plt.plot(r2_poses_x, r2_poses_y, label='Trajectory', marker='o', markersize=5, linestyle='-')
+
+            #     # Annotate with time points
+            #     for i in range(0, len(buffer_time), 10):  # Annotate every 10th current_time step
+            #         plt.annotate(f't={buffer_time[i]:.1f}', (r2_poses_x[i], r2_poses_y[i]), textcoords="offset points", xytext=(10,-10), ha='center')
+
+            #     # Labels and title
+            #     plt.xlabel('X position')
+            #     plt.ylabel('Y position')
+            #     plt.title('Robot2 Trajectory Over current_time')
+            #     plt.legend()
+            #     plt.grid(True)
+            #     plt.savefig(os.path.join(output_dir, 'R2_trajectory.png'))
+
+                output_dir="/home/kom018/behaviour_rl/Results_plots/pybullet_excels/"
+                #PLOT BOTH ROBOT TRAJECTORY IN ONE PLOT
+                # Plot the first trajectory
+                # plt.plot(r1_poses_x, r1_poses_y, label='Robot 1 Trajectory', marker='o', markersize=5, linestyle='-', color='orange')
+                plt.plot(r1_poses_x, r1_poses_y, label='Leading Robot Trajectory', marker='o', markersize=5, linestyle='-', color='orange')
+                # Annotate the first trajectory with time points
+                for i in range(0, len(buffer_time), 10):  # Annotate every 10th buffer_time step
+                    # plt.annotate(f't={buffer_time[i]:.1f}', (r1_poses_x[i], r1_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
+                    plt.annotate(f't={int(buffer_time[i])}', (r1_poses_x[i], r1_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
+
+                # Plot the second trajectory
+                # plt.plot(r2_poses_x, r2_poses_y, label='Robot 2 Trajectory', marker='o', markersize=5, linestyle='-', color='blue')
+                plt.plot(r2_poses_x, r2_poses_y, label='Following Robot Trajectory', marker='o', markersize=5, linestyle='-', color='blue')
+                # Annotate the second trajectory with buffer_time points
+                for i in range(0, len(buffer_time), 10):  # Annotate every 10th buffer_time step
+                    # plt.annotate(f't={buffer_time[i]:.1f}', (r2_poses_x[i], r2_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
+                    plt.annotate(f't={int(buffer_time[i])}', (r2_poses_x[i], r2_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
+                # print("r1_pos",r1_poses_x[0], r1_poses_y[0])
+                # print("r2_pos",r2_poses_x[0], r2_poses_y[0])
+                # Labels and title
+                plt.xlabel('X position (m)')
+                plt.ylabel('Y position (m)')
+                plt.title('Two Robot Trajectories Over Time')
+                plt.legend()
+                plt.grid(True)
+
+                # # Get current axis limits
+                # current_xlim = plt.xlim()
+                # current_ylim = plt.ylim()
+
+                # # Create custom tick labels that start from 0
+                # x_ticks = plt.xticks()[0]
+                # y_ticks = plt.yticks()[0]
+
+                # # Relabel ticks to start from 0
+                # x_labels = [f'{i}' for i in range(len(x_ticks))]
+                # y_labels = [f'{i}' for i in range(len(y_ticks))]
+
+                # plt.xticks(x_ticks, x_labels)
+                # plt.yticks(y_ticks, y_labels)
+
+                plt.savefig(os.path.join(output_dir, 'AMerged_trajectory.png'))
+
+
+                # data = {
+                # "Time": buffer_time,
+                # "Command Linear Velocity": r2_buffer_linear_action,
+                # "Command Angular Velocity": r2_buffer_angular_action,
+                # "Robot's Linear Velocity": r2_buffer_linear_obs,
+                # "Robot's Angular Velocity": r2_buffer_angular_obs
+                # }
+                # df = pd.DataFrame(data)
+                # csv_path = os.path.join(output_dir, 'r2_actions_data.csv')
+                # df.to_csv(csv_path, index=False)
+                # df = pd.DataFrame(r2_modified_occupancy_map)
+                # csv_path = os.path.join(output_dir, 'r2_occu.csv')
+                # df.to_csv(csv_path, index=False)
+
+
+                # grid_x = np.linspace(1, 25, 25)
+                # grid_y = np.linspace(1, 25, 25)
+
+                # grid_x = np.linspace(Goal1_x_list[0]-9, Goal1_x_list[0]+1, 25)
+                # grid_y = np.linspace(Goal1_y_list[0]-5, Goal2_y_list[0]+5, 25)
+
+                # # grid_x = np.linspace(1, 10, 1)
+                # # grid_y = np.linspace(1, 10, 1)
+
+                # # start_A = [env.Goals_pos[1][0]-8,env.Goals_pos[1][1]]
+                
+                # # start_B = [env.Goals_pos[0][0]-8,env.Goals_pos[0][1]]
+
+
+                # start_A = [Goal2_x_list[0]-8,Goal2_y_list[0]]
+                
+                # start_B = [Goal1_x_list[0]-8,Goal1_y_list[0]]
+
+                # # goal_A = env.Goals_pos[0][0:2]
+                # # goal_B = env.Goals_pos[1][0:2]
+
+                # goal_A = [Goal1_x_list[0],Goal1_y_list[0]]
+                # goal_B = [Goal2_x_list[0],Goal2_y_list[0]]
+
+                scale_factor=0.5
+            
+                # for i in range(0, len(buffer_time), 1):
+                    
+                #     fig, ax = plt.subplots(figsize=(10, 10))
+
+                #     for x in grid_x:
+                #         for y in grid_y:
+                #             # # pos_B = [r2_poses_x[i], r2_poses_y[i]]
+                #             # # ax.arrow(x, y, r1_buffer_linear_action[i] * 0.5, r1_buffer_angular_action[i] * 0.5,
+                #             # #         head_width=0.1, color='red', alpha=0.5)
+
+                #             ##______________
+                #             # is_reverse = r1_buffer_linear_action[i] < 0 #or r1_buffer_angular_action[i] < 0
+                #             # arrow_color = 'red' if is_reverse else 'orange'
+                            
+                #             # ax.arrow(x, y, r1_buffer_linear_action[i] * 0.5, r1_buffer_angular_action[i] * 0.5,
+                #             #         head_width=0.1, color=arrow_color, alpha=0.5)
+                            
+                #             #-------------------------------------------------------------------------
+                #             # is_reverse = r1_buffer_linear_action[i] < 0
+                #             # arrow_color = 'red' if is_reverse else 'orange'
+                            
+                #             # # Calculate magnitude for scaling arrow size
+                #             # # Using absolute values to get proper scaling regardless of direction
+                #             # linear_magnitude = abs(r1_buffer_linear_action[i])
+                #             # angular_magnitude = abs(r1_buffer_angular_action[i])
+                            
+                #             # # Scale factor can be adjusted as needed
+                #             # scale_factor = 0.5
+                            
+                #             # # Arrow size/length based on magnitude
+                #             # dx = r1_buffer_linear_action[i] * scale_factor
+                #             # dy = r1_buffer_angular_action[i] * scale_factor
+                            
+                #             # # Draw the arrow
+
+                #             # ax.arrow(x, y, dx, dy, head_width=0.1, color=arrow_color, alpha=0.5)
+                #             # # ax.arrow(x, y, dx, dy, head_width=0.1, color=arrow_color, alpha=0.5)
+                            
+                #             # # # Add text to display velocities - formatting to 2 decimal places
+                #             # # vel_text = f"lin: {r1_buffer_linear_action[i]:.2f}\nang: {r1_buffer_angular_action[i]:.2f}"
+                #             # # ax.text(x + dx, y + dy, vel_text, fontsize=8)
+
+                #             #------------------------------------------------------------------
+
+                #             # Determine if movement is reverse based on linear velocity
+                #             is_reverse = r1_buffer_linear_action[i] < 0
+                #             arrow_color = 'red' if is_reverse else 'orange'
+
+                #             # Scale factor can be adjusted as needed
+                #             scale_factor = 0.5
+                            
+                #             # Linear velocity determines arrow length in x-direction
+                #             dx = r1_buffer_linear_action[i] * scale_factor
+                            
+                #             # We don't use angular velocity for arrow displacement
+                #             dy = 0
+                            
+                #             # Arrow width can represent angular velocity
+                #             angular_magnitude = abs(r1_buffer_angular_action[i])
+                #             width = 0.05 + 0.1 * angular_magnitude  # Adjust multiplier as needed
+                            
+                #             # Draw the arrow for linear velocity
+                #             if not r1_buffer_linear_action[i] == 0:
+                #                 ax.arrow(x, y, dx, dy, head_width=width, color=arrow_color, alpha=0.5)
+                            
+                #             # # Optionally, add a circular marker to show direction of rotation
+                #             # if abs(r1_buffer_angular_action[i]) > 0.001:
+                #             #     rotation_color = 'purple' if r1_buffer_angular_action[i] < 0 else 'orange'
+                #             #     rotation_size = 30 * angular_magnitude
+                #             #     ax.scatter(x, y, s=rotation_size, color=rotation_color, alpha=0.3)
+                            
+
+
+
+                #     pos_B = [r2_poses_x[i], r2_poses_y[i]]
+                #     ax.plot(*pos_B, marker='s', color='blue', markersize=20)
+                #     ax.text(pos_B[0] + 0.1, pos_B[1], "Robot B", color='blue', fontsize=10)
+
+                #     # Determine if movement is reverse based on linear velocity only
+        
+
+                #     # # Obstacles
+                #     # ax.plot([env.Goals_pos[1][0]-4, env.Goals_pos[1][0]-4],
+                #     #         [env.Goals_pos[0][1]+0.3, env.Goals_pos[0][1]-0.3], 'k-', linewidth=8)
+                #     # ax.plot([env.Goals_pos[1][0]-4, env.Goals_pos[1][0]-4],
+                #     #         [env.Goals_pos[1][1]-0.3, env.Goals_pos[1][1]+0.3], 'k-', linewidth=8)
+                    
+
+                #      # Obstacles
+                #     ax.plot([Goal2_x_list[0]-4, Goal2_x_list[0]-4],
+                #             [Goal1_y_list[0]+0.65, Goal1_y_list[0]-0.65], 'k-', linewidth=8)
+                #     ax.plot([Goal2_x_list[0]-4, Goal2_x_list[0]-4],
+                #             [Goal2_y_list[0]-0.65, Goal2_y_list[0]+0.65], 'k-', linewidth=8)
+
+                #     # Start/Goal markers
+                #     ax.plot(*start_A, marker='>', color='orange', markersize=14, label='Start A')
+                #     ax.plot(*start_B, marker='>', color='blue', markersize=14, label='Start B')
+                #     ax.plot(*goal_A, marker='o', color='orange', markersize=16, label='Goal A')
+                #     ax.plot(*goal_B, marker='o', color='blue', markersize=16, label='Goal B')
+
+                #     # Legend
+                #     handles = [
+                #         Line2D([], [], marker='>', color='orange', linestyle='None', markersize=10, label='Start A'),
+                #         Line2D([], [], marker='>', color='blue', linestyle='None', markersize=10, label='Start B'),
+                #         Line2D([], [], marker='o', color='orange', linestyle='None', markersize=10, label='Goal A'),
+                #         Line2D([], [], marker='o', color='blue', linestyle='None', markersize=10, label='Goal B'),
+                #         Line2D([], [], marker='s', color='blue', linestyle='None', markersize=10, label='Robot B'),
+                #         Line2D([], [], color='black', linewidth=8, label='Obstacle'),
+                #         Line2D([], [], color='red', linewidth=2, marker='>', markersize=10, label='Vector Field A'),
+                #     ]
+                #     ax.legend(handles=handles, loc='upper right')
+                #     ax.set_title(f"Robot A Vector Field with Robot B Position at t={buffer_time[i]:.1f}s and lin: {r1_buffer_linear_action[i]:.2f}\nang: {r1_buffer_angular_action[i]:.2f}")
+                #     ax.axis("equal")
+                #     ax.set_xlim(Goal1_x_list[0]-9, Goal1_x_list[0]+1)
+                #     # ax.set_ylim(Goal1_y_list[0], Goal2_y_list[0])
+                #     ax.set_ylim(Goal1_y_list[0], Goal2_y_list[0])
+                #     ax.grid(True)
+                #     plt.tight_layout()
+
+                #     output_dir = "/home/kom018/behaviour_rl/Results_plots/pybullet_excels/vector_fields/"
+                #     filename = os.path.join(output_dir, f"robot1_field_{i:03d}.png")
+                #     # plt.savefig(filename)
+
+
+
+
+
+                # ##Another Robot Vector Field
+                # for i in range(0, len(buffer_time), 1):
+                    
+                #     fig, ax = plt.subplots(figsize=(10, 10))
+
+                #     for x in grid_x:
+                #         for y in grid_y:
+                            
+
+                #             # Determine if movement is reverse based on linear velocity
+                #             is_reverse = r2_buffer_linear_action[i] < 0
+                #             arrow_color = 'red' if is_reverse else 'blue'
+
+                #             # Scale factor can be adjusted as needed
+                #             scale_factor = 0.5
+                            
+                #             # Linear velocity determines arrow length in x-direction
+                #             dx = r2_buffer_linear_action[i] * scale_factor
+                            
+                #             # We don't use angular velocity for arrow displacement
+                #             dy = 0
+                            
+                #             # Arrow width can represent angular velocity
+                #             angular_magnitude = abs(r2_buffer_angular_action[i])
+                #             width = 0.05 + 0.1 * angular_magnitude  # Adjust multiplier as needed
+                            
+                #             # Draw the arrow for linear velocity
+
+                #             if not r2_buffer_linear_action[i] == 0:
+                #                 ax.arrow(x, y, dx, dy, head_width=width, color=arrow_color, alpha=0.5)
+                            
+                #             # # Optionally, add a circular marker to show direction of rotation
+                #             # if abs(r2_buffer_angular_action[i]) > 0.001:
+                #             #     rotation_color = 'purple' if r2_buffer_angular_action[i] < 0 else 'orange'
+                #             #     rotation_size = 30 * angular_magnitude
+                #             #     ax.scatter(x, y, s=rotation_size, color=rotation_color, alpha=0.3)
+                            
+
+
+
+                #     # pos_B = [r2_poses_x[i], r2_poses_y[i]]
+                #     pos_A = [r1_poses_x[i], r1_poses_y[i]]
+                #     ax.plot(*pos_A, marker='s', color='orange', markersize=20)
+                #     ax.text(pos_A[0] + 0.1, pos_A[1], "Robot A", color='blue', fontsize=10)
+
+                #     # Determine if movement is reverse based on linear velocity only
+        
+
+                #     # # Obstacles
+                #     # ax.plot([env.Goals_pos[1][0]-4, env.Goals_pos[1][0]-4],
+                #     #         [env.Goals_pos[0][1]+0.3, env.Goals_pos[0][1]-0.3], 'k-', linewidth=8)
+                #     # ax.plot([env.Goals_pos[1][0]-4, env.Goals_pos[1][0]-4],
+                #     #         [env.Goals_pos[1][1]-0.3, env.Goals_pos[1][1]+0.3], 'k-', linewidth=8)
+                    
+
+                #      # Obstacles
+                #     ax.plot([Goal2_x_list[0]-4, Goal2_x_list[0]-4],
+                #             [Goal1_y_list[0]+0.65, Goal1_y_list[0]-0.65], 'k-', linewidth=8)
+                #     ax.plot([Goal2_x_list[0]-4, Goal2_x_list[0]-4],
+                #             [Goal2_y_list[0]-0.65, Goal2_y_list[0]+0.65], 'k-', linewidth=8)
+
+                #     # Start/Goal markers
+                #     ax.plot(*start_A, marker='>', color='orange', markersize=14, label='Start A')
+                #     ax.plot(*start_B, marker='>', color='blue', markersize=14, label='Start B')
+                #     ax.plot(*goal_A, marker='o', color='orange', markersize=16, label='Goal A')
+                #     ax.plot(*goal_B, marker='o', color='blue', markersize=16, label='Goal B')
+
+                #     # Legend
+                #     handles = [
+                #         Line2D([], [], marker='>', color='orange', linestyle='None', markersize=10, label='Start A'),
+                #         Line2D([], [], marker='>', color='blue', linestyle='None', markersize=10, label='Start B'),
+                #         Line2D([], [], marker='o', color='orange', linestyle='None', markersize=10, label='Goal A'),
+                #         Line2D([], [], marker='o', color='blue', linestyle='None', markersize=10, label='Goal B'),
+                #         Line2D([], [], marker='s', color='orange', linestyle='None', markersize=10, label='Robot A'),
+                #         Line2D([], [], color='black', linewidth=8, label='Obstacle'),
+                #         Line2D([], [], color='blue', linewidth=2, marker='>', markersize=10, label='Vector Field B'),
+                #     ]
+                #     ax.legend(handles=handles, loc='upper right')
+                #     ax.set_title(f"Robot B Vector Field with Robot A Position at t={buffer_time[i]:.1f}s and lin: {r2_buffer_linear_action[i]:.2f}\nang: {r2_buffer_angular_action[i]:.2f}")
+                #     ax.axis("equal")
+                #     ax.set_xlim(Goal1_x_list[0]-9, Goal1_x_list[0]+1)
+                #     # ax.set_ylim(Goal1_y_list[0], Goal2_y_list[0])
+                #     ax.set_ylim(Goal1_y_list[0], Goal2_y_list[0])
+                #     ax.grid(True)
+                #     plt.tight_layout()
+
+                #     output_dir = "/home/kom018/behaviour_rl/Results_plots/pybullet_excels/vector_fields/"
+                #     filename = os.path.join(output_dir, f"robot2_field_{i:03d}.png")
+                #     # plt.savefig(filename)
+
+
+                # grid_x = np.linspace(Goal1_x_list[0]-9, Goal1_x_list[0]+1, 15)
+                # grid_y = np.linspace(Goal1_y_list[0]-5, Goal2_y_list[0]+5, 30)
+
+                
+
+                # grid_x = np.linspace(1, 10, 1)
+                # grid_y = np.linspace(1, 10, 1)
+
+                # start_A = [env.Goals_pos[1][0]-8,env.Goals_pos[1][1]]
+                
+                # start_B = [env.Goals_pos[0][0]-8,env.Goals_pos[0][1]]
+
+
+                start_A = [Goal2_x_list[0]-8,Goal2_y_list[0]]
+                
+                start_B = [Goal1_x_list[0]-8,Goal1_y_list[0]]
+
+                # goal_A = env.Goals_pos[0][0:2]
+                # goal_B = env.Goals_pos[1][0:2]
+
+                goal_A = [Goal1_x_list[0],Goal1_y_list[0]]
+                goal_B = [Goal2_x_list[0],Goal2_y_list[0]]
+                #-------------------------------------------------------------------------------
+                #Compute Vector Field Two robots side by side
+
+                for i in range(0, len(buffer_time), 1):
+                    grid_x1 = np.linspace(r1_poses_x[i], r1_poses_x[i], 1)
+                    grid_y1 = np.linspace(r1_poses_y[i], r1_poses_y[i], 1)
+                    grid_x2 = np.linspace(r2_poses_x[i], r2_poses_x[i], 1)
+                    grid_y2 = np.linspace(r2_poses_y[i], r2_poses_y[i], 1)
+                    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(15, 9))
+
+                    # ------------------ Robot A Vector Field on ax1 ------------------
+                    
+
+                    # lin_vel1 = r1_buffer_linear_action[i]
+                    # ang_vel1 = r1_buffer_angular_action[i]
+                    # print(f"t={buffer_time[i]:.2f}s, lin_vel1={r1_buffer_linear_action[i]:.10f}, format1={format(r1_buffer_linear_action[i], ".2f")}")
+                    print(f"t={buffer_time[i]:.2f}s, lin_vel1={r1_buffer_linear_action[i]:.10f}, format1={format(r1_buffer_linear_action[i], '.2f')}")
+
+
+                    # # if abs(r1_buffer_linear_action[i]) < 1e-3 or np.isnan(r1_buffer_linear_action[i]):
+                    # if format(r1_buffer_linear_action[i], ".2f") == "0.00" or format(r1_buffer_linear_action[i], ".2f") == "-0.00":
+                    #     print(f"Skipping Robot A vector field at t={buffer_time[i]:.2f}s due to zero velocity ({r1_buffer_linear_action[i]:.6f})")
+                    # else:
+                    arrow_color = 'magenta' if r1_buffer_linear_action[i] < 0 else 'orange'
+                    theta1 = r1_buffer_angular_action[i] * (np.pi / 4)
+                    # length1 = r1_buffer_linear_action[i] * 0.5
+                    length1 = r1_buffer_linear_action[i] * 1.5
+
+                    otheta1 = r1_buffer_angular_obs[i]  * (np.pi / 4)
+                    olength1 = r1_buffer_linear_obs[i]* 1.5
+                    # width1 = 0.05 + 0.05 * abs(r1_buffer_angular_action[i])
+                    print("OBS@@@",r1_buffer_linear_obs[i],r1_buffer_angular_obs[i])
+                    width1 = 0.1
+                    alpha1 = 0.5
+
+                    for x in grid_x1:
+                        for y in grid_y1:
+
+                            if abs(r1_buffer_linear_action[i]) <= 0.01 and abs(r1_buffer_linear_action[i]) >= - 0.01:
+                                print("BINGO_________________")
+                                dx = 0
+                                arrow_color = 'black'
+                                # widtharrow = 0.2
+                                # hd = 0.1
+                                # hl = 0.05
+
+                                # widtharrow = 0.02
+                                # hd = 0.01
+                                # hl = 0.009
+                                # dy=dy*0.5
+                                alpha = 1
+                                ax1.plot(x, y, marker='s', color='black', markersize=20, alpha=alpha)
+                                if abs(r1_buffer_linear_obs[i]) <= 0.01 and abs(r1_buffer_linear_obs[i]) >= - 0.01:
+                                    print("BINGO_________________")
+                                    dx = 0
+                                    arrow_color = 'black'
+                                    # widtharrow = 0.2
+                                    # hd = 0.1
+                                    # hl = 0.05
+
+                                    # widtharrow = 0.02
+                                    # hd = 0.01
+                                    # hl = 0.009
+                                    # dy=dy*0.5
+                                    alpha = 1
+                                    ax1.plot(x, y, marker='s', color='black',markerfacecolor='none', markersize=30, alpha=alpha)
+                                else:
+                                    
+                                    # dx1 = length1 * np.cos(theta1)
+                                    # dy1 = length1 * np.sin(theta1)
+
+                                    ox1 = olength1 * np.cos(otheta1)
+                                    oy1 = olength1 * np.sin(otheta1)
+                                    aspect_ratio = ((((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) / ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1))
+                                    # # aspect_ratio = ( ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1) / (((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) )
+                                    # dy1 = dy1 / aspect_ratio
+                                    oy1=oy1/aspect_ratio
+
+
+                                    # # # ⛔ Final guard: only plot arrow if vector is non-zero
+                                    # # if abs(dx1) < 1e-6 and abs(dy1) < 1e-6:
+                                    # #     continue
+
+                                    # ax1.arrow(x, y, dx1, dy1, width=0.01, head_width=width1, color='orange', alpha=1)
+                                    ax1.arrow(x, y, ox1, oy1, width=0.01, head_width=width1, color='magenta', alpha=1)
+                            elif abs(r1_buffer_linear_obs[i]) <= 0.01 and abs(r1_buffer_linear_obs[i]) >= - 0.01:
+                                print("BINGO_________________")
+                                dx = 0
+                                arrow_color = 'black'
+                                # widtharrow = 0.2
+                                # hd = 0.1
+                                # hl = 0.05
+
+                                # widtharrow = 0.02
+                                # hd = 0.01
+                                # hl = 0.009
+                                # dy=dy*0.5
+                                alpha = 1
+                                ax1.plot(x, y, marker='s', color='black',markerfacecolor='none', markersize=30, alpha=alpha)
+                                if abs(r1_buffer_linear_action[i]) <= 0.01 and abs(r1_buffer_linear_action[i]) >= - 0.01:
+                                    print("BINGO_________________")
+                                    dx = 0
+                                    arrow_color = 'black'
+                                    # widtharrow = 0.2
+                                    # hd = 0.1
+                                    # hl = 0.05
+
+                                    # widtharrow = 0.02
+                                    # hd = 0.01
+                                    # hl = 0.009
+                                    # dy=dy*0.5
+                                    alpha = 1
+                                    ax1.plot(x, y, marker='s', color='black', markersize=20, alpha=alpha)
 
                                 else:
-                                    r2_clipped_linear_vel_command=np.clip(action[1][0], -0.3, 0.75)
-                                    r2_clipped_lateral_vel_command=np.clip(action[1][1], -0.3, 0.3)
-                                    r2_clipped_angular_vel_command=np.clip(action[1][2], -0.75, 0.75)
+                                    dx1 = length1 * np.cos(theta1)
+                                    dy1 = length1 * np.sin(theta1)
 
-                    
-                    print("AC_VELS",r2_clipped_linear_vel_command,r2_clipped_angular_vel_command)
-                            
-                    sp_ac=np.array([[0., 0.],[0., 0.]])
-                    obs, _, done,termination, _ = env.step(action,sp_ac)
-
-                    if args.use_perception:
-                        im = env.get_image()
-
-                    if env.args.heterogeneous or env.args.titanheads:
-                        if "titan" in str(env.robots[0]):
-                            obs[0] = np.insert(obs[0], 0, 0)
-                            obs[1] = np.insert(obs[1], 0, 1)
-                        elif "spot" in str(env.robots[0]):
-                            obs[0] = np.insert(obs[0], 0, 1)
-                            obs[1] = np.insert(obs[1], 0, 0)
-                    counting_step+=1
-
-                    st=time.time()
-                    buffer_time.append(current_time)
-                    r1_buffer_linear_action.append(r1_clipped_linear_vel_command)
-                    r1_buffer_angular_action.append(r1_clipped_angular_vel_command)
-                    r1_buffer_ego_pos_x_obs.append(obs[0][0])
-                    r1_buffer_ego_pos_y_obs.append(obs[0][1])
-                    r1_buffer_roll_obs.append(obs[0][2])
-                    r1_buffer_pitch_obs.append(obs[0][3])
-                    r1_poses_x.append(env.robots_pos[0][0])
-                    r1_poses_y.append(env.robots_pos[0][1])
-
-                    Goal1_x_list.append(env.Goals_pos[0][0])
-                    Goal1_y_list.append(env.Goals_pos[0][1])
-
-                    
-
-                    if args.num_robots==2:
-                        r2_buffer_linear_action.append(r2_clipped_linear_vel_command)
-                        r2_buffer_angular_action.append(r2_clipped_angular_vel_command)
-                        r2_buffer_ego_pos_x_obs.append(obs[1][0])
-                        r2_buffer_ego_pos_y_obs.append(obs[1][1])
-                        r2_buffer_roll_obs.append(obs[1][2])
-                        r2_buffer_pitch_obs.append(obs[1][3])
-                        r2_poses_x.append(env.robots_pos[1][0])
-                        r2_poses_y.append(env.robots_pos[1][1])
-                        Goal2_x_list.append(env.Goals_pos[1][0])
-                        Goal2_y_list.append(env.Goals_pos[1][1])
-                        if env.args.heterogeneous or env.args.titanheads:
-                            r2_buffer_lateral_action.append(r2_clipped_lateral_vel_command)
-                    
-                    if args.num_robots==2:
-                        output_dir="/home/kom018/behaviour_rl/Results_plots/pybullet_excels/"
-                        
-                        # Plot trajectory
-                        plt.figure(figsize=(10, 8))
-                        plt.plot(r1_poses_x, r1_poses_y, label='Leading Robot Trajectory', marker='o', markersize=5, linestyle='-', color='orange')
-                        for i in range(0, len(buffer_time), 10):
-                            plt.annotate(f't={int(buffer_time[i])}', (r1_poses_x[i], r1_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
-
-                        plt.plot(r2_poses_x, r2_poses_y, label='Following Robot Trajectory', marker='o', markersize=5, linestyle='-', color='blue')
-                        for i in range(0, len(buffer_time), 10):
-                            plt.annotate(f't={int(buffer_time[i])}', (r2_poses_x[i], r2_poses_y[i]), textcoords="offset points", xytext=(10, -10), ha='center', color='black')
-
-                        plt.xlabel('X position (m)')
-                        plt.ylabel('Y position (m)')
-                        plt.title('Two Robot Trajectories Over Time')
-                        plt.legend()
-                        plt.grid(True)
-                        plt.savefig(os.path.join(output_dir, 'AMerged_trajectory.png'))
-                        plt.close()
-
-                        # Collect arrow data for this simulation run
-                        start_A = [Goal2_x_list[0]-8,Goal2_y_list[0]]
-                        start_B = [Goal1_x_list[0]-8,Goal1_y_list[0]]
-                        goal_A = [Goal1_x_list[0],Goal1_y_list[0]]
-                        goal_B = [Goal2_x_list[0],Goal2_y_list[0]]
-
-                        i = len(buffer_time)-1
-                        pos_A = [env.robots_pos[0][0],env.robots_pos[0][1]]
-                        pos_B = [env.robots_pos[1][0],env.robots_pos[1][1]]
+                                    # ox1 = olength1 * np.cos(otheta1)
+                                    # oy1 = olength1 * np.sin(otheta1)
+                                    aspect_ratio = ((((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) / ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1))
+                                    # # aspect_ratio = ( ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1) / (((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) )
+                                    dy1 = dy1 / aspect_ratio
+                                    # oy1=oy1/aspect_ratio
 
 
-                        # print("INFO",start_A,start_B,goal_A,goal_B)
-                        # Store data for vector field plotting
+                                    # # # ⛔ Final guard: only plot arrow if vector is non-zero
+                                    # # if abs(dx1) < 1e-6 and abs(dy1) < 1e-6:
+                                    # #     continue
 
-                        if env.args.heterogeneous or env.args.titanheads:
-                            # Base components from linear and lateral velocities
-                            dx_base = r2_buffer_linear_action[i] * 0.5   # Forward/backward component
-                            dy_base = r2_buffer_lateral_action[i] * 0.5  # Left/right component
-                            
-                            # Angular velocity modifies the direction of the resultant vector
-                            # It can be thought of as adding a rotational bias to the motion
-                            angular_influence = r2_buffer_angular_action[i] * 0.3  # Scale factor for angular effect
-                            
-                            # Method 1: Angular velocity rotates the linear+lateral vector
-                            if abs(r2_buffer_linear_action[i]) > 0.01 or abs(r2_buffer_lateral_action[i]) > 0.01:
-                                # There's translational motion - angular velocity modifies its direction
-                                angle_offset = r2_buffer_angular_action[i] * (np.pi / 8)  # Convert angular vel to angle offset
-                                
-                                # Rotate the base vector by the angular influence
-                                cos_offset = np.cos(angle_offset)
-                                sin_offset = np.sin(angle_offset)
-                                
-                                dx2 = dx_base * cos_offset - dy_base * sin_offset
-                                dy2 = dx_base * sin_offset + dy_base * cos_offset
+                                    ax1.arrow(x, y, dx1, dy1, width=0.01, head_width=width1, color='orange', alpha=1)
+                                    # ax1.arrow(x, y, ox1, oy1, width=0.01, head_width=width1, color='magenta', alpha=1)   
+
                             else:
-                                # Pure angular motion - create a tangential vector
-                                if abs(r2_buffer_angular_action[i]) > 0.01:
-                                    # Create a vector tangent to rotation at current position
-                                    dx2 = -angular_influence  # Tangential component
-                                    dy2 = angular_influence   # Tangential component
+                                dx1 = length1 * np.cos(theta1)
+                                dy1 = length1 * np.sin(theta1)
+
+                                ox1 = olength1 * np.cos(otheta1)
+                                oy1 = olength1 * np.sin(otheta1)
+                                aspect_ratio = ((((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) / ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1))
+                                # aspect_ratio = ( ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1) / (((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) )
+                                dy1 = dy1 / aspect_ratio
+                                oy1=oy1/aspect_ratio
+
+
+                                # # ⛔ Final guard: only plot arrow if vector is non-zero
+                                # if abs(dx1) < 1e-6 and abs(dy1) < 1e-6:
+                                #     continue
+
+                                ax1.arrow(x, y, dx1, dy1, width=0.01, head_width=width1, color='orange', alpha=1)
+                                ax1.arrow(x, y, ox1, oy1, width=0.01, head_width=width1, color='magenta', alpha=1)
+
+                    
+                    
+                    
+
+
+                    pos_B = [r2_poses_x[i], r2_poses_y[i]]
+                    length = 1.2
+                    width = 0.78
+                    # theta1 = r2_buffer_angular_action[i] * 180 / np.pi #* (np.pi / 4)
+                    # Bottom-left corner of the rectangle
+                    bottom_left = (pos_B[0] - length/2, pos_B[1] - width/2)
+
+                    # Create rectangle patch
+                    robot_rect = Rectangle(
+                        bottom_left,
+                        length,
+                        width,
+                        linewidth=10,
+                        edgecolor='blue',
+                        facecolor='blue'  # hollow
+                    )
+
+                    # t = transforms.Affine2D().rotate(theta1).translate(*pos_B) + ax1.transData
+                    # robot_rect.set_transform(t)
+
+                    # Add to plot
+                    ax1.add_patch(robot_rect)
+                    # ax1.plot(*pos_B, marker='s', color='blue', markersize=60)
+                    ax1.text(pos_B[0] + 0.1, pos_B[1], "Following Robot", color='black', fontsize=15)
+                    # ax1.set_title(f"Robot A Vector Field at t={buffer_time[i]:.1f}s")
+                    # ax1.set_title(f"Leading Robot's Vector Field with Following Robot Position \n at t (s)={buffer_time[i]:.1f}s and lin_vel (m/s): {r1_buffer_linear_action[i]:.2f} ang_vel (rad/s): {r1_buffer_angular_action[i]:.2f}",fontsize=15)
+                    # ax1.set_title(f"Leading Robot's Vector Field Relative to \n Following Robot at t (s)={buffer_time[i]:.1f}s and lin_vel (m/s): {r1_buffer_linear_action[i]:.2f} ang_vel (rad/s): {r1_buffer_angular_action[i]:.2f}",fontsize=20)
+                    # ax1.set_title(f"Following Robot\'s Vector Field Relative to \n Leading Robot at t (s)={buffer_time[i]:.1f}s and lin_vel (m/s): {r1_buffer_linear_action[i]:.2f} \n ang_vel (rad/s): {r1_buffer_angular_action[i]:.2f}  obs lin vel (m/s): {r1_buffer_linear_obs[i]:.2f} \n obs ang vel (m/s): {r1_buffer_angular_obs[i]:.2f}",fontsize=20)
+                    
+                    ax1.set_title(f"Leading Robot's Vector Field Relative to \n Following Robot at t (s)={buffer_time[i]:.1f}s ",fontsize=20)
+                    # ax1.axis("equal")
+                    handles = [
+                        # Line2D([], [], marker='>', color='orange', linestyle='None', markersize=13, label='Leading Robot\'s Origin'),
+                        # Line2D([], [], marker='>', color='blue', linestyle='None', markersize=13, label='Following Robot\'s Origin'),
+                        Line2D([], [], marker='o', color='orange', linestyle='None', markersize=13, label='Leading Robot\'s Goal'),
+                        Line2D([], [], marker='o', color='blue', linestyle='None', markersize=13, label='Following Robot\'s Goal'),
+                        Line2D([], [], marker='s', color='blue', linestyle='None', markersize=13, label='Following Robot'),
+                        Line2D([], [], color='red', linewidth=8, label='Obstacle'),
+                        Line2D([], [], color='orange', linewidth=2, marker='>', markersize=13, label='Leading Robot\'s \n Action Velocity'),
+                        Line2D([], [], color='magenta', linewidth=2, marker='>', markersize=13, label='Leading Robot\'s \n Perceived Velocity'),
+                    ]
+                    # ax1.legend(handles=handles, loc='upper left', fontsize=15)
+                    ax1.legend(handles=handles, loc='upper left', fontsize=13, ncol=2, columnspacing=1.5)
+                    # ax1.set_xlim(Goal1_x_list[0]-9, Goal1_x_list[0]+1)
+                    # ax1.set_ylim(Goal1_y_list[0]-6, Goal2_y_list[0]-6)
+                    
+                    ax1.grid(True)
+
+                    # ------------------ Robot B Vector Field on ax2 ------------------
+
+
+                    # Optional: debug print
+                    # print(f"t={buffer_time[i]:.2f}s, lin_vel2={r2_buffer_linear_action[i]:.10f}, format2={format(r2_buffer_linear_action[i], ".2f")}")
+                    print(f"t={buffer_time[i]:.2f}s, lin_vel2={r2_buffer_linear_action[i]:.10f}, format2={format(r2_buffer_linear_action[i], '.2f')}")
+
+                    # # if abs(r2_buffer_linear_action[i]) < 1e-3 or np.isnan(r2_buffer_linear_action[i]):
+                    # if format(r2_buffer_linear_action[i], ".2f") == "0.00" or format(r2_buffer_linear_action[i], ".2f") == "-0.00":
+
+                    #     print(f"Skipping Robot B vector field at t={buffer_time[i]:.2f}s due to near-zero velocity.")
+                    # else:
+                    arrow_color = 'purple' if r2_buffer_linear_action[i] < 0 else 'blue'
+                    theta2 = r2_buffer_angular_action[i] * (np.pi / 4)
+                    # length2 = r2_buffer_linear_action[i] * 0.5
+                    length2 = r2_buffer_linear_action[i] * 1.5
+                    # width2 = 0.05 + 0.05 * abs(r2_buffer_angular_action[i])
+                    width2 = 0.1
+                    alpha2 = 0.5
+
+                    otheta2 =  r2_buffer_angular_obs[i] * (np.pi / 4)
+                    olength2 = r2_buffer_linear_obs[i]  * 1.5
+                    
+
+                            
+
+                    for x in grid_x2:
+                        for y in grid_y2:
+
+                            # if abs(r2_buffer_linear_action[i]) <= 0.01 and abs(r2_buffer_linear_action[i]) >= - 0.01:
+                            if (abs(r2_buffer_linear_action[i]) <= 0.01 and abs(r2_buffer_lateral_action[i]) <= 0.01) if env.args.heterogeneous else abs(r2_buffer_linear_action[i]) <= 0.01:
+                                # do something
+
+                                print("BINGO_________________")
+                                dx = 0
+                                arrow_color = 'black'
+                                # widtharrow = 0.2
+                                # hd = 0.1
+                                # hl = 0.05
+
+                                # widtharrow = 0.02
+                                # hd = 0.01
+                                # hl = 0.009
+                                # dy=dy*0.5
+                                alpha = 1
+                                ax2.plot(x, y, marker='s', color='black', markersize=20, alpha=alpha)
+                                if abs(r2_buffer_linear_obs[i]) <= 0.01 and abs(r2_buffer_linear_obs[i]) >= - 0.01:
+                                    print("BINGO_________________")
+                                    dx = 0
+                                    arrow_color = 'black'
+                                    # widtharrow = 0.2
+                                    # hd = 0.1
+                                    # hl = 0.05
+
+                                    # widtharrow = 0.02
+                                    # hd = 0.01
+                                    # hl = 0.009
+                                    # dy=dy*0.5
+                                    alpha = 1
+                                    ax2.plot(x, y, marker='s', color='black',markerfacecolor='none', markersize=30, alpha=alpha)
+
                                 else:
-                                    # No motion at all
-                                    dx2 = 0
-                                    dy2 = 0
+
+                                    if env.args.heterogeneous or env.args.titanheads:
+                                        # Base components from linear and lateral velocities
+                                        dx_base = r2_buffer_linear_action[i] * 0.5   # Forward/backward component
+                                        dy_base = r2_buffer_lateral_action[i] * 0.5  # Left/right component
+                                        width2 = 0.1
+                                        alpha2 = 0.5
+                                        ox2 = olength2 * np.cos(otheta2)
+                                        oy2 = olength2 * np.sin(otheta2)
+                                        aspect_ratio = ((((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) / ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1))
+                                        oy2=oy2/aspect_ratio
+                                        # Angular velocity modifies the direction of the resultant vector
+                                        # It can be thought of as adding a rotational bias to the motion
+                                        angular_influence = r2_buffer_angular_action[i] * 0.3  # Scale factor for angular effect
+                                        
+                                        # Method 1: Angular velocity rotates the linear+lateral vector
+                                        if abs(r2_buffer_linear_action[i]) > 0.01 or abs(r2_buffer_lateral_action[i]) > 0.01:
+                                            # There's translational motion - angular velocity modifies its direction
+                                            angle_offset = r2_buffer_angular_action[i] * (np.pi / 8)  # Convert angular vel to angle offset
+                                            
+                                            # Rotate the base vector by the angular influence
+                                            cos_offset = np.cos(angle_offset)
+                                            sin_offset = np.sin(angle_offset)
+                                            
+                                            dx2 = dx_base * cos_offset - dy_base * sin_offset
+                                            dy2 = dx_base * sin_offset + dy_base * cos_offset
+                                        else:
+                                            # Pure angular motion - create a tangential vector
+                                            if abs(r2_buffer_angular_action[i]) > 0.01:
+                                                # Create a vector tangent to rotation at current position
+                                                dx2 = -angular_influence  # Tangential component
+                                                dy2 = angular_influence   # Tangential component
+                                            else:
+                                                # No motion at all
+                                                dx2 = 0
+                                                dy2 = 0
+                                        # ax2.arrow(x, y, dx2, dy2, width=0.01, head_width=width2, color='blue', alpha=1)
+                                        ax2.arrow(x, y, ox2, oy2, width=0.01, head_width=width2, color="purple", alpha=1)
+                                    else:
+                                        dx2 = length2 * np.cos(theta2)
+                                        dy2 = length2 * np.sin(theta2)
+                                        aspect_ratio = ((((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) / ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1))
+                                        dy2=dy2/aspect_ratio
+
+                                        ox2 = olength2 * np.cos(otheta2)
+                                        oy2 = olength2 * np.sin(otheta2)
+
+                                        oy2=oy2/aspect_ratio
+
+                                        # # Final safeguard: skip arrow if vector is still tiny
+                                        # if abs(dx2) < 1e-6 and abs(dy2) < 1e-6:
+                                    #     continue
+
+                                        # ax2.arrow(x, y, dx2, dy2, width=0.01, head_width=width2, color='blue', alpha=1)
+                                        ax2.arrow(x, y, ox2, oy2, width=0.01, head_width=width2, color="purple", alpha=1)
 
 
+                            elif abs(r2_buffer_linear_obs[i]) <= 0.01 and abs(r2_buffer_linear_obs[i]) >= - 0.01:
+                                print("BINGO_________________")
+                                dx = 0
+                                arrow_color = 'black'
+                                # widtharrow = 0.2
+                                # hd = 0.1
+                                # hl = 0.05
+
+                                # widtharrow = 0.02
+                                # hd = 0.01
+                                # hl = 0.009
+                                # dy=dy*0.5
+                                alpha = 1
+                                ax2.plot(x, y, marker='s', color='black',markerfacecolor='none', markersize=30, alpha=alpha)
+                                if (abs(r2_buffer_linear_action[i]) <= 0.01 and abs(r2_buffer_lateral_action[i]) <= 0.01) if env.args.heterogeneous else abs(r2_buffer_linear_action[i]) <= 0.01:
+                                # if abs(r2_buffer_linear_action[i]) <= 0.01 and abs(r2_buffer_linear_action[i]) >= - 0.01:
+                                    print("BINGO_________________")
+                                    dx = 0
+                                    arrow_color = 'black'
+                                    # widtharrow = 0.2
+                                    # hd = 0.1
+                                    # hl = 0.05
+
+                                    # widtharrow = 0.02
+                                    # hd = 0.01
+                                    # hl = 0.009
+                                    # dy=dy*0.5
+                                    alpha = 1
+                                    ax2.plot(x, y, marker='s', color='black', markersize=20, alpha=alpha)
+
+                                else:
+
+                                    if env.args.heterogeneous or env.args.titanheads:
+                                        # Base components from linear and lateral velocities
+                                        dx_base = r2_buffer_linear_action[i] * 0.5   # Forward/backward component
+                                        dy_base = r2_buffer_lateral_action[i] * 0.5  # Left/right component
+                                        width2 = 0.1
+                                        alpha2 = 0.5
+                                        ox2 = olength2 * np.cos(otheta2)
+                                        oy2 = olength2 * np.sin(otheta2)
+                                        aspect_ratio = ((((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) / ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1))
+                                        oy2=oy2/aspect_ratio
+                                        # Angular velocity modifies the direction of the resultant vector
+                                        # It can be thought of as adding a rotational bias to the motion
+                                        angular_influence = r2_buffer_angular_action[i] * 0.3  # Scale factor for angular effect
+                                        
+                                        # Method 1: Angular velocity rotates the linear+lateral vector
+                                        if abs(r2_buffer_linear_action[i]) > 0.01 or abs(r2_buffer_lateral_action[i]) > 0.01:
+                                            # There's translational motion - angular velocity modifies its direction
+                                            angle_offset = r2_buffer_angular_action[i] * (np.pi / 8)  # Convert angular vel to angle offset
+                                            
+                                            # Rotate the base vector by the angular influence
+                                            cos_offset = np.cos(angle_offset)
+                                            sin_offset = np.sin(angle_offset)
+                                            
+                                            dx2 = dx_base * cos_offset - dy_base * sin_offset
+                                            dy2 = dx_base * sin_offset + dy_base * cos_offset
+                                        else:
+                                            # Pure angular motion - create a tangential vector
+                                            if abs(r2_buffer_angular_action[i]) > 0.01:
+                                                # Create a vector tangent to rotation at current position
+                                                dx2 = -angular_influence  # Tangential component
+                                                dy2 = angular_influence   # Tangential component
+                                            else:
+                                                # No motion at all
+                                                dx2 = 0
+                                                dy2 = 0
+                                        ax2.arrow(x, y, dx2, dy2, width=0.01, head_width=width2, color='blue', alpha=1)
+                                        # ax2.arrow(x, y, ox2, oy2, width=0.01, head_width=width2, color="purple", alpha=1)
+                                    else:
+                                        dx2 = length2 * np.cos(theta2)
+                                        dy2 = length2 * np.sin(theta2)
+                                        aspect_ratio = ((((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) / ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1))
+                                        dy2=dy2/aspect_ratio
+
+                                        ox2 = olength2 * np.cos(otheta2)
+                                        oy2 = olength2 * np.sin(otheta2)
+
+                                        oy2=oy2/aspect_ratio
+
+                                        # # Final safeguard: skip arrow if vector is still tiny
+                                        # if abs(dx2) < 1e-6 and abs(dy2) < 1e-6:
+                                    #     continue
+
+                                        ax2.arrow(x, y, dx2, dy2, width=0.01, head_width=width2, color='blue', alpha=1)
+                                        # ax2.arrow(x, y, ox2, oy2, width=0.01, head_width=width2, color="purple", alpha=1)
+
+                            else:
+
+
+                                if env.args.heterogeneous or env.args.titanheads:
+                                    # Base components from linear and lateral velocities
+                                    dx_base = r2_buffer_linear_action[i] * 0.5   # Forward/backward component
+                                    dy_base = r2_buffer_lateral_action[i] * 0.5  # Left/right component
+                                    width2 = 0.1
+                                    alpha2 = 0.5
+                                    ox2 = olength2 * np.cos(otheta2)
+                                    oy2 = olength2 * np.sin(otheta2)
+                                    aspect_ratio = ((((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) / ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1))
+                                    oy2=oy2/aspect_ratio
+                                    # Angular velocity modifies the direction of the resultant vector
+                                    # It can be thought of as adding a rotational bias to the motion
+                                    angular_influence = r2_buffer_angular_action[i] * 0.3  # Scale factor for angular effect
+                                    
+                                    # Method 1: Angular velocity rotates the linear+lateral vector
+                                    if abs(r2_buffer_linear_action[i]) > 0.01 or abs(r2_buffer_lateral_action[i]) > 0.01:
+                                        # There's translational motion - angular velocity modifies its direction
+                                        angle_offset = r2_buffer_angular_action[i] * (np.pi / 8)  # Convert angular vel to angle offset
+                                        
+                                        # Rotate the base vector by the angular influence
+                                        cos_offset = np.cos(angle_offset)
+                                        sin_offset = np.sin(angle_offset)
+                                        
+                                        dx2 = dx_base * cos_offset - dy_base * sin_offset
+                                        dy2 = dx_base * sin_offset + dy_base * cos_offset
+                                    else:
+                                        # Pure angular motion - create a tangential vector
+                                        if abs(r2_buffer_angular_action[i]) > 0.01:
+                                            # Create a vector tangent to rotation at current position
+                                            dx2 = -angular_influence  # Tangential component
+                                            dy2 = angular_influence   # Tangential component
+                                        else:
+                                            # No motion at all
+                                            dx2 = 0
+                                            dy2 = 0
+                                    ax2.arrow(x, y, dx2, dy2, width=0.01, head_width=width2, color='blue', alpha=1)
+                                    ax2.arrow(x, y, ox2, oy2, width=0.01, head_width=width2, color="purple", alpha=1)
+                                else:
+                                    dx2 = length2 * np.cos(theta2)
+                                    dy2 = length2 * np.sin(theta2)
+                                    aspect_ratio = ((((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) / ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1))
+                                    dy2=dy2/aspect_ratio
+
+                                    ox2 = olength2 * np.cos(otheta2)
+                                    oy2 = olength2 * np.sin(otheta2)
+
+                                    oy2=oy2/aspect_ratio
+
+                                    # # Final safeguard: skip arrow if vector is still tiny
+                                    # if abs(dx2) < 1e-6 and abs(dy2) < 1e-6:
+                                #     continue
+
+                                    ax2.arrow(x, y, dx2, dy2, width=0.01, head_width=width2, color='blue', alpha=1)
+                                    ax2.arrow(x, y, ox2, oy2, width=0.01, head_width=width2, color="purple", alpha=1)
+
+
+                    
+                    
+
+                    pos_A = [r1_poses_x[i], r1_poses_y[i]]
+                    # Robot dimensions
+                    length = 1.2
+                    width = 0.78
+
+                    # Bottom-left corner of the rectangle
+                    bottom_left = (pos_A[0] - length/2, pos_A[1] - width/2)
+
+                    # Create rectangle patch
+                    robot_rect = Rectangle(
+                        bottom_left,
+                        length,
+                        width,
+                        linewidth=10,
+                        edgecolor='orange',
+                        facecolor='orange'  # hollow
+                    )
+
+                    # Add to plot
+                    ax2.add_patch(robot_rect)
+                    # ax2.plot(*pos_A, marker='s', color='orange', markersize=60)
+                    ax2.text(pos_A[0] + 0.1, pos_A[1], "Leading Robot", color='black', fontsize=15)
+                    # ax2.set_title(f"Robot B Vector Field at t={buffer_time[i]:.1f}s")
+                    # ax2.set_title(f"Following Robot\'s Vector Field Relative to Leading Robot Position \n at t (s)={buffer_time[i]:.1f}s and lin_vel (m/s): {r2_buffer_linear_action[i]:.2f} ang_vel (rad/s): {r2_buffer_angular_action[i]:.2f}",fontsize=15)
+                    # ax2.set_title(f"Following Robot\'s Vector Field Relative to \n Leading Robot at t (s)={buffer_time[i]:.1f}s and lin_vel (m/s): {r2_buffer_linear_action[i]:.2f} ang_vel (rad/s): {r2_buffer_angular_action[i]:.2f}",fontsize=20)
+                    # ax2.set_title(f"Following Robot\'s Vector Field Relative to \n Leading Robot at t (s)={buffer_time[i]:.1f}s and lin_vel (m/s): {r2_buffer_linear_action[i]:.2f} \n ang_vel (rad/s): {r2_buffer_angular_action[i]:.2f} lat vel (m/s): {r2_buffer_lateral_action[i]:.2f} \n obs lin vel (m/s): {r2_buffer_linear_obs[i]:.2f} obs ang vel (m/s): {r2_buffer_angular_obs[i]:.2f}",fontsize=20)
+                    
+                    
+                    # ax2.set_title(f"Following Robot\'s Vector Field Relative to \n Leading Robot at t (s)={buffer_time[i]:.1f}s and lin_vel (m/s): {r2_buffer_linear_action[i]:.2f} \n ang_vel (rad/s): {r2_buffer_angular_action[i]:.2f}  \n obs lin vel (m/s): {r2_buffer_linear_obs[i]:.2f} obs ang vel (m/s): {r2_buffer_angular_obs[i]:.2f}",fontsize=20)
+                    ax2.set_title(f"Following Robot\'s Vector Field Relative to \n Leading Robot at t (s)={buffer_time[i]:.1f}s",fontsize=20)
+                    # ax2.axis("equal")
+
+                    handles = [
+                        # Line2D([], [], marker='>', color='orange', linestyle='None', markersize=10, label='Start of Leading Robot'),
+                        # Line2D([], [], marker='>', color='blue', linestyle='None', markersize=10, label='Start of Following Robot'),
+                        # Line2D([], [], marker='o', color='orange', linestyle='None', markersize=10, label='Goal of Leading Robot'),
+                        # Line2D([], [], marker='o', color='blue', linestyle='None', markersize=10, label='Goal of Following Robot'),
+                        Line2D([], [], marker='s', color='orange', linestyle='None', markersize=13, label='Leading Robot'),
+                        Line2D([], [], color='blue', linewidth=2, marker='>', markersize=13, label='Following Robot\'s \n Action Velocity'),
+                        Line2D([], [], color='purple', linewidth=2, marker='>', markersize=13, label='Following Robot\'s \n Perceived Velocity'),
+                        Line2D([], [], color='black', linewidth=2, marker='s', markersize=13, label='Commanded to Stopped'),
+                        Line2D([], [], color='black',markerfacecolor='none', linewidth=2, marker='s', markersize=13, label='Perceived as Stopped'),
+                        # Line2D([], [], color='red', linewidth=8, label='Obstacle'),
                         
-                        else:
-                            theta2 = r2_buffer_angular_action[i] * (np.pi / 4)
-                            length2 = r2_buffer_linear_action[i] * 0.5
-                            width2 = 0.1
-                            alpha2 = 0.5
+                    ]
+                    # ax2.legend(handles=handles, loc='upper left', fontsize=15)
+                    ax2.legend(handles=handles, loc='upper left', fontsize=13, ncol=2, columnspacing=1.5)
 
-                            dx2 = length2 * np.cos(theta2)
-                            dy2 = length2 * np.sin(theta2)
-                            aspect_ratio = ((((goal_A[0] + start_A[0]) / 2)+5) - (((goal_A[0] + start_A[0]) / 2)-5)) / ((((goal_A[1] + start_A[1]) / 2)+2) - (((goal_A[1] + start_A[1]) / 2)-1))
-                            dy2=dy2/aspect_ratio
+                    # ax2.set_xlim(Goal1_x_list[0]-9, Goal1_x_list[0]+1)
+                    # ax2.set_ylim(Goal1_y_list[0]-6, Goal2_y_list[0]-6)
+                    ax2.grid(True)
 
-                        # Store arrow data
-                        if env.args.heterogeneous or env.args.titanheads:
-                            arrow_data = {
-                            'x': g,
-                            'y': h,
-                            'dx': dx2,
-                            'dy': dy2,
-                            'linear_action': r2_buffer_linear_action[i],
-                            'lateral_action': r2_buffer_lateral_action[i],
-                            'angular_action': r2_buffer_angular_action[i],
-                            'pos_A': pos_A,
-                            'pos_B': pos_B,
-                            'start_A': start_A,
-                            'start_B': start_B,
-                            'goal_A': goal_A,
-                            'goal_B': goal_B,
-                            'buffer_time': buffer_time[i],
-                            'width2': width2,
-                            'alpha2': alpha2
-                            }
-                        else:
-                            arrow_data = {
-                                'x': g,
-                                'y': h,
-                                'dx': dx2,
-                                'dy': dy2,
-                                'linear_action': r2_buffer_linear_action[i],
-                                'angular_action': r2_buffer_angular_action[i],
-                                'pos_A': pos_A,
-                                'pos_B': pos_B,
-                                'start_A': start_A,
-                                'start_B': start_B,
-                                'goal_A': goal_A,
-                                'goal_B': goal_B,
-                                'buffer_time': buffer_time[i],
-                                'width2': width2,
-                                'alpha2': alpha2
-                            }
-                        all_arrows_data.append(arrow_data)
+                    # ------------------ Common Features ------------------
+                    for ax in [ax1, ax2]:
+                        # Compute midpoint between goals and starts
+                        # Midpoint between start and goal (obstacles are placed here)
+                        # Midpoint between start and goal
+                        # Midpoint between start and goal
+                        mid_x = (goal_A[0] + start_A[0]) / 2
+                        mid_y = (goal_A[1] + start_A[1]) / 2
 
-                    env._p.disconnect()
+                        # Parameters
+                        # gap = 0.85  # gap between obstacles (vertical)
+                        gap = 0.95  # gap between obstacles (vertical)
+                        half_gap = gap / 2
+                        # obs_height = 0.55  # height of each vertical obstacle
+                        # obs_height = 0.75  # height of each vertical obstacle
+                        obs_height = 1.5  # height of each vertical obstacle
+                        obs_thickness = 0.1  # width (x-direction thickness)
 
-            # NOW PLOT ALL ARROWS IN A SINGLE IMAGE
-            if args.num_robots==2 and all_arrows_data:
-                fig, ax2 = plt.subplots(nrows=1, ncols=1, figsize=(15, 9))
-                
-                # Use data from the first arrow for scene setup
-                first_arrow = all_arrows_data[0]
-                pos_A = first_arrow['pos_A']
-                pos_B = first_arrow['pos_B']
-                start_A = first_arrow['start_A']
-                start_B = first_arrow['start_B']
-                goal_A = first_arrow['goal_A']
-                goal_B = first_arrow['goal_B']
-                
-                # Draw robots
-                length = 1.2
-                width = 0.78
-                
-                # # Robot B (Following Robot)
-                # bottom_left_B = (pos_B[0] - length/2, pos_B[1] - width/2)
-                # robot_rect1 = Rectangle(bottom_left_B, length, width, linewidth=10, edgecolor='blue', facecolor='blue')
-                # ax2.add_patch(robot_rect1)
-                
-                # Robot A (Leading Robot)
-                bottom_left_A = (pos_A[0] - length/2, pos_A[1] - width/2)
-                robot_rect2 = Rectangle(bottom_left_A, length, width, linewidth=10, edgecolor='orange', facecolor='orange')
-                ax2.add_patch(robot_rect2)
-                
-                # ax2.text(pos_A[0] + 0.1, pos_A[1], "Leading Robot", color='black', fontsize=15)
-                
-                # Plot ALL arrows
-                for arrow_data in all_arrows_data:
-                    x, y = arrow_data['x'], arrow_data['y']
-                    dx, dy = arrow_data['dx'], arrow_data['dy']
-                    linear_action = arrow_data['linear_action']
+                        # Coordinates for top obstacle (above the gap)
+                        # top_y_bottom = mid_y + half_gap +0.2
+                        top_y_bottom = mid_y + half_gap 
+                        top_y_top = top_y_bottom + obs_height
+
+                        # Coordinates for bottom obstacle (below the gap)
+                        bot_y_top = mid_y - half_gap
+                        # bot_y_bottom = bot_y_top - obs_height -0.2
+                        bot_y_bottom = bot_y_top - obs_height 
+
+                        # Draw top vertical obstacle
+                        ax.plot([mid_x, mid_x], [top_y_bottom, top_y_top], 'r-', linewidth=8)
+
+                        # Draw bottom vertical obstacle
+                        ax.plot([mid_x, mid_x], [bot_y_bottom, bot_y_top], 'r-', linewidth=8)
+
+                        # Horizontal extension length (leftward or rightward depending on robot flow)
+                        horizontal_length = 5.0  # for example
+
+                        # Draw horizontal obstacle from top_y_top (perpendicular to top vertical)
+                        ax.plot([mid_x, mid_x + horizontal_length], [top_y_top, top_y_top], 'r-', linewidth=8)
+
+                        # Draw horizontal obstacle from bot_y_bottom (perpendicular to bottom vertical)
+                        ax.plot([mid_x, mid_x + horizontal_length], [bot_y_bottom, bot_y_bottom], 'r-', linewidth=8)
+
+                        ax.plot([mid_x - horizontal_length, mid_x], [top_y_top, top_y_top], 'r-', linewidth=8)
+                        ax.plot([mid_x - horizontal_length, mid_x], [bot_y_bottom, bot_y_bottom], 'r-', linewidth=8)
+
+
+
+
+
+
+                                    # ax.plot([Goal2_x_list[0]-4, Goal2_x_list[0]-4],
+                                    #         [Goal1_y_list[0]+0.65, Goal1_y_list[0]-0.65], 'k-', linewidth=8)
+                                    # ax.plot([Goal2_x_list[0]-4, Goal2_x_list[0]-4],
+                                    #         [Goal2_y_list[0]-0.65, Goal2_y_list[0]+0.65], 'k-', linewidth=8)
+                        # ax.plot(*start_A, marker='>', color='orange', markersize=40)
+                        # ax.plot(*start_B, marker='>', color='blue', markersize=40)
+                        ax.plot(*goal_A, marker='o', color='orange', markersize=40)
+                        ax.plot(*goal_B, marker='o', color='blue', markersize=40)
+                        # ax.set_xlim(mid_x - 5, mid_x + 5)
+                        # ax.set_ylim(mid_y , mid_y )
+                        # ax.set_xlim(mid_x - 5, mid_x + 5)
+                        # ax.set_ylim(mid_y - 1.2, mid_y + 2)
+
+                        # # ####1.2  reverse or stopping
+                        # ax.set_xlim(mid_x - 5, mid_x+0.5 )
+                        # ax.set_ylim(mid_y - 1.2, mid_y + 1)
+
+                        # # ####1.2 CLosecall and Following
+                        # ax.set_xlim(mid_x - 5, mid_x+2.5 )
+                        # ax.set_ylim(mid_y - 1.2, mid_y + 1)
+
+                        # # ####Heteroreverse or HPPOSTOPPED
+                        # ax.set_xlim(mid_x - 5, mid_x+0.5 )
+                        # ax.set_ylim(mid_y - 2.2, mid_y + 2)
+
+                        ####1.2 HPPO CLosecall and Following
+                        ax.set_xlim(mid_x - 5, mid_x+2.5 )
+                        ax.set_ylim(mid_y - 2.2, mid_y + 1)
+
+
+                        ### INDIVIDUAL FOLLOWING (NOT NEEDED)
+                        # ax.set_xlim(mid_x - 3, mid_x +1 )
+                        # ax.set_ylim(mid_y - 1, mid_y + 0.8)
+
+                        # ####GAP ALIGNMENT
+                        # ax.set_xlim(mid_x - 4, mid_x +1 )
+                        # ax.set_ylim(mid_y - 2, mid_y + 2)
+                        # ax.set_aspect("equal", adjustable="datalim")
+                        # ax2.set_aspect("equal", adjustable="datalim")
+
+                        # ax.set_aspect('auto')  # optional: or use 'equal' if you want uniform scaling
+                        # ax.set_aspect('equal')  # optional: or use 'equal' if you want uniform scaling
+                        ax.set_xlabel("X position (m)", fontsize=25)
+                        ax.set_ylabel("Y position (m)", fontsize=25)
+                        ax.tick_params(axis='both', labelsize=25)
+
+
+                        # ax2.set_xlabel("X position (m)")
+                        # ax2.set_ylabel("Y position (m)")
+
+
                     
-                    # Determine arrow properties
-                    # if round(linear_action, 3) == 0.0:
-                    # if format(linear_action, ".2f") in ["0.00", "-0.00"]:
-                    if abs(linear_action) < 0.01 and abs(linear_action) > - 0.01:
-                        print("BINGO_________________")
-                        dx = 0
-                        arrow_color = 'black'
-                        # widtharrow = 0.2
-                        # hd = 0.1
-                        # hl = 0.05
 
-                        # widtharrow = 0.02
-                        # hd = 0.01
-                        # hl = 0.009
-                        # dy=dy*0.5
-                        alpha = 1
-                        ax2.plot(x, y, marker='s', color='black', markersize=20, alpha=alpha)
-                    else:
-                        is_reverse = dx <= -0.01
-                        arrow_color = 'red' if is_reverse else 'blue'
-                        widtharrow = 0.01
-                        hd = arrow_data['width2']
-                        hl = 0.1
+                    plt.tight_layout()
+                    output_dir = "/home/kom018/behaviour_rl/Results_plots/pybullet_excels/vector_fields/"
+                    filename = os.path.join(output_dir, f"combined_vector_field_{i:03d}.png")
+                    plt.savefig(filename)
+                    plt.close()
 
-                        # # widtharrow=0.001
-                        # # hd=0.01
-                        # # hl=0.01
-                        # # alpha = arrow_data['alpha2']
-                        # # dx=dx*0.5
+                
+                #-------------------------------------------------------------------------------
+                #Compute Vector Field Robot 1
 
-                        # widtharrow=0.0005
-                        # hd=0.004
-                        # hl=0.006
-                        alpha = arrow_data['alpha2']
-                        # dx=dx*0.2
+                # time_range = np.arange(0, save_time)
+
+                # print("gg")
+                # dt = 0.5
+                # # grid_x = np.linspace(1, 9, 9)
+                # # grid_y = np.linspace(1, 11, 9)
+
+                # grid_x = np.linspace(1, 25, 25)
+                # grid_y = np.linspace(1, 25, 25)
+
+                # # start_A = np.array([0, 3])
+                
+                # # start_B = np.array([0, -3])
+
+                # start_A = [env.Goals_pos[1][0]-8,env.Goals_pos[1][1]]
+                
+                # start_B = [env.Goals_pos[0][0]-8,env.Goals_pos[0][1]]
+
+                # # obstacle_A = [env.Goals_pos[1][0]-4,env.Goals_pos[1][1]]
+                
+                # # obstacle_B = [env.Goals_pos[0][0]-4,env.Goals_pos[0][1]]
+
+                # # goal_A = np.array([6, 9])
+                # # goal_B = np.array([3, 9])
+
+                # goal_A = env.Goals_pos[0][0:2]
+                # goal_B = env.Goals_pos[1][0:2]
+                # # print("gp",goal_A,goal_B)
+                # pos_A = [r1_poses_x[0],r1_poses_y[0]]
+                # # pos_B = np.array([6, 3])
+                # pos_B = [r2_poses_x[0],r2_poses_y[0]]
+                # # positions = {0: (start_A.copy())}
+
+                # # for t in range(1, max(time_range) + 1):
+                # #     # Simple linear interpolation for this example 
+                # #     # (you could use your original movement logic instead)
+                # #     alpha = min(t / 20.0, 1.0)  # Normalized time from 0 to 1
                     
-                    # Plot the arrow
+                # #     # Linear interpolation between start and goal
+                # #     # pos_A = start_A + alpha * (goal_A - start_A)
+                # #     pos_B = start_B + alpha * (goal_B - start_B)
+                # #     actn = start_B + alpha * (goal_B - start_B)
                     
-                        ax2.arrow(x, y, dx, dy, width=widtharrow, head_width=hd, head_length=hl, color=arrow_color, alpha=alpha)
+                # #     positions[t] = (pos_B)
 
-                # Set up the scene (obstacles, goals, etc.)
-                mid_x = (goal_A[0] + start_A[0]) / 2
-                mid_y = (goal_A[1] + start_A[1]) / 2
-                gap = 0.85
-                half_gap = gap / 2
-                obs_height = 0.75
-                obs_thickness = 0.1
-                
-                top_y_bottom = mid_y + half_gap 
-                top_y_top = top_y_bottom + obs_height
-                bot_y_top = mid_y - half_gap
-                bot_y_bottom = bot_y_top - obs_height 
-                horizontal_length = 5.0
-                
-                # Draw obstacles
-                ax2.plot([mid_x, mid_x], [top_y_bottom, top_y_top], 'r-', linewidth=8)
-                ax2.plot([mid_x, mid_x], [bot_y_bottom, bot_y_top], 'r-', linewidth=8)
-                ax2.plot([mid_x, mid_x + horizontal_length], [top_y_top, top_y_top], 'r-', linewidth=8)
-                ax2.plot([mid_x, mid_x + horizontal_length], [bot_y_bottom, bot_y_bottom], 'r-', linewidth=8)
-                ax2.plot([mid_x - horizontal_length, mid_x], [top_y_top, top_y_top], 'r-', linewidth=8)
-                ax2.plot([mid_x - horizontal_length, mid_x], [bot_y_bottom, bot_y_bottom], 'r-', linewidth=8)
-                
-                # Plot start and goal positions
-                # ax2.plot(*start_A, marker='>', color='orange', markersize=40)
-                # ax2.plot(*start_B, marker='>', color='blue', markersize=40)
-                ax2.plot(*goal_A, marker='o', color='orange', markersize=40)
-                ax2.plot(*goal_B, marker='o', color='blue', markersize=40)
-                
-                # Set title and labels
-                ax2.set_title(f"Robot B Vector Field Relative to Robot A", fontsize=25)
-                ax2.set_xlabel("X position (m)", fontsize=25)
-                ax2.set_ylabel("Y position (m)", fontsize=25)
-                ax2.tick_params(axis='both', labelsize=25)
-                
-                #Set limits
-                ax2.set_xlim(mid_x - 6, mid_x + 5)
-                ax2.set_ylim(mid_y - 1.2, mid_y + 2)
 
-                # ax2.set_xlim(mid_x - 3.45, mid_x - 3.25)
-                # ax2.set_ylim(mid_y - 0.05, mid_y +0.15 )
-                ax2.grid(True)
-                
-                # Legend
-                handles = [
+                # # for i, t in enumerate(time_range):
+                # for i in range(0, len(buffer_time), 10):
+                #     fig, ax = plt.subplots(figsize=(10, 10))
+                #     # print("GOAL",env.Goals_pos);exit()
+                #     for x in grid_x:
+                #         for y in grid_y:
+                #             # pos_B = [env.robots_pos[1][0],env.robots_pos[1][1]]
+                #             pos_B=[r2_poses_x[i], r2_poses_y[i]]
+                #             # pos_B=positions[t]
+                #             # action_robot0=action[0]
+                #             # print("actions",action_robot0,pos_B)
+                #             # ax.arrow(x, y, action_robot0[0]*0.5, action_robot0[1]*0.5, head_width=0.1, color='red', alpha=0.5)
+                #             ax.arrow(x, y, r1_buffer_linear_action[i]*0.5, r1_buffer_angular_action[i]*0.5, head_width=0.1, color='red', alpha=0.5)
+
+                #     # ax.plot(*pos_A, marker='s', color='red', markersize=20)
+                #     ax.plot(*pos_B, marker='s', color='blue', markersize=20)
+
+                #     # ax.text(pos_A[0] + 0.1, pos_A[1], "Robot A", color='red', fontsize=10)
+                #     ax.text(pos_B[0] + 0.1, pos_B[1], "Robot B", color='blue', fontsize=10)
+
+                #     # ax.plot([2, 4.5], [5, 5], 'k-', linewidth=8)
+                #     # ax.plot([5.5, 8], [5, 5], 'k-', linewidth=8)
+
+                #     # ax.plot([2, 10], [4.5, 4.5], 'k-', linewidth=8)
+                #     # ax.plot([5.5, 8], [5, 5], 'k-', linewidth=8)
+
+                # ax.plot([env.Goals_pos[1][0]-4, env.Goals_pos[1][0]-4], [env.Goals_pos[0][1]+0.3, env.Goals_pos[0][1]-0.3], 'k-', linewidth=8)
+                # ax.plot([env.Goals_pos[1][0]-4, env.Goals_pos[1][0]-4], [env.Goals_pos[1][1]-0.3, env.Goals_pos[1][1]+0.3], 'k-', linewidth=8)
+                # # ax.plot([env.Goals_pos[0][0]-4, env.Goals_pos[0][0]-4], [0, 1], 'k-', linewidth=8)
+
+                # # ax.plot(obstacle_A, 'k-', linewidth=1)
+                # # ax.plot(obstacle_B, 'k-', linewidth=1)
+
+                # ax.plot(*start_A, marker='>', color='red', markersize=14, label='Start A')
+                # ax.plot(*start_B, marker='>', color='blue', markersize=14, label='Start B')
+                # ax.plot(*goal_A, marker='o', color='red', markersize=16, label='Goal A')
+                # ax.plot(*goal_B, marker='o', color='blue', markersize=16, label='Goal B')
+
+                # handles = [
+                #     Line2D([], [], marker='>', color='red', linestyle='None', markersize=13, label='Start A'),
+                #     Line2D([], [], marker='>', color='blue', linestyle='None', markersize=10, label='Start B'),
+                #     Line2D([], [], marker='o', color='red', linestyle='None', markersize=10, label='Goal A'),
+                #     Line2D([], [], marker='o', color='blue', linestyle='None', markersize=10, label='Goal B'),
+                #     # Line2D([], [], marker='s', color='red', linestyle='None', markersize=10, label='Robot A'),
+                #     Line2D([], [], marker='s', color='blue', linestyle='None', markersize=10, label='Robot B'),
+                #     Line2D([], [], color='black', linewidth=8, label='Obstacle'),
+                #     Line2D([], [], color='red', linewidth=2, marker='>', markersize=10, label='Vector Field A'),
+                # ]
+
+                # ax.legend(handles=handles, loc='upper right')
+                # ax.set_title("Robot A Vector Field with Robot B Position")
+                # ax.axis("equal")
+                # # ax.set_xlim(0.5, 9.5)
+                # # ax.set_ylim(0.5, 11.5)
+
+                # ax.set_xlim(-3, 20)
+                # ax.set_ylim(-3, 20)
+                # ax.grid(True)
+
+                # plt.tight_layout()
+                # # plt.savefig("FINALLY_robot1_vector_field_simple.png")
+                # # plt.show()
+                # output_dir="/home/kom018/behaviour_rl/Results_plots/pybullet_excels/vector_fields/"
+                # filename = os.path.join(output_dir, f"robot1_field_{i:03d}.png")  # Uses counter i with padding
+                # plt.savefig(filename)
+
+
+
+
+
+
+                #-----------------------------------------------
+                # dt = 0.5
+                # grid_x = np.linspace(1, 9, 9)
+                # grid_y = np.linspace(1, 11, 9)
+
+                # start_A = np.array([3, 1])
+                # goal_A = np.array([6, 9])
+                # start_B = np.array([6, 1])
+                # goal_B = np.array([3, 9])
+
+                # pos_A = np.array([3, 3])
+                # # pos_B = np.array([6, 3])
+                # pos_B = [r1_poses_x,r1_poses_y]
+                # positions = {0: (start_A.copy())}
+
+                # for t in range(1, max(time_range) + 1):
+                #     # Simple linear interpolation for this example 
+                #     # (you could use your original movement logic instead)
+                #     alpha = min(t / 20.0, 1.0)  # Normalized time from 0 to 1
                     
-                    Line2D([], [], color='blue', linewidth=2, marker='>', markersize=25, label='Forward Movement'),
-                    Line2D([], [], color='red', linewidth=2, marker='>', markersize=25, label='Reverse Movement'),
-                    # Line2D([], [], color='black', linewidth=2, marker='>', markersize=13, label='Following Robot Vector Field (Stopped)'),
-                    Line2D([], [], color='black', linewidth=2, marker='s', markersize=25, label='Stopped'),
-                    Line2D([], [], marker='s', color='orange', linestyle='None', markersize=25, label='Robot A'),
-                    Line2D([], [], color='red', linewidth=8, label='Obstacle'),
-                    # Line2D([], [], marker='>', color='black', markerfacecolor='none',linestyle='none', markersize=25, label='Start Position'),
-                    Line2D([], [], marker='o', color='orange', linestyle='none', markersize=25, label='Goal of Robot A'),
-                    Line2D([], [], marker='o', color='blue', linestyle='none', markersize=25, label='Goal of Robot B'),
-                   
-                ]
-                ax2.legend(handles=handles, loc='upper left', fontsize=25, ncol=3, columnspacing=1.5)
+                #     # Linear interpolation between start and goal
+                #     # pos_A = start_A + alpha * (goal_A - start_A)
+                #     pos_B = start_B + alpha * (goal_B - start_B)
+                #     actn = start_B + alpha * (goal_B - start_B)
+                    
+                #     positions[t] = (pos_B)
+
+
+                # for i, t in enumerate(time_range):
+
+                #     fig, ax = plt.subplots(figsize=(10, 10))
+
+                #     for x in grid_x:
+                #         for y in grid_y:
+                #             # pos = [env.robots_pos[0][0],env.robots_pos[0][1]]
+                #             # pos_B=[r1_poses_x[t], r1_poses_y[t]]
+                #             pos_B=positions[t]
+                #             action_robot1=action[0]
+                #             print("actions",action_robot1,pos_B,t)
+                #             ax.arrow(x, y, action_robot1[0]*0.5, action_robot1[1]*0.5, head_width=0.1, color='red', alpha=0.5)
+
+                #     # ax.plot(*pos_A, marker='s', color='red', markersize=20)
+                #     ax.plot(*pos_B, marker='s', color='blue', markersize=20)
+
+                #     # ax.text(pos_A[0] + 0.1, pos_A[1], "Robot A", color='red', fontsize=10)
+                #     ax.text(pos_B[0] + 0.1, pos_B[1], "Robot B", color='blue', fontsize=10)
+
+                #     ax.plot([2, 4.5], [5, 5], 'k-', linewidth=8)
+                #     ax.plot([5.5, 8], [5, 5], 'k-', linewidth=8)
+
+                #     ax.plot(*start_A, marker='^', color='red', markersize=14, label='Start A')
+                #     ax.plot(*start_B, marker='^', color='blue', markersize=14, label='Start B')
+                #     ax.plot(*goal_A, marker='o', color='red', markersize=16, label='Goal A')
+                #     ax.plot(*goal_B, marker='o', color='blue', markersize=16, label='Goal B')
+
+                #     handles = [
+                #         Line2D([], [], marker='^', color='red', linestyle='None', markersize=10, label='Start A'),
+                #         Line2D([], [], marker='^', color='blue', linestyle='None', markersize=10, label='Start B'),
+                #         Line2D([], [], marker='o', color='red', linestyle='None', markersize=10, label='Goal A'),
+                #         Line2D([], [], marker='o', color='blue', linestyle='None', markersize=10, label='Goal B'),
+                #         # Line2D([], [], marker='s', color='red', linestyle='None', markersize=10, label='Robot A'),
+                #         Line2D([], [], marker='s', color='blue', linestyle='None', markersize=10, label='Robot B'),
+                #         Line2D([], [], color='black', linewidth=8, label='Obstacle'),
+                #         Line2D([], [], color='red', linewidth=2, marker='>', markersize=10, label='Vector Field A'),
+                #     ]
+
+                #     ax.legend(handles=handles, loc='upper right')
+                #     ax.set_title("Robot A Vector Field with Robot B Position")
+                #     ax.axis("equal")
+                #     ax.set_xlim(0.5, 9.5)
+                #     ax.set_ylim(0.5, 11.5)
+                #     ax.grid(True)
+
+                #     plt.tight_layout()
+                #     # plt.savefig("FINALLY_robot1_vector_field_simple.png")
+                #     # plt.show()
+                #     filename = os.path.join(output_dir, f"robot_field_{i:03d}.png")  # Uses counter i with padding
+                #     plt.savefig(filename)
                 
-                plt.tight_layout()
-                output_dir = "/home/kom018/behaviour_rl/Results_plots/pybullet_excels/vector_fields/"
-                filename = os.path.join(output_dir, f"combined_vector_field_all_arrows_{p}_{q}.png")
-                plt.savefig(filename)
-                plt.close()
-                
-                print(f"Plotted {len(all_arrows_data)} arrows in single image: {filename}")
+            
+            
+            # # print("overal",time.time()-R3.t1)
+            print("TIMES",current_time,save_time)
+            # if current_time>save_time:
+            #     # print("THAM");exit()
+            #     print("THAM")
+            break
+
+    
+        
+        
+        # # print(counting_step*1/10)
+            
+
+        # # if done==[True] or termination==[True] or env.steps > args.max_ep_len:
+        # if all(done) or all(termination) or env.steps > args.max_ep_len:
+            
+        #     obs = env.reset()
+        #     if args.use_perception:
+        #         im = env.get_image()
+        #         # print(im,type(im),im[0][0][1].shape)
+
+        #     if env.args.heterogeneous or env.args.titanheads:
+        #         # if ac_size==(2,3):
+        #         if "titan" in str(env.robots[0]):
+        #             # print("O_before",len(o[0]),o)
+        #             obs[0] = np.insert(obs[0], 0, 0)
+        #             obs[1] = np.insert(obs[1], 0, 1)
+        #             # print("O_after",len(obs[0]),o)
+        #         # elif ac_size==(3,2):
+        #         elif "spot" in str(env.robots[0]):
+        #             # print("O_before",len(obs[0]),o)
+        #             obs[0] = np.insert(obs[0], 0, 1)
+        #             obs[1] = np.insert(obs[1], 0, 0)
+        #     n=n+1
+        #     print("Trial_no",n)
+        #     if n==100:
+        #         print("100 Iteration Done")
+        #     for a in done:
+        #         if a:
+        #             print(n,a)
+        
+        #     #print(obs)
 
 if __name__== "__main__":
-    run(args)
+    
+    # # print(pol)
+    # for x in range(1, 8):
+    #     # for y in range(1.2,2.5):
+    #     for y in np.arange(1.25, 2.6, 0.25):
+    # # x=1
+    # # y=
+    #         print("AAALLCHECKX",x,y)
+            # env = Env(PATH=PATH, args=args)
+            # env.reset(loading_poses=[x,y])
+            
+            
+            
+                # start_time=time.time()
+            
+    run(args,env)
+            
+            # env._p.disconnect()
+                # p.disconnect()
+                # current_time=0

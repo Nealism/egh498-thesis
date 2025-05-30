@@ -643,6 +643,8 @@ class Env(EnvBasePB):
                 self.robottogoal_angle = angles#[0]
                 
                 break
+
+            
             # else:
             #     # If the robot_name is not found, handle it accordingly
             #     print(f"Robot {self} not found in robottogoal_angles.")
@@ -769,6 +771,13 @@ class Env(EnvBasePB):
                     # Assuming there's only one value in the angles list for simplicity
                     self.robot_own_pos = own_pos
                     break
+
+            if self.args.randomness==4:
+                for robot, initial_pos in self.initial_robots_pos:
+                    if robot == self:
+                        # Assuming there's only one value in the angles list for simplicity
+                        self.initial_pos = initial_pos
+                        break
                 # else:
                 #     # If the robot_name is not found, handle it accordingly
                 #     print(f"Robot {self} not found in pos.")
@@ -811,6 +820,7 @@ class Env(EnvBasePB):
         # self.robottogoal_angle=None
         self.external_goals_states=[]
         self.external_robots_states=[]
+        self.initial_robots_states=[]
         
         for robot,goal in self.external_goals_states_with_IDx:
             self.external_goals_states.append(goal)
@@ -818,12 +828,19 @@ class Env(EnvBasePB):
         for robot,r_position in self.external_robots_pos:
             self.external_robots_states.append(r_position)
 
+        if self.args.randomness==4:
+            for robot,i_position in self.initial_robots_pos:
+                self.initial_robots_states.append(i_position)
+
         self.mid_point_of_goals=self.calculate_midpoint(self.external_goals_states[0],self.external_goals_states[-1])
         # self.mid_point_of_goals=(self.mid_point_of_goals[0],self.mid_point_of_goals[1],self.mid_point_of_goals[2])
         # print(self.mid_point_of_goals)
         # self.mid_point_of_goals= (self.mid_point_of_goals[0],self.mid_point_of_goals[1])
+        if self.args.randomness==4:
+            self.mid_point_of_robots=self.calculate_midpoint(self.initial_robots_states[0],self.initial_robots_states[-1])
 
-        self.mid_point_of_robots=self.calculate_midpoint(self.external_robots_states[0],self.external_robots_states[-1])
+        else:
+            self.mid_point_of_robots=self.calculate_midpoint(self.external_robots_states[0],self.external_robots_states[-1])
         # self.mid_point_of_robots_offsetting=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-1.2,1.2))
         # self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]-1.2)
         # self.mid_point_of_robots=(self.mid_point_of_robots[0],self.mid_point_of_robots[1]+np.random.uniform(-3,3))
@@ -841,8 +858,12 @@ class Env(EnvBasePB):
             
 
             #print("reset self.robottogoal_angle",self.robottogoal_angle)
+
+            if self.args.randomness==4:
+                self.move_goal_and_static_robot(initial_x=self.initial_pos[0], initial_y=self.initial_pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
+            else:
             
-            self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
+                self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
         else:
             self.move_goal_and_static_robot(initial_x=pos[0], initial_y=pos[1], yaw=self.initial_yaw,robottogoal_angle=self.robottogoal_angle,mid_point_goals=self.mid_point_of_goals,mid_point_robots=self.mid_point_of_robots)
         
@@ -1057,7 +1078,7 @@ class Env(EnvBasePB):
         #state_object=[np.random.uniform(-7, 7), np.random.uniform(-8, -6), 0.00]
         #print("self.external_goals_states",self.external_goals_states)
         robot1_pos=(initial_x, initial_y)
-        
+        initial_pos=(initial_x, initial_y)
         
         # if self.args.gap_avoidance:
         #     for self.robottogoal_angle in self.robottogoal_angles:
@@ -1065,8 +1086,13 @@ class Env(EnvBasePB):
         # else:
         # state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, random.randint(0, 360))
         if self.args.gap_avoidance:
+
+
+            if self.args.randomness==4:
+                state_object=self.find_position_B(initial_pos, self.initial_goal_dist, robottogoal_angle)
+            else:
             
-            state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, robottogoal_angle)
+                state_object=self.find_position_B(robot1_pos, self.initial_goal_dist, robottogoal_angle)
             #print(self.robottogoal_angle);exit()
             dist = np.sqrt((state_object[0] - initial_x)**2 + (state_object[1] - initial_y)**2)
             #print(dist)
@@ -2625,7 +2651,7 @@ class Env(EnvBasePB):
             self.other_robots_orientation=self.Other_Robots_orn_list[0]
             self.other_robots_vx=self.Other_Robots_vx_list[0]
             self.other_robots_angular_vx=self.Other_Robots_angular_vx_list[0]
-
+        print("S_VX",self.vx,self.vxS)
         if self.args.static_robots > 1:
             return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3])
         
@@ -6832,7 +6858,7 @@ class Env(EnvBasePB):
             [		0,			 0, 1]]
         )
         self.heading_vx, _, _ = np.dot(rot_speed, (self.body_vxyz[0],self.body_vxyz[1],self.body_vxyz[2]))
-        #print("self.heading_vx",self.heading_vx)
+        print("SPOT.heading_vx",self.heading_vx)
 
         
         ########################
@@ -8405,6 +8431,10 @@ class Env(EnvBasePB):
 
     def set_external_goals_state(self, list_of_external_goals_state):
         self.external_goals_states_with_IDx=list_of_external_goals_state
+
+
+    def set_initial_robots_pos(self, list_of_initial_robots_pos):
+        self.initial_robots_pos=list_of_initial_robots_pos
 
     def set_wall1_corners(self, list_of_wall1_corners):
         self.wall1_corners=list_of_wall1_corners
