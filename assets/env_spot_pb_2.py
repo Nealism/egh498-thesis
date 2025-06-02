@@ -2651,7 +2651,7 @@ class Env(EnvBasePB):
             self.other_robots_orientation=self.Other_Robots_orn_list[0]
             self.other_robots_vx=self.Other_Robots_vx_list[0]
             self.other_robots_angular_vx=self.Other_Robots_angular_vx_list[0]
-        print("S_VX",self.vx,self.vxS)
+        # print("S_VX",self.vx,self.vxS)
         if self.args.static_robots > 1:
             return np.array(self.wp_pos_robot + [self.roll, self.pitch, self.vx, self.yaw_vel] + self.robot2_bbox[0] + self.robot2_bbox[1] + self.robot2_bbox[2] + self.robot2_bbox[3])
         
@@ -6858,7 +6858,7 @@ class Env(EnvBasePB):
             [		0,			 0, 1]]
         )
         self.heading_vx, _, _ = np.dot(rot_speed, (self.body_vxyz[0],self.body_vxyz[1],self.body_vxyz[2]))
-        print("SPOT.heading_vx",self.heading_vx)
+        # print("SPOT.heading_vx",self.heading_vx)
 
         
         ########################

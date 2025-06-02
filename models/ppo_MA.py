@@ -558,9 +558,38 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         
         if load_path != "":
             ac = torch.load(load_path)
-            print("Loading saved weights: ", load_path)
+            print("Loading saved weights: ", load_path);exit()
+
+        elif env.args.spot_transfer:
+            ac = actor_critic(base_model, env.observation_space, im_size, env.action_space, **ac_kwargs)
+            if not env.args.freezing_off:
+                for param in ac.pi.z_net.parameters():
+                    param.requires_grad = False
+                if env.args.multi_spots:
+
+                    for param in ac.pi.feature_layers.parameters():
+                        param.requires_grad = False
+
+                    
 
 
+                    if env.args.spot_additional_layer:
+                        for param in ac.pi.spot_additional_layer.parameters():
+                            param.requires_grad = False
+
+                    # for param in ac.pi.spot_output_layer.parameters():
+                    #     param.requires_grad = True
+                    if env.args.titan_frozen_layer:
+                        for param in ac.pi.titan_output_layer.parameters():
+                            param.requires_grad = False
+
+                    if env.args.spot_frozen_layer:
+                        for param in ac.pi.spot_output_layer.parameters():
+                            param.requires_grad = False
+
+                if env.args.multi_titans:
+                    for param in ac.pi.mu_net.parameters():
+                        param.requires_grad = False
         
                         
         elif env.args.transfer_learning:
@@ -916,7 +945,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
     # action_saving2=[]
     # action_saving3=[]
     # action_saving4=[]
-
+    
     
     for epoch in range(epochs):
         st=time.time()
@@ -928,7 +957,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 if (env.args.heterogeneous or env.args.titanheads) and not env.args.cloning:
                     
                     a_spot,a_titan, v, logp_spot, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
-                
+                    
                 # if (env.args.heterogeneous or env.args.titanheads) and not env.args.separate_node:
                     
                 #     a_spot,a_titan, v, logp_spot, logp_titan = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
@@ -945,11 +974,11 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 else:
                     a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32))
                 
-            
+                    # print("AC_CHECK",a);exit() 
             else:
                 a, v, logp = ac.step(torch.as_tensor(np.array(o), dtype=torch.float32))
 
-
+               
             if env.args.Pretrained_cur:
             # obs = MUL.reset()
             # im = MUL.get_image()
@@ -995,7 +1024,10 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 sp_ac=action_r
                 # print("sp_ac",sp_ac)
             else: 
-                sp_ac=np.array([[0., 0.],[0., 0.]])
+                if env.args.multi_titans :
+                    sp_ac=np.array([[0., 0.],[0., 0.]])
+                elif env.args.multi_spots:
+                    sp_ac=np.array([[0., 0.,0.],[0., 0.,0.]])
             # print("action_bef",a_spot,a_titan, v, logp_spot, logp_titan)
             # print(ac_size);exit()
             # print(env.robots);exit()

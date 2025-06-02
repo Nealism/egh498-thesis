@@ -181,7 +181,7 @@ class MLPGaussianActorPerception(ActorPerception):
         if args.heterogeneous or args.titanheads:
             self.obs_dim=6
             obs_dim=6
-        # print("base",base)
+        # print("base",base);exit()
         # print("CHEKJDASLJDHJL",act_dim)
         # print("self.obs_dim",self.obs_dim,act_dim);exit()
         # print(act_dim);exit()
@@ -189,7 +189,47 @@ class MLPGaussianActorPerception(ActorPerception):
         # print("act_dim______________________________->>",act_dim)
         # print(args.robots);exit()
         # if (act_dim==(2,3) or act_dim==(3,2)) and args.heterogeneous or args.titanheads:
-        if (act_dim==(2,3) or act_dim==(3,2)) and args.heterogeneous:
+
+        if args.spot_transfer:
+            if args.separate_node:
+
+                spot_act_dim=3
+                feature_shape=256
+                self.log_std_spot = base.pi.log_std
+                # log_std_spot = -0.0 * np.ones(spot_act_dim, dtype=np.float32)
+                # self.log_std_spot = torch.nn.Parameter(torch.as_tensor(log_std_spot))
+                log_std_spot_lateral = -0.0 * np.ones(spot_act_dim-2, dtype=np.float32)
+                self.log_std_spot_lateral = torch.nn.Parameter(torch.as_tensor(log_std_spot_lateral))
+
+
+                self.z_net = base.pi.z_net
+
+                self.feature_layers = base.pi.mu_net[:-2]
+                self.spot_output_layer = base.pi.mu_net[-2:]
+                # self.spot_output_layer = output_layer(feature_shape,3)
+                self.spot_lateral_layer = output_layer(feature_shape,1)
+                
+
+            else:
+                spot_act_dim=3
+                feature_shape=256
+                # self.log_std_spot = base.pi.log_std
+                log_std_spot = -0.0 * np.ones(spot_act_dim, dtype=np.float32)
+                self.log_std_spot = torch.nn.Parameter(torch.as_tensor(log_std_spot))
+                log_std_spot_lateral = -0.0 * np.ones(spot_act_dim-2, dtype=np.float32)
+                self.log_std_spot_lateral = torch.nn.Parameter(torch.as_tensor(log_std_spot_lateral))
+
+
+                self.z_net = base.pi.z_net
+
+                self.feature_layers = base.pi.mu_net[:-2]
+                # self.spot_output_layer = base.pi.mu_net[-2:]
+                self.spot_output_layer = output_layer(feature_shape,3)
+                self.spot_lateral_layer = output_layer(feature_shape,1)
+                
+            
+
+        elif (act_dim==(2,3) or act_dim==(3,2)) and args.heterogeneous:
             # print("OR NOT")
             # spot_act_dim=3
             spot_act_dim=3
@@ -283,6 +323,8 @@ class MLPGaussianActorPerception(ActorPerception):
             else:
                 self.spot_output_layer = output_layer(feature_shape,3)
                 self.titan_output_layer = output_layer(feature_shape,2)
+
+
         elif (act_dim==(2,2)) and args.titanheads:
             spot_act_dim=2
             titan_act_dim=2
@@ -393,7 +435,7 @@ class MLPGaussianActorPerception(ActorPerception):
         else:
             # print("th");exit()
             act_dim=act_dim[0]
-            # print("NextCOMING",[act_dim])
+            # print("NextCOMING",[act_dim]);exit()
             self.obs_dim = obs_dim
             self.im_dim = im_dim
             # log_std = -0.5 * np.ones(act_dim, dtype=np.float32)
@@ -624,6 +666,27 @@ class MLPGaussianActorPerception(ActorPerception):
         #     self.mu=self.output_layer(self.feature_extraction)
         #     self.std = torch.exp(self.log_std)
         #     return Normal(self.mu, self.std)
+
+        elif args.spot_transfer:
+            
+            if args.separate_node:
+                self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
+                self.std_spot = torch.exp(self.log_std_spot)
+                self.std_spot_lateral = torch.exp(self.log_std_spot_lateral)
+                self.mu_spot=self.spot_output_layer(self.feature_extraction)
+                self.mu_spot_lateral=self.spot_lateral_layer(self.feature_extraction)
+                # self.std_spot_lateral.data = torch.tensor([args.std_lat])
+                # print("self.std_spot_lateral",self.std_spot_lateral)
+                self.std = torch.concat((self.std_spot[[0]], self.std_spot_lateral, self.std_spot[[1]]))
+                self.mu=torch.concat((self.mu_spot[:, :1], self.mu_spot_lateral, self.mu_spot[:, 1:]), dim=1)
+
+                return Normal(self.mu, self.std)
+            else:
+                self.feature_extraction = self.feature_layers(torch.concat((obs, self.z_net(im)), -1))
+                # self.mu_spot_lateral=self.spot_lateral_layer(self.feature_extraction)
+                self.mu=self.spot_output_layer(self.feature_extraction)
+                self.std = torch.exp(self.log_std_spot)
+                return Normal(self.mu, self.std)
         else:
             # print("GGCMING")
             # print("CHEKINGLOPP");exit()
@@ -759,7 +822,7 @@ class MLPActorCriticPerception(nn.Module):
         # print("stepobs",obs.shape)
         # print("lenlen",len(obs),len(im))
         # obs=obs[0]
-        # print("obs",obs)
+        # print("obs",obs);exit()
         # pi = self.pi._distribution(obs, im)
         if (args.heterogeneous or args.titanheads):
             pi_spot,pi_titan = self.pi._distribution(obs, im)
@@ -775,6 +838,7 @@ class MLPActorCriticPerception(nn.Module):
         # pi = self.pi._distribution_clipped(obs, im)
         
         # print(pi_spot,pi_titan);exit()
+            # print(pi);exit()
 
         if stochastic:
             if (args.heterogeneous or args.titanheads) and not args.titan_off:

@@ -38,6 +38,7 @@ def get_defaults():
     parser.add_argument('--env', default="franka_reach_mj")
     parser.add_argument('--urdf', default=False, action="store_true")
     parser.add_argument('--multi_spots', default=False, action="store_true")
+    parser.add_argument('--spot_transfer', default=False, action="store_true")
     parser.add_argument('--multi_titans', default=False, action="store_true")
     parser.add_argument('--multi_dtrs', default=False, action="store_true")
     parser.add_argument('--heterogeneous', default=False, action="store_true")

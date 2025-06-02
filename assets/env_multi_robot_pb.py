@@ -146,6 +146,8 @@ class Env(EnvBasePB):
                 self.ac_size.append(self.ac_s)
         else:
             self.ac_size = self.robots[0].ac_size
+
+        # print("ACTION_SIZE",self.ac_size)
         
         self.action_space = spaces.Box(-10000*np.ones(self.ac_size), 10000*np.ones(self.ac_size), dtype=np.float32)
         self.observation_space = spaces.Box(-10000*np.ones(self.ob_size), 10000*np.ones(self.ob_size), dtype=np.float32)
