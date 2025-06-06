@@ -186,14 +186,12 @@ def run(args,env):
     # model1 = copy.deepcopy(pol.pi.mu_net).to('cpu')
     # traced_script_module1 = torch.jit.script(model1)
     # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
-    # # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_simul.jit")
-    # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/Spot_Titan/selected/Jit_model_Heterogeneous/mu_net_simul.jit")
+    # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_simul.jit")
 
     # model2 = copy.deepcopy(pol.pi.z_net).to('cpu')
     # traced_script_module2 = torch.jit.script(model2)
     # # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
-    # # traced_script_module2.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/z_net_simul.jit")
-    # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/Spot_Titan/selected/Jit_model_Heterogeneous/z_net_simul.jit")
+    # traced_script_module2.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/z_net_simul.jit")
 
     # model3 = copy.deepcopy(pol.v.v_net).to('cpu')
     # traced_script_module3 = torch.jit.script(model3)
@@ -204,38 +202,6 @@ def run(args,env):
     # traced_script_module4 = torch.jit.script(model4)
     # # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
     # traced_script_module4.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/vz_net_simul.jit")
-
-
-    ####HETEROGENEOUS
-
-    # model3 = copy.deepcopy(pol.pi.z_net).to('cpu')
-    # traced_script_module3 = torch.jit.script(model3)
-    # # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
-    # # traced_script_module2.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/z_net_simul.jit")
-    # traced_script_module3.save("/home/kom018/behaviour_rl/Saved_models/Spot_Titan/selected/Jit_model_Heterogeneous/z_net_13.jit")
-
-    # print("model",pol)
-    # model4 = copy.deepcopy(pol.pi.feature_layers).to('cpu')
-    
-    # traced_script_module4 = torch.jit.script(model4)
-    # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
-    # # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_simul.jit")
-    # traced_script_module4.save("/home/kom018/behaviour_rl/Saved_models/Spot_Titan/selected/Jit_model_Heterogeneous/feature_layers_13.jit")
-
-    # model1 = copy.deepcopy(pol.pi.spot_output_layer).to('cpu')
-    # print("model1",model1)
-    # traced_script_module1 = torch.jit.script(model1)
-    # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
-    # # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_simul.jit")
-    # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/Spot_Titan/selected/Jit_model_Heterogeneous/spot_output_13.jit")
-
-    # model2 = copy.deepcopy(pol.pi.titan_output_layer).to('cpu')
-    # traced_script_module2 = torch.jit.script(model2)
-    # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
-    # # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_simul.jit")
-    # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/Spot_Titan/selected/Jit_model_Heterogeneous/titan_output_13.jit")
-
-    
     
 
     # print("traced_script_module1",traced_script_module1)
@@ -292,14 +258,14 @@ def run(args,env):
         #     # action[0] = [-0.2, 0.0,0.0]  # Robot 1 moves backward
 
 
-        # # # ##__LATERAL SIDE SWIPE
-        # if current_time > 3 and current_time < 8:
-        #     action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
-        #     # print("action",action)
-        #     # action[1] = [-0.2, 0.0, 0.0]  # Robot 1 moves backward
-        #     action[1] = [0.0, -0.075, 0.0]  # Robot 1 moves Lateral
-        #     # action[0] = [-0.2, 0.0]  # Robot 1 moves backward
-        #     # action[0] = [-0.2, 0.0,0.0]  # Robot 1 moves backward
+        # # ##__LATERAL SIDE SWIPE
+        if current_time > 3 and current_time < 8:
+            action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+            # print("action",action)
+            # action[1] = [-0.2, 0.0, 0.0]  # Robot 1 moves backward
+            action[1] = [0.0, -0.075, 0.0]  # Robot 1 moves Lateral
+            # action[0] = [-0.2, 0.0]  # Robot 1 moves backward
+            # action[0] = [-0.2, 0.0,0.0]  # Robot 1 moves backward
         
 
 
@@ -351,37 +317,37 @@ def run(args,env):
         #             action[1] = [0, 0]  # Robot 2 stops
         #         else:
         #             action[1] = action_rl2  # Robot 2 resumes movement
-        # else:
+        else:
             # print("obs",len(obs),obs)
             #------------------------------------------------------------
 
 
 
 
-        if args.use_perception and not args.jit_model:
-            # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
-            if args.heterogeneous or args.titanheads:
-                a_spot,a_titan, v, logp_spot, logp_titan =pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)
-            else:
-                action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
-            # print(a_spot,a_titan,len(a_spot),len(a_titan))
-            # print(pol)
+            if args.use_perception and not args.jit_model:
+                # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
+                if args.heterogeneous or args.titanheads:
+                    a_spot,a_titan, v, logp_spot, logp_titan =pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)
+                else:
+                    action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+                # print(a_spot,a_titan,len(a_spot),len(a_titan))
+                # print(pol)
 
-                # r1_clipped_linear_vel_command=np.clip(action[0][0], -0.75, 0.75)
-                # r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
-                # r2_clipped_linear_vel_command=np.clip(action[1][0], -0.75, 0.75)
-                # r2_clipped_angular_vel_command=np.clip(action[1][1], -0.75, 0.75)
+                    # r1_clipped_linear_vel_command=np.clip(action[0][0], -0.75, 0.75)
+                    # r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
+                    # r2_clipped_linear_vel_command=np.clip(action[1][0], -0.75, 0.75)
+                    # r2_clipped_angular_vel_command=np.clip(action[1][1], -0.75, 0.75)
 
 
-            if env.args.heterogeneous or env.args.titanheads:
-                # if ac_size==(2,3):
-                if "titan" in str(env.robots[0]):
-                    action=a_titan[0],a_spot[1]
-                    logp=[logp_titan[0],logp_spot[1]]
-                # elif ac_size==(3,2):
-                elif "spot" in str(env.robots[0]):
-                    action=a_spot[0],a_titan[1]
-                logp=[logp_spot[0],logp_titan[1]]
+                if env.args.heterogeneous or env.args.titanheads:
+                    # if ac_size==(2,3):
+                    if "titan" in str(env.robots[0]):
+                        action=a_titan[0],a_spot[1]
+                        logp=[logp_titan[0],logp_spot[1]]
+                    # elif ac_size==(3,2):
+                    elif "spot" in str(env.robots[0]):
+                        action=a_spot[0],a_titan[1]
+                    logp=[logp_spot[0],logp_titan[1]]
 
 
         r1_clipped_linear_vel_command=np.clip(action[0][0], -0.75, 0.75)
@@ -2184,12 +2150,12 @@ def run(args,env):
                 
             
             
-            # # # print("overal",time.time()-R3.t1)
-            # print("TIMES",current_time,save_time)
-            # # if current_time>save_time:
-            # #     # print("THAM");exit()
-            # #     print("THAM")
-            # break
+            # # print("overal",time.time()-R3.t1)
+            print("TIMES",current_time,save_time)
+            # if current_time>save_time:
+            #     # print("THAM");exit()
+            #     print("THAM")
+            break
 
     
         
@@ -2197,35 +2163,35 @@ def run(args,env):
         # # print(counting_step*1/10)
             
 
-        # if done==[True] or termination==[True] or env.steps > args.max_ep_len:
-        if all(done) or all(termination) or env.steps > args.max_ep_len:
+        # # if done==[True] or termination==[True] or env.steps > args.max_ep_len:
+        # if all(done) or all(termination) or env.steps > args.max_ep_len:
             
-            obs = env.reset()
-            if args.use_perception:
-                im = env.get_image()
-                # print(im,type(im),im[0][0][1].shape)
+        #     obs = env.reset()
+        #     if args.use_perception:
+        #         im = env.get_image()
+        #         # print(im,type(im),im[0][0][1].shape)
 
-            if env.args.heterogeneous or env.args.titanheads:
-                # if ac_size==(2,3):
-                if "titan" in str(env.robots[0]):
-                    # print("O_before",len(o[0]),o)
-                    obs[0] = np.insert(obs[0], 0, 0)
-                    obs[1] = np.insert(obs[1], 0, 1)
-                    # print("O_after",len(obs[0]),o)
-                # elif ac_size==(3,2):
-                elif "spot" in str(env.robots[0]):
-                    # print("O_before",len(obs[0]),o)
-                    obs[0] = np.insert(obs[0], 0, 1)
-                    obs[1] = np.insert(obs[1], 0, 0)
-            n=n+1
-            print("Trial_no",n)
-            if n==100:
-                print("100 Iteration Done")
-            for a in done:
-                if a:
-                    print(n,a)
+        #     if env.args.heterogeneous or env.args.titanheads:
+        #         # if ac_size==(2,3):
+        #         if "titan" in str(env.robots[0]):
+        #             # print("O_before",len(o[0]),o)
+        #             obs[0] = np.insert(obs[0], 0, 0)
+        #             obs[1] = np.insert(obs[1], 0, 1)
+        #             # print("O_after",len(obs[0]),o)
+        #         # elif ac_size==(3,2):
+        #         elif "spot" in str(env.robots[0]):
+        #             # print("O_before",len(obs[0]),o)
+        #             obs[0] = np.insert(obs[0], 0, 1)
+        #             obs[1] = np.insert(obs[1], 0, 0)
+        #     n=n+1
+        #     print("Trial_no",n)
+        #     if n==100:
+        #         print("100 Iteration Done")
+        #     for a in done:
+        #         if a:
+        #             print(n,a)
         
-            #print(obs)
+        #     #print(obs)
 
 if __name__== "__main__":
     

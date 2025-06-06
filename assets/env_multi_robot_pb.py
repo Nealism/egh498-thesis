@@ -318,9 +318,9 @@ class Env(EnvBasePB):
         
         elif self.args.num_robots ==2:
             
-            # synchoniser_value=np.random.uniform(1.5, 2.5)
+            synchoniser_value=np.random.uniform(1.5, 2.5)
             # synchoniser_value=2.5
-            synchoniser_value=1.2
+            # synchoniser_value=1.2
             if self.args.generalise:
                 goal_offset_cross=np.random.uniform(7.0, 8.0)
                 
@@ -334,7 +334,7 @@ class Env(EnvBasePB):
             else:
                 goal_offset=7.5
             self.robot_goal_synchroniser=np.random.choice([-synchoniser_value,synchoniser_value]) #change value to increase gap between robots #This synchroniser ensire robots and goals are crossing to each other even when external robot position are swapping
-            if self.args.collision_likelihood_curr:
+            if self.args.collision_likelihood_curr or self.args.rand_collision_likelihood:
                 self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*-2.5),(self.robots[1],self.robot_goal_synchroniser*2.5)]
             elif not self.args.collision_likelihood_curr:
                 # self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*7.5),(self.robots[1],self.robot_goal_synchroniser*-7.5)]
@@ -410,6 +410,7 @@ class Env(EnvBasePB):
                 goal_offset=7.5
             self.robot_goal_synchroniser=np.random.choice([-synchoniser_value,synchoniser_value]) #change value to increase gap between robots #This synchroniser ensire robots and goals are crossing to each other even when external robot position are swapping
             if self.args.collision_likelihood_curr:
+                # self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*-2.5),(self.robots[0],self.robot_goal_synchroniser*2.5)]
                 self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*-2.5),(self.robots[0],self.robot_goal_synchroniser*2.5)]
             elif not self.args.collision_likelihood_curr:
                 # self.robottogoal_angles=[(self.robots[0],self.robot_goal_synchroniser*7.5),(self.robots[1],self.robot_goal_synchroniser*-7.5)]

@@ -171,7 +171,16 @@ class Env(EnvBasePB):
 
 
         if self.args.gap_avoidance and self.args.num_robots>1 and self.args.collision_likelihood_curr:
-            self.increase_collision_rate=-2
+            
+            # self.increase_collision_rate=-2
+            self.increase_collision_rate=0
+
+        elif self.args.gap_avoidance and self.args.num_robots>1 and self.args.rand_collision_likelihood:
+            self.increase_collision_rate=np.random.uniform(0,3,1)
+            self.increase_collision_rate = (self.increase_collision_rate /0.05) * 0.05
+            # self.increase_collision_rate=-2
+            # self.increase_collision_rate=0
+
         else:
             self.increase_collision_rate=0
             

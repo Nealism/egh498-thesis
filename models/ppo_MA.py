@@ -558,7 +558,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
         
         if load_path != "":
             ac = torch.load(load_path)
-            print("Loading saved weights: ", load_path);exit()
+            # print("Loading saved weights: ", load_path);exit()
 
         elif env.args.spot_transfer:
             ac = actor_critic(base_model, env.observation_space, im_size, env.action_space, **ac_kwargs)
@@ -1027,6 +1027,9 @@ def ppo(env, ac_kwargs=dict(), seed=0,
                 if env.args.multi_titans :
                     sp_ac=np.array([[0., 0.],[0., 0.]])
                 elif env.args.multi_spots:
+                    sp_ac=np.array([[0., 0.,0.],[0., 0.,0.]])
+                elif env.args.heterogeneous:
+                    # sp_ac=np.array([[0., 0.],[0., 0.]])
                     sp_ac=np.array([[0., 0.,0.],[0., 0.,0.]])
             # print("action_bef",a_spot,a_titan, v, logp_spot, logp_titan)
             # print(ac_size);exit()
