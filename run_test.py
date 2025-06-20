@@ -235,6 +235,35 @@ def run(args,env):
     # # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_simul.jit")
     # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/Spot_Titan/selected/Jit_model_Heterogeneous/titan_output_13.jit")
 
+    # ## ####MULTI_SPOTS
+
+    # model3 = copy.deepcopy(pol.pi.z_net).to('cpu')
+    # traced_script_module3 = torch.jit.script(model3)
+    # # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/z_net_s.jit")
+    # # traced_script_module2.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/z_net_simul.jit")
+    # traced_script_module3.save("/home/kom018/behaviour_rl/Saved_models/Spot_Titan/selected/Jit_model_Spots/extreme_noisy/z_net_10.jit")
+
+    # print("model",pol)
+    # model4 = copy.deepcopy(pol.pi.feature_layers).to('cpu')
+    
+    # traced_script_module4 = torch.jit.script(model4)
+    # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
+    # # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_simul.jit")
+    # traced_script_module4.save("/home/kom018/behaviour_rl/Saved_models/Spot_Titan/selected/Jit_model_Spots/extreme_noisy/feature_layers_10.jit")
+
+    # model1 = copy.deepcopy(pol.pi.spot_output_layer).to('cpu')
+    # print("model1",model1)
+    # traced_script_module1 = torch.jit.script(model1)
+    # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
+    # # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_simul.jit")
+    # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/Spot_Titan/selected/Jit_model_Spots/extreme_noisy/spot_output_10.jit")
+
+    # model2 = copy.deepcopy(pol.pi.spot_lateral_layer).to('cpu')
+    # traced_script_module2 = torch.jit.script(model2)
+    # # traced_script_module1.save("/home/kom018/behaviour_rl/Saved_models/JIT_models/mu_net_s.jit")
+    # # traced_script_module1.save("/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/turtle_titan85/mu_net_simul.jit")
+    # traced_script_module2.save("/home/kom018/behaviour_rl/Saved_models/Spot_Titan/selected/Jit_model_Spots/extreme_noisy/spot_lateral_10.jit")
+
     
     
 
@@ -357,13 +386,14 @@ def run(args,env):
 
 
 
-
+        print("POLICy",pol)
         if args.use_perception and not args.jit_model:
             # print(torch.as_tensor(np.array(obs), dtype=torch.float32))
             if args.heterogeneous or args.titanheads:
                 a_spot,a_titan, v, logp_spot, logp_titan =pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)
             else:
                 action = pol.step(torch.as_tensor(np.array(obs), dtype=torch.float32), torch.as_tensor(im, dtype=torch.float32), stochastic=False)[0]
+                print("ACTIONSARE",action)
             # print(a_spot,a_titan,len(a_spot),len(a_titan))
             # print(pol)
 
@@ -386,7 +416,7 @@ def run(args,env):
 
         r1_clipped_linear_vel_command=np.clip(action[0][0], -0.75, 0.75)
         r1_clipped_angular_vel_command=np.clip(action[0][1], -0.75, 0.75)
-        if env.args.heterogeneous or env.args.titanheads:
+        if env.args.heterogeneous or env.args.titanheads or env.args.multi_spots:
             if env.robots[1].body_xyz[2] < 0.4 or (abs(np.array([env.robots[1].pitch, env.robots[1].roll])) > 0.8).any() or (np.array(env.robots[1].leg_contacts)).any():
                 # print("poregse---------------------")
                 r2_clipped_linear_vel_command=np.clip(action[1][0], -0.1, 0.5)
@@ -531,6 +561,8 @@ def run(args,env):
             # print("sp_ac",sp_ac)
         else: 
             sp_ac=np.array([[0., 0.],[0., 0.]])
+
+        print("spot_actionsare",action)
         obs, _, done,termination, _ = env.step(action,sp_ac)
 
 

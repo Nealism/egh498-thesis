@@ -226,6 +226,8 @@ class MLPGaussianActorPerception(ActorPerception):
                 # self.spot_output_layer = base.pi.mu_net[-2:]
                 self.spot_output_layer = output_layer(feature_shape,3)
                 self.spot_lateral_layer = output_layer(feature_shape,1)
+
+        
                 
             
 
@@ -687,6 +689,9 @@ class MLPGaussianActorPerception(ActorPerception):
                 self.mu=self.spot_output_layer(self.feature_extraction)
                 self.std = torch.exp(self.log_std_spot)
                 return Normal(self.mu, self.std)
+            
+
+        
         else:
             # print("GGCMING")
             # print("CHEKINGLOPP");exit()

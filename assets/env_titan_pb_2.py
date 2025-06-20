@@ -188,10 +188,12 @@ class Env(EnvBasePB):
         if self.args.cur or self.args.region_curr:
             self.initial_goal_dist=6	
             self.max_goal_dist=12
+        elif self.args.extreme_noise_randomness:
+            self.initial_goal_dist=np.random.uniform(6,9)
         else:
             self.initial_goal_dist=8
    
-            self.max_goal_dist=8
+            self.max_goal_dist=self.initial_goal_dist
         
 
         self.action_multiplier = 1
@@ -533,7 +535,12 @@ class Env(EnvBasePB):
             self.increase_collision_rate=3
 
         elif self.args.gap_avoidance and not self.args.collision_likelihood_curr:
-            self.increase_collision_rate=-1
+            
+
+            if self.args.extreme_noise_randomness:
+                self.increase_collision_rate=np.random.uniform(0.2,-1.5)
+            else:
+                self.increase_collision_rate=-1
         
         
         for robot, angles in self.robottogoal_angles:
@@ -868,6 +875,7 @@ class Env(EnvBasePB):
             # print("self.max_gap_among_all_robots_individual_gap_width,",self.max_gap_among_all_robots_individual_gap_width)
             # side_wall_moving_rate=self.max_gap_among_all_robots_individual_gap_width-21
             # side_wall_moving_rate=-np.random.choice([20,21])
+            # side_wall_moving_rate=-21
             side_wall_moving_rate=-21
             # print("self.All_Robot_ID[0].mid_point_of_goals",self.All_Robot_ID[0].mid_point_of_goals)
             # self.gap=self.gap_generator(width=self.max_gap_among_all_robots_individual_gap_width, depth=self.All_Robot_ID[0].tunnel_depth,height=0.015,pos=self.All_Robot_ID[0].pos2,wall_length = self.wall_length,goal_pos=self.All_Robot_ID[0].mid_point_of_goals,lineId=self.All_Robot_ID[0].lineIdWall,lineIdgap=self.All_Robot_ID[0].lineIdgap,lineIdA=self.All_Robot_ID[0].lineIdA,lineIdB=self.All_Robot_ID[0].lineIdB)
@@ -7266,7 +7274,7 @@ class Env(EnvBasePB):
         return reward, done, termination
     
 
-    def get_reward_33(self):
+    def get_reward_32(self):
         """
         Step Reward
         """
@@ -7307,13 +7315,12 @@ class Env(EnvBasePB):
             step_counter=step_counter-1
 
         if self.intersection_r1_r==True: # intersection between robot bbox with other robot bbox
-            # MA_colision= -2*step_counter
+            MA_colision= -10
             done=True
 
 
         if (np.array(self.contacts) == True).any():  #Collision with Walls/anything
-            # collision= -0.8*step_counter
-            collision= -10
+            collision= -0.3*step_counter
             #print("HIT_WALL")
         #     done=True
 
@@ -7325,12 +7332,12 @@ class Env(EnvBasePB):
         
 
         self.ep_reward_dict["Reward/goal"] += goal
-        self.ep_reward_dict["Reward/neg"] += neg
+        self.ep_reward_dict["Reward/neg"] += step_counter
         self.ep_reward_dict["Reward/heading"] += heading
         self.ep_reward_dict["Reward/MA_colision"] += MA_colision
         self.ep_reward_dict["Reward/collision"] += collision
         self.ep_reward_dict["Reward/reach"] += reach
-        
+        # print("GOALREWW",self.ep_reward_dict)
         
         
         
@@ -8249,7 +8256,14 @@ class Env(EnvBasePB):
         # print("g",len(self.robots_bbox))
         textureId = -1
         
-        self.robot1_bbox=self.bbox_generator_titan1(0.075,self.pos,self.orn,self.lineId1) #0.075
+
+        ####This is the actual robot bounding box Red
+        if self.args.extreme_noise_randomness:
+        
+            self.robot1_bbox=self.bbox_generator_titan1(np.random.uniform(0.075,0.1),self.pos,self.orn,self.lineId1) #0.075
+        else:
+            self.robot1_bbox=self.bbox_generator_titan1(0.075,self.pos,self.orn,self.lineId1) #0.075
+        
         self.robot1_bbox.append(self.robot1_bbox[0])
         #self.intersection_r1_r1,_= self.intersection_check(self.robot1_bbox,self.robot1_bbox)
         # To set robot collision with obstacle

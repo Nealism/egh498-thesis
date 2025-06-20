@@ -39,6 +39,7 @@ def get_defaults():
     parser.add_argument('--urdf', default=False, action="store_true")
     parser.add_argument('--multi_spots', default=False, action="store_true")
     parser.add_argument('--spot_transfer', default=False, action="store_true")
+    parser.add_argument('--spot_transfer_test', default=False, action="store_true")
     parser.add_argument('--multi_titans', default=False, action="store_true")
     parser.add_argument('--multi_dtrs', default=False, action="store_true")
     parser.add_argument('--heterogeneous', default=False, action="store_true")
@@ -131,6 +132,7 @@ def get_defaults():
     parser.add_argument('--jit_model', default=False, action="store_true")
     
     parser.add_argument('--randomness', type=int, default=1)
+    parser.add_argument('--extreme_noise_randomness', default=False, action="store_true")
     parser.add_argument('--map_noise', default=False, action="store_true")
     parser.add_argument('--noise_mixed', default=False, action="store_true")
     parser.add_argument('--gap_offset', default=False, action="store_true")

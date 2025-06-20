@@ -199,6 +199,11 @@ class Env(EnvBasePB):
             self.noise=0.3#np.random.choice([0.0,0.3])
         elif self.args.noise_mixed:
             self.noise=np.random.choice([0.0,0.3])
+            # self.noise=0.8
+
+        elif self.args.extreme_noise_randomness:
+            self.noise=np.random.uniform(0.0,0.8)
+            # print("NOISE",self.noise)
         else:
             self.noise=0.0
         self.obstacles=[]
@@ -318,9 +323,10 @@ class Env(EnvBasePB):
         
         elif self.args.num_robots ==2:
             
-            synchoniser_value=np.random.uniform(1.5, 2.5)
+            synchoniser_value=np.random.uniform(1, 2.5)
+            # synchoniser_value=np.random.uniform(1.5, 2.5)
             # synchoniser_value=2.5
-            # synchoniser_value=1.2
+            # synchoniser_value=1
             if self.args.generalise:
                 goal_offset_cross=np.random.uniform(7.0, 8.0)
                 
@@ -353,8 +359,14 @@ class Env(EnvBasePB):
             elif self.args.randomness==1:
                 # self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
                 self.external_robots_pos=[(self.robots[0],list((random_0_10))),(self.robots[1],[list(random_0_10)[0]+0,list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
+
             elif self.args.randomness==2:
-                self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.choice([-1,0,-0,1]),list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
+                # self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.choice([-1,0,-0,1]),list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
+                if self.args.extreme_noise_randomness:
+                    self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.uniform(0, 1),list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
+                else:
+                    self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.choice([-1,0,-0,1]),list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
+
             elif self.args.randomness==3:
                 self.external_robots_pos=[(self.robots[0],list(random_0_10)),(self.robots[1],[list(random_0_10)[0]+np.random.choice([-1,1]),list(random_0_10)[1]+self.robot_goal_synchroniser,self.z_position])]
             elif self.args.randomness==4:
@@ -385,6 +397,8 @@ class Env(EnvBasePB):
                     # if self.args.randomness==4:
                     #     self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
                     # else:
+                    # print("ROT_ANGLE",robotgoal_angle[1])
+                    # self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
                     self.external_goal_state=self.find_position_B(robot_pos[1], initial_goal_dist, robotgoal_angle[1])
                     self.external_goals_states.append(self.external_goal_state)
 
@@ -1616,26 +1630,62 @@ class Env(EnvBasePB):
             for i in range(self.args.num_robots):
                 global_map_image = cv2.circle(global_map_image, (turtlebots_y_index[i], turtlebots_x_index[i]), 5, (255, 0, 0), -1)
                 global_map_image = cv2.circle(global_map_image, (Goals_y_index[i], Goals_x_index[i]), 5, (0, 255, 0), -1)
-                # print(self.global_resolution)
-                # print("index",index,"i",i)
-                # if index!=i or index==i:
-                # for index_hm,local_heightmap in enumerate(local_heightmaps):
-                #     print("ind",index,i,index_hm)
+                # # print(self.global_resolution)
+                # # print("index",index,"i",i)
+                # # if index!=i or index==i:
+                # # for index_hm,local_heightmap in enumerate(local_heightmaps):
+                # #     print("ind",index,i,index_hm)
+                # if index!=i:
+                #     # robot_length = int(1.4 / (2 * self.global_resolution))
+                #     # robot_width = int(0.78 / (2 * self.global_resolution))
+                #     if "titan" in str(self.robots[i]):
+                #         robot_length = int(1.4 / (2 * self.global_resolution))
+                #         robot_width = int(0.78 / (2 * self.global_resolution))
+                #     # elif "dtr" in str(self.robots[i]):
+                #     #     robot_length = int(0.8 / (2 * self.global_resolution))
+                #     #     robot_width = int(0.51 / (2 * self.global_resolution))
+                #     elif "spot" in str(self.robots[i]): #This is actual Spot
+                #         robot_length = int(1.1 / (2 * self.global_resolution))
+                #         robot_width = int(0.5 / (2 * self.global_resolution))
+                #     # elif "spot" in str(self.robots[i]):  # This is titan but using spot env name
+                #     #     robot_length = int(1.4 / (2 * self.global_resolution))
+                #     #     robot_width = int(0.78 / (2 * self.global_resolution))
+
+                
                 if index!=i:
-                    # robot_length = int(1.4 / (2 * self.global_resolution))
-                    # robot_width = int(0.78 / (2 * self.global_resolution))
-                    if "titan" in str(self.robots[i]):
-                        robot_length = int(1.4 / (2 * self.global_resolution))
-                        robot_width = int(0.78 / (2 * self.global_resolution))
-                    # elif "dtr" in str(self.robots[i]):
-                    #     robot_length = int(0.8 / (2 * self.global_resolution))
-                    #     robot_width = int(0.51 / (2 * self.global_resolution))
-                    elif "spot" in str(self.robots[i]): #This is actual Spot
-                        robot_length = int(1.1 / (2 * self.global_resolution))
-                        robot_width = int(0.5 / (2 * self.global_resolution))
-                    # elif "spot" in str(self.robots[i]):  # This is titan but using spot env name
-                    #     robot_length = int(1.4 / (2 * self.global_resolution))
-                    #     robot_width = int(0.78 / (2 * self.global_resolution))
+                    if self.args.extreme_noise_randomness:
+                        # robot_length = int(1.4 / (2 * self.global_resolution))
+                        # robot_width = int(0.78 / (2 * self.global_resolution))
+                        if "titan" in str(self.robots[i]):
+                            robot_length = int(np.random.uniform(0.7,1.5) / (2 * self.global_resolution))
+                            robot_width = int(np.random.uniform(0.2,0.78) / (2 * self.global_resolution))
+                        # elif "dtr" in str(self.robots[i]):
+                        #     robot_length = int(0.8 / (2 * self.global_resolution))
+                        #     robot_width = int(0.51 / (2 * self.global_resolution))
+                        elif "spot" in str(self.robots[i]): #This is actual Spot
+                            robot_length = int(np.random.uniform(0.7,1.3) / (2 * self.global_resolution))
+                            robot_width = int(np.random.uniform(0.2,0.7) / (2 * self.global_resolution))
+                        # elif "spot" in str(self.robots[i]):  # This is titan but using spot env name
+                        #     robot_length = int(1.4 / (2 * self.global_resolution))
+                        #     robot_width = int(0.78 / (2 * self.global_resolution))
+                    else:
+                        # robot_length = int(1.4 / (2 * self.global_resolution))
+                        # robot_width = int(0.78 / (2 * self.global_resolution))
+                        if "titan" in str(self.robots[i]):
+                            robot_length = int(1.4 / (2 * self.global_resolution))
+                            robot_width = int(0.78 / (2 * self.global_resolution))
+                        # elif "dtr" in str(self.robots[i]):
+                        #     robot_length = int(0.8 / (2 * self.global_resolution))
+                        #     robot_width = int(0.51 / (2 * self.global_resolution))
+                        elif "spot" in str(self.robots[i]): #This is actual Spot
+                            robot_length = int(1.1 / (2 * self.global_resolution))
+                            robot_width = int(0.5 / (2 * self.global_resolution))
+                        # elif "spot" in str(self.robots[i]):  # This is titan but using spot env name
+                        #     robot_length = int(1.4 / (2 * self.global_resolution))
+                        #     robot_width = int(0.78 / (2 * self.global_resolution))
+
+
+                
                     
                 
                     

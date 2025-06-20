@@ -1089,7 +1089,7 @@ def ppo(env, ac_kwargs=dict(), seed=0,
             # print(a)
             tt=time.time()
             # if env.args.Pretrained_cur:
-
+            # print("spot_ac",a);exit()
             if env.args.cloning:
                 next_o, r, d,termination, _,exps = env.step(a,sp_ac)
                 # exps = np.vstack(exps)
