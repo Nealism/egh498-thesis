@@ -652,7 +652,8 @@ class Env(EnvBasePB):
             self.buffer_time.append(ttg)
 
 
-            output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/train_plots"
+            # output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/train_plots"
+            output_dir = "./Results_plots/Action_plots/Pybullet/train_plots" # edited by Ben Neal locally
 
             plt.figure()
             plt.plot(self.buffer_time, self.buffer_linear_action, label='Command Linear Velocity')
@@ -782,7 +783,8 @@ class Env(EnvBasePB):
                 ob_ang=round(ob[5],4)
                 self.buffer_linear_obs.append(ob_lin)
                 self.buffer_angular_obs.append(ob_ang)
-                output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/train_plots"
+                # output_dir ="/home/kom018/behaviour_rl/Results_plots/Action_plots/Pybullet/train_plots"
+                output_dir = "./Results_plots/Action_plots/Pybullet/train_plots" # edited by Ben Neal locally
 
                 plt.figure()
                 plt.plot(self.buffer_time, self.buffer_linear_obs, label='Robot\'s Linear Velocity')

@@ -18,7 +18,8 @@ def run(args):
     now = datetime.now()
     now = comm.bcast(now.strftime("%Y_%m_%d_%H_%M_%S"), root=0)  
 
-    SAVE_PATH = "/scratch3/" + home.split("/")[-1] + "/results/"
+    # SAVE_PATH = "/scratch3/" + home.split("/")[-1] + "/results/"
+    SAVE_PATH = home + "/multi-robot-collision-avoidance/results/"  # edited by Ben Neal for local reference
     #SAVE_PATH = "~/scratch3/" + home.split("/")[-1] + "/results/"
 
     if args.folder:

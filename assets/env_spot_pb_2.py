@@ -147,7 +147,9 @@ class Env(EnvBasePB):
         self.cmd_update_rate = 100
 
         if args.jit_model: 
-            SPOT_MODEL_PATH="/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/spot_walking1.jit"
+            # SPOT_MODEL_PATH="/home/kom018/refarm/src/multi_robot_rl/scripts/JIT_models/spot_walking1.jit"
+            SPOT_MODEL_PATH="./Saved_models/Spot_Titan/selected/Jit_model_Spots_Walking/spot_walking1.jit" # edited by Ben Neal locally
+
             # SPOT_MODEL_PATH = "/home/kom018/behaviour_rl/Saved_models/Spot_walking/2025_01_30_17_51_34/model.pt"
 
             self.spot_pol  = torch.load(SPOT_MODEL_PATH)
@@ -157,7 +159,8 @@ class Env(EnvBasePB):
             # SPOT_MODEL_PATH = "./resources/spot/2024_05_08_21_23_04/model.pt" 
             # SPOT_MODEL_PATH = "./resources/spot/2024_05_13_11_11_30/model.pt" 
             # SPOT_MODEL_PATH = "/home/kom018/behaviour_rl/Saved_models/Spot_walking/2025_01_30_17_51_34/model.pt"
-            SPOT_MODEL_PATH ="/home/kom018/behaviour_rl/Saved_models/Spot_walking/2025_01_30_17_51_31/model.pt"
+            # SPOT_MODEL_PATH ="/home/kom018/behaviour_rl/Saved_models/Spot_walking/2025_01_30_17_51_31/model.pt"
+            SPOT_MODEL_PATH ="./Saved_models/Spot_walking/2025_01_30_17_51_31/model.pt" # edited by Ben Neal locally
             self.spot_pol = torch.load(SPOT_MODEL_PATH)
         
         # print(self.spot_pol);exit()

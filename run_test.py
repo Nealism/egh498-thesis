@@ -39,7 +39,8 @@ if args.home:
     path_home += "/behaviour_rl/" +  args.exp + "/"
 
 else:
-    path_home += "/results/" + args.env + "/" + args.exp + "/"
+    # path_home += "/results/" + args.env + "/" + args.exp + "/"
+    path_home = home + "/multi-robot-collision-avoidance/" + args.exp + "/"  # edited by Ben Neal locally
 
 if args.folder == "":
     # Get latest experiment (eg: latest model inside test folder)
