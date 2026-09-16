@@ -22,6 +22,7 @@ class RolloutCollector:
         spot_actions = []
 
         episode_rewards = []
+        episode_ids = []
 
         for episode in range(n_episodes):
             obs = self.env.reset()
@@ -38,7 +39,11 @@ class RolloutCollector:
             ep_reward = 0.0
 
             for step in range(self.max_ep_len):
-                actions, value, logps = self.expert.act(obs, im)
+                # env returns 6 physical observation features
+                # heterogeneous PPO policy expects robot ID put at start 0 = Titan and 1 = Spot
+                model_obs = [np.insert(obs[0], 0, 0), np.insert(obs[1], 0, 1)]
+
+                actions, value, logps = self.expert.act(model_obs, im)
 
                 titan_obs.append(np.asarray(obs[0], dtype=np.float32))
                 titan_im.append(np.asarray(im[0], dtype=np.float32))
@@ -48,20 +53,28 @@ class RolloutCollector:
                 spot_im.append(np.asarray(im[1], dtype=np.float32))
                 spot_actions.append(np.asarray(actions[1], dtype=np.float32))
 
+                episode_ids.append(episode)
+
                 expert_acs = np.zeros((2, 2), dtype=np.float32)
 
                 result = self.env.step(actions, expert_acs)
 
                 obs, rewards, dones, terminations, info = result
 
+                # print("STEP", step)
+                # print("rewards:", rewards)
+                # print("dones:", dones)
+                # print("terminations:", terminations)
+
                 ep_reward += float(np.sum(rewards))
 
-                if any(dones) or any(terminations):
+                if all(dones) or any(terminations):
                     break
 
                 im = self.env.get_image()
 
             episode_rewards.append(ep_reward)
+            
 
             print(
                 f"Episode {episode + 1}/{n_episodes} "
@@ -69,22 +82,23 @@ class RolloutCollector:
                 f"- reward: {ep_reward:.3f}"
             )
 
-            return {
-                "titan_obs": np.asarray(titan_obs),
-                "titan_im": np.asarray(titan_im),
-                "titan_actions": np.asarray(titan_actions),
-                "spot_obs": np.asarray(spot_obs),
-                "spot_im": np.asarray(spot_im),
-                "spot_actions": np.asarray(spot_actions),
-                "episode_rewards": np.asarray(episode_rewards)
-            }
+        return {
+            "titan_obs": np.asarray(titan_obs),
+            "titan_im": np.asarray(titan_im),
+            "titan_actions": np.asarray(titan_actions),
+            "spot_obs": np.asarray(spot_obs),
+            "spot_im": np.asarray(spot_im),
+            "spot_actions": np.asarray(spot_actions),
+            "episode_rewards": np.asarray(episode_rewards),
+            "episode_ids": np.asarray(episode_ids)
+        }
 
-    def save_dataset(dataset, output_path):
-        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+def save_dataset(dataset, output_path):
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
 
-        np.savez_compressed(output_path, **dataset)
+    np.savez_compressed(output_path, **dataset)
 
-        print(f"Dataset saved to {output_path}")
+    print(f"Dataset saved to {output_path}")
 
-        for key, value in dataset.items():
-            print(f"{key}: {np.asarray(value).shape}")
+    for key, value in dataset.items():
+        print(f"{key}: {np.asarray(value).shape}")

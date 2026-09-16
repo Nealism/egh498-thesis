@@ -17,6 +17,12 @@ class HeterogeneousExpert:
             weights_only=False
         )
 
+        # debugging code, pls remember to comment out
+        print("POLICY TYPE:", type(self.policy))
+        print("PI TYPE:", type(self.policy.pi))
+        print("PI ATTRIBUTES:")
+        print([x for x in dir(self.policy.pi) if "mu" in x or "spot" in x or "titan" in x])
+
         self.policy.eval()
 
 
@@ -24,43 +30,43 @@ class HeterogeneousExpert:
 
 # return Spot/Titan continuous actions
 
-def act(self, obs, im):
-    obs_tensor = torch.as_tensor(
-        np.asarray(obs),
-        dtype=torch.float32,
-        device=self.device
-    )
-
-    im_tensor = torch.as_tensor(
-        np.asarray(im),
-        dtype=torch.float32,
-        device=self.device
-    )
-
-    with torch.no_grad():
-        (
-            a_spot,
-            a_titan,
-            value,
-            logp_spot,
-            logp_titan
-        ) = self.policy.step(
-            obs_tensor,
-            im_tensor,
-            stochastic=False
+    def act(self, obs, im):
+        obs_tensor = torch.as_tensor(
+            np.asarray(obs),
+            dtype=torch.float32,
+            device=self.device
         )
 
-        actions = [
-            self._to_numpy(a_titan[0]),
-            self._to_numpy(a_spot[1])
-        ]
+        im_tensor = torch.as_tensor(
+            np.asarray(im),
+            dtype=torch.float32,
+            device=self.device
+        )
 
-        logps = [
-            self._to_numpy(logp_titan[0]),
-            self._to_numpy(logp_spot[1])
-        ]
+        with torch.no_grad():
+            (
+                a_spot,
+                a_titan,
+                value,
+                logp_spot,
+                logp_titan
+            ) = self.policy.step(
+                obs_tensor,
+                im_tensor,
+                stochastic=False
+            )
 
-        return actions, self._to_numpy(value), logps
+            actions = [
+                self._to_numpy(a_titan[0]),
+                self._to_numpy(a_spot[1])
+            ]
+
+            logps = [
+                self._to_numpy(logp_titan[0]),
+                self._to_numpy(logp_spot[1])
+            ]
+
+            return actions, self._to_numpy(value), logps
 
     @staticmethod
     def _to_numpy(value):
