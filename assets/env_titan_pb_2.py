@@ -9152,13 +9152,17 @@ class Env(EnvBasePB):
                     x4,y4,z4=line2[j+1]   #Rotating end coordinates for Robot 2
 
 
-                    if (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1) == 0:
+                    #if (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1) == 0:
+                    denominator = ((y4-y3) * (x2-x1) - (x4-x3) * (y2-y1))
+
+                    if abs(denominator) < 1e-9:
+                        continue
                         
-                        intersection = True
+                        #intersection = True
                         #print("Denominator_Zero")
                     else:
-                        uA = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
-                        uB = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
+                        uA = ((x4-x3) * (y1-y3) - (y4-y3) * (x1-x3)) / denominator
+                        uB = ((x2-x1) * (y1-y3) - (y2-y1) * (x1-x3)) / denominator
                         #print("uA",uA)
                         #print("uB",uB)
       
@@ -9171,7 +9175,7 @@ class Env(EnvBasePB):
                     #print("line1",uA,"line2", uB)
                         if 0 <= uA <= 1 and 0 <= uB <= 1:
                             intersection = True
-                            intersection_point = (x1 + uA * (x2 - x1), y1 + uB * (y2 - y1))
+                            intersection_point = (x1 + uA * (x2 - x1), y1 + uA * (y2 - y1))
                             intersection_p.append(intersection_point)
         return intersection, intersection_p
 

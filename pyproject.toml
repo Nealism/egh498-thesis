@@ -11,4 +11,4 @@ py-modules = ["default_arguments"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["maviper*", "assets*"]
+include = ["maviper*", "assets*", "utils*", "models*"]

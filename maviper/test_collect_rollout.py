@@ -10,9 +10,19 @@ from datetime import datetime
 
 
 home = str(Path.home())
-model_path_int = home + "/multi-robot-collision-avoidance" + "/Saved_models/Spot_Titan/selected/E13r32G1E1_104_Transfer_Hetero_85_BESTEST" + "/"
-folder = "2025_02_12_16_12_53" # test folder
+# selected_model = "400182_E2_2025_06_06_12_53_28"
+# model_path_int = home + "/multi-robot-collision-avoidance" + "/Saved_models/Spot_Titan/selected/"# + selected_model + "/"
+# # folder = "2025_02_12_16_12_53" # test folder
 
+# folder = "400182_E2_2025_06_06_12_53_28"
+model_path_int = (
+    home
+    + "/multi-robot-collision-avoidance/"
+    + "Saved_models/Spot_Titan/selected/"
+    + "E13r32G1E1_104_Transfer_Hetero_85_BESTEST/"
+)
+
+folder = "2025_02_12_16_12_53"
 
 
 def parse_date():
@@ -33,7 +43,7 @@ def main():
     args.experiment_1 = True
     args.heterogeneous = True
     args.gap_curr = True
-    args.starting_gap_width = 0.85
+    args.starting_gap_width = 2.0
     args.randomness = 2
     args.reward_fn = 27
     args.Pretrained_cur = False
@@ -60,7 +70,7 @@ def main():
         max_ep_len=args.max_ep_len
     )
 
-    dataset = collector.collect(n_episodes=50)
+    dataset = collector.collect(n_episodes=100)
     if args.dataset_description:
         dataset_name = args.dataset_description + "_" + parse_date() + "_dataset.npz"
     else:

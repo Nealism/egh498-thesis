@@ -258,6 +258,12 @@ def get_defaults():
     # ========================================================================
     parser.add_argument("--wp_time_scalar", type=float, default=2.0)
 
+    # ========================================================================
+    # MAVIPER Dataset Collection
+    # ========================================================================
+    parser.add_argument("--dataset_description", type=str, help="Description for the saved dataset", default="hetero_dataset")
+    parser.add_argument("--dataset_output_path", type=str, help="Path to save the collected dataset", default="maviper/data/hetero_dataset.npz")
+
     # knowns, unknowns = parser.parse_known_args()
     args = parser.parse_args()
     return args

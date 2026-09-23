@@ -1,12 +1,14 @@
 import numpy as np
 import joblib
 import os
+import csv
 
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from core.regression_dt import RegressionDTPolicy
+from datetime import datetime
 
 FEATURE_NAMES = [
     "waypoint_x",
@@ -16,6 +18,31 @@ FEATURE_NAMES = [
     "forward_velocity",
     "yaw_angular_velocity",
 ]
+
+depths = range(1,50)
+
+def save_to_csv(results):
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    output_path = f"maviper/results/regression_trees_{timestamp}.csv"
+
+    os.makedirs("maviper/results", exist_ok=True)
+
+    if not results:
+            print("No results to save")
+            return
+    
+    fieldnames = results[0].keys()
+
+    with open(output_path, "w", newline="") as csvfile:
+        writer = csv.DictWriter(
+            csvfile,
+            fieldnames=fieldnames
+        )
+
+        writer.writeheader()
+        writer.writerows(results)
+
+    print(f"\nResults saved to {output_path}")
 
 def evaluate_tree(name, tree, x_test, y_test):
     predictions = tree.predict(x_test)
@@ -30,6 +57,17 @@ def evaluate_tree(name, tree, x_test, y_test):
     print(f"MAE: {mae:.6f}")
     print(f"MSE: {mse:.6f}")
     print(f"R2: {r2:.6f}")
+
+    result = {
+         "robot": name,
+         "depth": tree.get_depth(),
+         "nodes": tree.get_node_count(),
+         "mae": mae,
+         "mse": mse,
+         "r2": r2
+    }
+
+    return result
 
 def train_and_save_pair(
         name,
@@ -55,7 +93,7 @@ def train_and_save_pair(
 
 
 def main():
-    dataset_path = "maviper/data/episode_ids_2026_09_09_13_37_24_dataset.npz" # TODO: come back to this
+    dataset_path = "maviper/data/experiment3_2026_09_24_01_44_28_dataset.npz" # TODO: come back to this
 
     data = np.load(dataset_path)
 
@@ -101,29 +139,37 @@ def main():
     #     random_state=42
     # )
 
-    titan_tree = RegressionDTPolicy(max_depth=4)
-    spot_tree = RegressionDTPolicy(max_depth=4)
+    # results = []
 
-    titan_tree.train(titan_x_train, titan_y_train)
-    spot_tree.train(spot_x_train, spot_y_train)
+    # for depth in depths:
 
-    evaluate_tree(
-        "Titan",
-        titan_tree,
-        titan_x_test,
-        titan_y_test
-    )
+    #     titan_tree = RegressionDTPolicy(max_depth=depth)
+    #     spot_tree = RegressionDTPolicy(max_depth=depth)
 
-    evaluate_tree(
-        "Spot",
-        spot_tree,
-        spot_x_test,
-        spot_y_test
-    )
+    #     titan_tree.train(titan_x_train, titan_y_train)
+    #     spot_tree.train(spot_x_train, spot_y_train)
 
-    train_and_save_pair("depth4_e", 4,4, titan_x_train, titan_y_train, spot_x_train, spot_y_train)
-    train_and_save_pair("depth6_e", 6,6, titan_x_train, titan_y_train, spot_x_train, spot_y_train)
-    train_and_save_pair("high_fidelity_e", 6,9, titan_x_train, titan_y_train, spot_x_train, spot_y_train) # 10 and 9 had the highest r2 values for titan and spot respectively for Random-Timestep, 6 and 9 for Episodic Split
+    #     result1 = evaluate_tree(
+    #         "Titan",
+    #         titan_tree,
+    #         titan_x_test,
+    #         titan_y_test
+    #     )
+
+    #     result2 = evaluate_tree(
+    #         "Spot",
+    #         spot_tree,
+    #         spot_x_test,
+    #         spot_y_test
+    #     )
+    #     results.append(result1)
+    #     results.append(result2)
+
+    # save_to_csv(results)
+
+    # train_and_save_pair("depth4_e_exp2", 4,4, titan_x_train, titan_y_train, spot_x_train, spot_y_train)
+    # train_and_save_pair("depth8_e_exp2", 8,8, titan_x_train, titan_y_train, spot_x_train, spot_y_train)
+    # train_and_save_pair("high_fidelity_e_exp2", 8,9, titan_x_train, titan_y_train, spot_x_train, spot_y_train) # 10 and 9 had the highest r2 values for titan and spot respectively for Random-Timestep, 6 and 9 for Episodic Split
 
     # print("\nTitan Rules:")
     # print(titan_tree.export_rules(FEATURE_NAMES))

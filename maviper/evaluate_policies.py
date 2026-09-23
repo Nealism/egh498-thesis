@@ -15,9 +15,11 @@ from default_arguments import get_defaults, get_env
 from heterogeneous_expert import HeterogeneousExpert
 
 home = str(Path.home())
+selected_model = "400182_E2_2025_06_06_12_53_28"
+model_path_int = home + "/multi-robot-collision-avoidance" + "/Saved_models/Spot_Titan/selected/"# + selected_model + "/"
+# folder = "2025_02_12_16_12_53" # test folder
 
-model_path_int = home + "/multi-robot-collision-avoidance" + "/Saved_models/Spot_Titan/selected/E13r32G1E1_104_Transfer_Hetero_85_BESTEST" + "/"
-folder = "2025_02_12_16_12_53" # test folder
+folder = "400182_E2_2025_06_06_12_53_28"
 
 tree_path = "maviper/saved_trees/"
 
@@ -26,7 +28,8 @@ SEEDS = range(50)
 random_SEEDS = []
 
 x = 0
-while x < 200:
+seed_count = 100
+while x < seed_count: # seed count
     random_SEEDS.append(random.randint(0, 2**32-1))
     x += 1
 
@@ -50,9 +53,9 @@ def suppress_output():
 def save_to_csv(results):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
-    output_path = f"maviper/results/policy_evaluation_{timestamp}.csv"
+    output_path = f"maviper/results/experiment2/policy_evaluation_{timestamp}.csv"
 
-    os.makedirs("maviper/results", exist_ok=True)
+    os.makedirs("maviper/results/experiment2", exist_ok=True)
 
     if not results:
         print("No results to save")
@@ -399,13 +402,16 @@ def main():
 
     policies = [
         "ppo",
-        "depth4_e",
-        "depth6_e", 
-        "high_fidelity_e",
+        "depth4_e_exp2",
+        "depth8_e_exp2", 
+        "high_fidelity_e_exp2",
     ]
 
     results = []
+    current = 1
     for seed in random_SEEDS:
+        print(f"Seed {current} of {seed_count}")
+        current += 1
         for policy_name in policies:
             with suppress_output():
                 result = run_policy(
