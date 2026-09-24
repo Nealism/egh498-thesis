@@ -15,15 +15,24 @@ from default_arguments import get_defaults, get_env
 from heterogeneous_expert import HeterogeneousExpert
 
 home = str(Path.home())
-selected_model = "400182_E2_2025_06_06_12_53_28"
-model_path_int = home + "/multi-robot-collision-avoidance" + "/Saved_models/Spot_Titan/selected/"# + selected_model + "/"
-# folder = "2025_02_12_16_12_53" # test folder
+# selected_model = "400182_E2_2025_06_06_12_53_28"
+# model_path_int = home + "/multi-robot-collision-avoidance" + "/Saved_models/Spot_Titan/selected/"# + selected_model + "/"
+# # folder = "2025_02_12_16_12_53" # test folder
 
-folder = "400182_E2_2025_06_06_12_53_28"
+# folder = "400182_E2_2025_06_06_12_53_28"
+
+model_path_int = (
+    home
+    + "/multi-robot-collision-avoidance/"
+    + "Saved_models/Spot_Titan/selected/"
+    + "E13r32G1E1_104_Transfer_Hetero_85_BESTEST/"
+)
+
+folder = "2025_02_12_16_12_53"
 
 tree_path = "maviper/saved_trees/"
 
-SEEDS = range(50)
+#SEEDS = range(50)
 
 random_SEEDS = []
 
@@ -32,6 +41,21 @@ seed_count = 100
 while x < seed_count: # seed count
     random_SEEDS.append(random.randint(0, 2**32-1))
     x += 1
+
+
+
+def open_seeds():
+    test_seeds = []
+    with open("maviper/results/experiment3/experimental_seeds_2026_09_24_02_30_07.csv", 'r') as seeds:
+
+        for row in csv.reader(seeds):
+            if row[0] == 'seed':
+                continue
+            else:
+                test_seeds.append(int(row[0]))
+
+    return test_seeds
+
 
 warnings.filterwarnings("ignore")
 @contextmanager
@@ -50,12 +74,13 @@ def suppress_output():
             os.close(old_stdout_fd)
             os.close(old_stderr_fd)
 
-def save_to_csv(results):
+def save_to_csv(results, seeds):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
-    output_path = f"maviper/results/experiment2/policy_evaluation_{timestamp}.csv"
+    output_path = f"maviper/results/experiment3/policy_evaluation_{timestamp}.csv"
+    seed_path = f"maviper/results/experiment3/experimental_seeds_{timestamp}.csv"
 
-    os.makedirs("maviper/results/experiment2", exist_ok=True)
+    os.makedirs("maviper/results/experiment3", exist_ok=True)
 
     if not results:
         print("No results to save")
@@ -71,6 +96,15 @@ def save_to_csv(results):
 
         writer.writeheader()
         writer.writerows(results)
+
+    with open(seed_path, "w", newline="") as csvfile_seed:
+        writer = csv.writer(csvfile_seed)
+
+        writer.writerow(["seed"])
+
+        for seed in seeds:
+            writer.writerow([seed])
+
 
     print(f"\nResults saved to {output_path}")
 
@@ -96,7 +130,7 @@ def create_env(seed):
     args.experiment_1 = True
     args.heterogeneous = True
     args.gap_curr = True
-    args.starting_gap_width = 0.85
+    args.starting_gap_width = 2
     args.randomness = 2
     args.reward_fn = 27
     args.Pretrained_cur = False
@@ -402,14 +436,15 @@ def main():
 
     policies = [
         "ppo",
-        "depth4_e_exp2",
-        "depth8_e_exp2", 
-        "high_fidelity_e_exp2",
+        "depth4_e_exp3",
+        "depth8_e_exp3", 
+        "high_fidelity_e_exp3",
     ]
 
     results = []
     current = 1
-    for seed in random_SEEDS:
+    test_seeds = open_seeds()
+    for seed in test_seeds: # random_SEEDS
         print(f"Seed {current} of {seed_count}")
         current += 1
         for policy_name in policies:
@@ -429,7 +464,7 @@ def main():
     # check_seed_validity()
     #check_first_step_conditions()
 
-    save_to_csv(results)
+    save_to_csv(results, test_seeds)
 
 
 if __name__ == "__main__":

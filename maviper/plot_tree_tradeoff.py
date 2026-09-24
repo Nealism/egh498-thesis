@@ -6,10 +6,10 @@ from pathlib import Path
 # INPUT CSV
 # =========================
 
-csv_path = "maviper/results/experiment2/regression_trees_2026_09_22_00_57_39.csv"
+csv_path = "maviper/results/experiment3/regression_trees_2026_09_24_01_51_48.csv"
 
 # Folder to save plots
-output_dir = Path("maviper/data/experiment2")
+output_dir = Path("maviper/data/experiment3")
 output_dir.mkdir(parents=True, exist_ok=True)
 
 # =========================

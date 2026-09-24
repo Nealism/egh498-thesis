@@ -167,9 +167,9 @@ def main():
 
     # save_to_csv(results)
 
-    # train_and_save_pair("depth4_e_exp2", 4,4, titan_x_train, titan_y_train, spot_x_train, spot_y_train)
-    # train_and_save_pair("depth8_e_exp2", 8,8, titan_x_train, titan_y_train, spot_x_train, spot_y_train)
-    # train_and_save_pair("high_fidelity_e_exp2", 8,9, titan_x_train, titan_y_train, spot_x_train, spot_y_train) # 10 and 9 had the highest r2 values for titan and spot respectively for Random-Timestep, 6 and 9 for Episodic Split
+    train_and_save_pair("depth4_e_exp3", 4,4, titan_x_train, titan_y_train, spot_x_train, spot_y_train)
+    train_and_save_pair("depth8_e_exp3", 8,8, titan_x_train, titan_y_train, spot_x_train, spot_y_train)
+    train_and_save_pair("high_fidelity_e_exp3", 9,10, titan_x_train, titan_y_train, spot_x_train, spot_y_train) # 10 and 9 had the highest r2 values for titan and spot respectively for Random-Timestep, 6 and 9 for Episodic Split
 
     # print("\nTitan Rules:")
     # print(titan_tree.export_rules(FEATURE_NAMES))
