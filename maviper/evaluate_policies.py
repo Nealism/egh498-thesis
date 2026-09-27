@@ -37,7 +37,7 @@ tree_path = "maviper/saved_trees/"
 random_SEEDS = []
 
 x = 0
-seed_count = 100
+seed_count = 200
 while x < seed_count: # seed count
     random_SEEDS.append(random.randint(0, 2**32-1))
     x += 1
@@ -46,7 +46,7 @@ while x < seed_count: # seed count
 
 def open_seeds():
     test_seeds = []
-    with open("maviper/results/experiment3/experimental_seeds_2026_09_24_02_30_07.csv", 'r') as seeds:
+    with open("maviper/results/experiment4/experimental_seeds_2026_09_24_15_10_24.csv", 'r') as seeds: #TODO: CHANGE THIS
 
         for row in csv.reader(seeds):
             if row[0] == 'seed':
@@ -77,10 +77,10 @@ def suppress_output():
 def save_to_csv(results, seeds):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
-    output_path = f"maviper/results/experiment3/policy_evaluation_{timestamp}.csv"
-    seed_path = f"maviper/results/experiment3/experimental_seeds_{timestamp}.csv"
+    output_path = f"maviper/results/experiment5/policy_evaluation_{timestamp}.csv"
+    seed_path = f"maviper/results/experiment5/experimental_seeds_{timestamp}.csv"
 
-    os.makedirs("maviper/results/experiment3", exist_ok=True)
+    os.makedirs("maviper/results/experiment5", exist_ok=True)
 
     if not results:
         print("No results to save")
@@ -130,7 +130,7 @@ def create_env(seed):
     args.experiment_1 = True
     args.heterogeneous = True
     args.gap_curr = True
-    args.starting_gap_width = 2
+    args.starting_gap_width = 1
     args.randomness = 2
     args.reward_fn = 27
     args.Pretrained_cur = False
@@ -153,10 +153,14 @@ def create_env(seed):
     return env, obs, args, model_dir
 
 def load_tree_policy(tree_name):
-    titan_tree = joblib.load(tree_path+tree_name+"/titan_tree.joblib")
-    spot_tree = joblib.load(tree_path+tree_name+"/spot_tree.joblib")
 
-    return titan_tree, spot_tree
+    titan_linear_tree = joblib.load(tree_path+tree_name+"/titan_linear_tree.joblib")
+    titan_angular_tree = joblib.load(tree_path+tree_name+"/titan_angular_tree.joblib")
+    spot_linear_tree = joblib.load(tree_path+tree_name+"/spot_linear_tree.joblib")
+    spot_lateral_tree = joblib.load(tree_path+tree_name+"/spot_lateral_tree.joblib")
+    spot_angular_tree = joblib.load(tree_path+tree_name+"/spot_angular_tree.joblib")
+
+    return titan_linear_tree, titan_angular_tree, spot_linear_tree, spot_lateral_tree, spot_angular_tree
 
 def load_ppo_policy(model_dir):
     return HeterogeneousExpert(model_path=model_dir + "/model.pt")
@@ -224,7 +228,7 @@ def run_policy(seed, policy_name):
     expert = load_ppo_policy(model_dir)
 
     if policy_name != "ppo":
-        titan_tree, spot_tree = load_tree_policy(policy_name)
+        titan_linear_tree, titan_angular_tree, spot_linear_tree, spot_lateral_tree, spot_angular_tree = load_tree_policy(policy_name)
 
     total_reward = 0.0
 
@@ -251,6 +255,13 @@ def run_policy(seed, policy_name):
     titan_action_errors = []
     spot_action_errors = []
 
+    titan_linear_errors = []
+    titan_angular_errors = []
+
+    spot_linear_errors = []
+    spot_lateral_errors = []
+    spot_angular_errors = []
+
     for step in range(args.max_ep_len):
         im = env.get_image()
 
@@ -269,13 +280,20 @@ def run_policy(seed, policy_name):
 
         else:
 
-            titan_action = titan_tree.predict(
-                np.asarray(obs[0], dtype=np.float32)
-            )[0]
+            titan_state = np.asarray(obs[0], dtype=np.float32)
+            spot_state = np.asarray(obs[1], dtype=np.float32)
 
-            spot_action = spot_tree.predict(
-                np.asarray(obs[1], dtype=np.float32)
-            )[0]
+            titan_linear_action = titan_linear_tree.predict(titan_state)[0]
+            titan_angular_action = titan_angular_tree.predict(titan_state)[0]
+
+            titan_action = np.array([titan_linear_action, titan_angular_action], dtype=np.float32)
+
+            spot_linear_action = spot_linear_tree.predict(spot_state)[0]
+            spot_lateral_action = spot_lateral_tree.predict(spot_state)[0]
+            spot_angular_action = spot_angular_tree.predict(spot_state)[0]
+
+            spot_action = np.array([spot_linear_action, spot_lateral_action, spot_angular_action], dtype=np.float32)
+
 
             actions = [
                 titan_action,
@@ -287,8 +305,22 @@ def run_policy(seed, policy_name):
             titan_action_error = np.mean(np.abs(titan_action - ppo_actions[0]))
             spot_action_error = np.mean(np.abs(spot_action - ppo_actions[1]))
 
+            titan_linear_error = np.mean(np.abs(titan_linear_action - ppo_actions[0][0]))
+            titan_angular_error = np.mean(np.abs(titan_angular_action - ppo_actions[0][1]))
+
+            spot_linear_error = np.mean(np.abs(spot_linear_action - ppo_actions[1][0]))
+            spot_lateral_error =  np.mean(np.abs(spot_lateral_action - ppo_actions[1][1]))
+            spot_angular_error = np.mean(np.abs(spot_angular_action - ppo_actions[1][2]))
+
             titan_action_errors.append(titan_action_error)
             spot_action_errors.append(spot_action_error)
+
+            titan_linear_errors.append(titan_linear_error)
+            titan_angular_errors.append(titan_angular_error)
+
+            spot_linear_errors.append(spot_linear_error)
+            spot_lateral_errors.append(spot_lateral_error)
+            spot_angular_errors.append(spot_angular_error)
 
             
 
@@ -389,6 +421,22 @@ def run_policy(seed, policy_name):
     else:
         spot_action_mae = None
 
+    if titan_linear_errors:
+        titan_linear_mae = float(np.mean(titan_linear_errors))
+        titan_angular_mae = float(np.mean(titan_angular_errors))
+
+        spot_linear_mae = float(np.mean(spot_linear_errors))
+        spot_lateral_mae = float(np.mean(spot_lateral_errors))
+        spot_angular_mae = float(np.mean(spot_angular_errors))
+
+    else:
+        titan_linear_mae = None
+        titan_angular_mae = None
+
+        spot_linear_mae = None
+        spot_lateral_mae = None
+        spot_angular_mae = None
+
 
     result = {
         "seed": seed,
@@ -423,6 +471,13 @@ def run_policy(seed, policy_name):
 
         "titan_action_mae": titan_action_mae,
         "spot_action_mae": spot_action_mae,
+
+        "titan_linear_mae": titan_linear_mae,
+        "titan_angular_mae": titan_angular_mae,
+
+        "spot_linear_mae": spot_linear_mae,
+        "spot_lateral_mae": spot_lateral_mae,
+        "spot_angular_mae": spot_angular_mae,
     }
 
     env._p.disconnect()
@@ -436,16 +491,20 @@ def main():
 
     policies = [
         "ppo",
-        "depth4_e_exp3",
-        "depth8_e_exp3", 
-        "high_fidelity_e_exp3",
+        "low_exp5",
+        "mid_exp5",
+        "high_exp5",
+        "of_exp5",
+        # "depth4_e_exp3",
+        # "depth8_e_exp3", 
+        # "high_fidelity_e_exp3",
     ]
 
     results = []
     current = 1
-    test_seeds = open_seeds()
-    for seed in test_seeds: # random_SEEDS
-        print(f"Seed {current} of {seed_count}")
+    #test_seeds = open_seeds()
+    for seed in random_SEEDS: # random_SEEDS or test_seeds
+        print(f"Seed {current} of {len(random_SEEDS)}")
         current += 1
         for policy_name in policies:
             with suppress_output():
@@ -464,7 +523,7 @@ def main():
     # check_seed_validity()
     #check_first_step_conditions()
 
-    save_to_csv(results, test_seeds)
+    save_to_csv(results, random_SEEDS)
 
 
 if __name__ == "__main__":

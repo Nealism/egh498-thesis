@@ -1,8 +1,14 @@
 import os
 import numpy as np
 import torch
+import random
 
 from heterogeneous_expert import HeterogeneousExpert
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
 class RolloutCollector:
     def __init__(self, env, expert, max_ep_len=200):
@@ -10,7 +16,11 @@ class RolloutCollector:
         self.expert = expert
         self.max_ep_len = max_ep_len
 
-    def collect(self, n_episodes=10):
+    def collect(self, n_episodes=10, seeds=None):
+
+        if seeds is not None:
+            if len(seeds) != n_episodes:
+                raise ValueError(f"Expected {n_episodes} seeds but receieved {len(seeds)}.")
 
 
         titan_obs = []
@@ -24,7 +34,17 @@ class RolloutCollector:
         episode_rewards = []
         episode_ids = []
 
+        used_seeds = []
+
         for episode in range(n_episodes):
+
+            if seeds is not None:
+                episode_seed = int(seeds[episode])
+                set_seed(episode_seed)
+                used_seeds.append(episode_seed)
+
+
+
             obs = self.env.reset()
             im = self.env.get_image()
 
@@ -68,7 +88,7 @@ class RolloutCollector:
 
                 ep_reward += float(np.sum(rewards))
 
-                if all(dones) or any(terminations):
+                if all(dones) or all(terminations):
                     break
 
                 im = self.env.get_image()
