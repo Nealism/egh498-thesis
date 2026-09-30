@@ -17,7 +17,6 @@ from heterogeneous_expert import HeterogeneousExpert
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 
-
 home = str(Path.home())
 # selected_model = "400182_E2_2025_06_06_12_53_28"
 # model_path_int = home + "/multi-robot-collision-avoidance" + "/Saved_models/Spot_Titan/selected/"# + selected_model + "/"
@@ -49,19 +48,19 @@ while x < seed_count: # seed count
 
 POLICIES = [
     "ppo",
-    "T1_exp9"
-    # "low_exp8",
-    # "mid_exp8",
-    # "high_exp8",
-    # "of_exp8",
+    "low_exp5",
+    "mid_exp5",
+    "high_exp5",
+    "of_exp5",
     # "depth4_e_exp3",
     # "depth8_e_exp3", 
     # "high_fidelity_e_exp3",
 ]
 
+
 def open_seeds():
     test_seeds = []
-    with open("maviper/results/experiment9/experimental_seeds_2026_10_01_00_38_09.csv", 'r') as seeds: #TODO: CHANGE THIS
+    with open("maviper/results/experiment4/experimental_seeds_2026_09_24_15_10_24.csv", 'r') as seeds: #TODO: CHANGE THIS
 
         for row in csv.reader(seeds):
             if row[0] == 'seed':
@@ -92,10 +91,10 @@ def suppress_output():
 def save_to_csv(results, seeds):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
-    output_path = f"maviper/results/experiment9/policy_evaluation_{timestamp}.csv"
-    seed_path = f"maviper/results/experiment9/experimental_seeds_{timestamp}.csv"
+    output_path = f"maviper/results/experiment7/policy_evaluation_{timestamp}.csv"
+    seed_path = f"maviper/results/experiment7/experimental_seeds_{timestamp}.csv"
 
-    os.makedirs("maviper/results/experiment9", exist_ok=True)
+    os.makedirs("maviper/results/experiment7", exist_ok=True)
 
     if not results:
         print("No results to save")
@@ -184,14 +183,14 @@ def create_env(seed):
     return env, obs, args, model_dir
 
 def load_tree_policy(tree_name):
-    titan_tree = joblib.load(tree_path+tree_name+"/titan_tree.joblib")
-    spot_tree = joblib.load(tree_path+tree_name+"/spot_tree.joblib")
 
-    if titan_tree is None or spot_tree is None:
-        raise ValueError("The specified tree does not exist. Have you checked your target directory or checked if you " \
-        "are using multi-output trees or segregated single output trees?")
+    titan_linear_tree = joblib.load(tree_path+tree_name+"/titan_linear_tree.joblib")
+    titan_angular_tree = joblib.load(tree_path+tree_name+"/titan_angular_tree.joblib")
+    spot_linear_tree = joblib.load(tree_path+tree_name+"/spot_linear_tree.joblib")
+    spot_lateral_tree = joblib.load(tree_path+tree_name+"/spot_lateral_tree.joblib")
+    spot_angular_tree = joblib.load(tree_path+tree_name+"/spot_angular_tree.joblib")
 
-    return titan_tree, spot_tree
+    return titan_linear_tree, titan_angular_tree, spot_linear_tree, spot_lateral_tree, spot_angular_tree
 
 def load_ppo_policy(model_dir):
     return HeterogeneousExpert(model_path=model_dir + "/model.pt")
@@ -259,7 +258,7 @@ def run_policy(seed, policy_name):
     expert = load_ppo_policy(model_dir)
 
     if policy_name != "ppo":
-        titan_tree, spot_tree = load_tree_policy(policy_name)
+        titan_linear_tree, titan_angular_tree, spot_linear_tree, spot_lateral_tree, spot_angular_tree = load_tree_policy(policy_name)
 
     total_reward = 0.0
 
@@ -286,6 +285,13 @@ def run_policy(seed, policy_name):
     titan_action_errors = []
     spot_action_errors = []
 
+    titan_linear_errors = []
+    titan_angular_errors = []
+
+    spot_linear_errors = []
+    spot_lateral_errors = []
+    spot_angular_errors = []
+
     for step in range(args.max_ep_len):
         im = env.get_image()
 
@@ -304,13 +310,20 @@ def run_policy(seed, policy_name):
 
         else:
 
-            titan_action = titan_tree.predict(
-                np.asarray(obs[0], dtype=np.float32)
-            )[0]
+            titan_state = np.asarray(obs[0], dtype=np.float32)
+            spot_state = np.asarray(obs[1], dtype=np.float32)
 
-            spot_action = spot_tree.predict(
-                np.asarray(obs[1], dtype=np.float32)
-            )[0]
+            titan_linear_action = titan_linear_tree.predict(titan_state)[0]
+            titan_angular_action = titan_angular_tree.predict(titan_state)[0]
+
+            titan_action = np.array([titan_linear_action, titan_angular_action], dtype=np.float32)
+
+            spot_linear_action = spot_linear_tree.predict(spot_state)[0]
+            spot_lateral_action = spot_lateral_tree.predict(spot_state)[0]
+            spot_angular_action = spot_angular_tree.predict(spot_state)[0]
+
+            spot_action = np.array([spot_linear_action, spot_lateral_action, spot_angular_action], dtype=np.float32)
+
 
             actions = [
                 titan_action,
@@ -322,8 +335,22 @@ def run_policy(seed, policy_name):
             titan_action_error = np.mean(np.abs(titan_action - ppo_actions[0]))
             spot_action_error = np.mean(np.abs(spot_action - ppo_actions[1]))
 
+            titan_linear_error = np.mean(np.abs(titan_linear_action - ppo_actions[0][0]))
+            titan_angular_error = np.mean(np.abs(titan_angular_action - ppo_actions[0][1]))
+
+            spot_linear_error = np.mean(np.abs(spot_linear_action - ppo_actions[1][0]))
+            spot_lateral_error =  np.mean(np.abs(spot_lateral_action - ppo_actions[1][1]))
+            spot_angular_error = np.mean(np.abs(spot_angular_action - ppo_actions[1][2]))
+
             titan_action_errors.append(titan_action_error)
             spot_action_errors.append(spot_action_error)
+
+            titan_linear_errors.append(titan_linear_error)
+            titan_angular_errors.append(titan_angular_error)
+
+            spot_linear_errors.append(spot_linear_error)
+            spot_lateral_errors.append(spot_lateral_error)
+            spot_angular_errors.append(spot_angular_error)
 
             
 
@@ -424,6 +451,22 @@ def run_policy(seed, policy_name):
     else:
         spot_action_mae = None
 
+    if titan_linear_errors:
+        titan_linear_mae = float(np.mean(titan_linear_errors))
+        titan_angular_mae = float(np.mean(titan_angular_errors))
+
+        spot_linear_mae = float(np.mean(spot_linear_errors))
+        spot_lateral_mae = float(np.mean(spot_lateral_errors))
+        spot_angular_mae = float(np.mean(spot_angular_errors))
+
+    else:
+        titan_linear_mae = None
+        titan_angular_mae = None
+
+        spot_linear_mae = None
+        spot_lateral_mae = None
+        spot_angular_mae = None
+
 
     result = {
         "seed": seed,
@@ -458,6 +501,13 @@ def run_policy(seed, policy_name):
 
         "titan_action_mae": titan_action_mae,
         "spot_action_mae": spot_action_mae,
+
+        "titan_linear_mae": titan_linear_mae,
+        "titan_angular_mae": titan_angular_mae,
+
+        "spot_linear_mae": spot_linear_mae,
+        "spot_lateral_mae": spot_lateral_mae,
+        "spot_angular_mae": spot_angular_mae,
     }
 
     env._p.disconnect()
@@ -467,13 +517,13 @@ def run_policy(seed, policy_name):
 
 def main():
 
-    seed_test = 42
-
     results = []
-    test_seeds = random_SEEDS
-    #test_seeds = open_seeds()
 
-    max_workers = 12
+    test_seeds = random_SEEDS
+
+    # test_seeds = open_seeds()
+
+    max_workers = 8
 
     print(
         f"Running {len(test_seeds)} seeds "
@@ -531,9 +581,9 @@ def main():
                     f"  {result['policy']}: "
                     f"Titan={result.get('titan_success')} "
                     f"Spot={result.get('spot_success')} "
-                    f"Team={result.get('team_success')} "
-                    f"Total reward={result.get('total_reward')} "
-                    f"Steps={result.get('steps')} "
+                    f"Team={result.get('team_success')}"
+                    f"Total reward={result.get('total_reward')}"
+                    f"Steps={result.get('steps')}"
                 )
 
     policy_order = {
